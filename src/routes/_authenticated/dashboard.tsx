@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, ClipboardList, Timer, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
+import { useRoles } from "@/lib/use-role";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({ component: Dashboard });
 
@@ -22,6 +24,9 @@ function StatCard({ icon: Icon, label, value }: { icon: any; label: string; valu
 }
 
 function Dashboard() {
+  const { user } = useAuth();
+  const { isAdmin, loading: rolesLoading } = useRoles();
+  const isDev = import.meta.env.DEV;
   const stats = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {
@@ -44,6 +49,11 @@ function Dashboard() {
 
   return (
     <div className="space-y-6 max-w-7xl">
+      {isDev && (
+        <div className="text-xs text-muted-foreground border rounded-md px-3 py-2 font-mono break-all">
+          [dev] user.id: {user?.id ?? "—"} • role: {rolesLoading ? "carregando…" : isAdmin ? "admin ✓" : "não-admin"}
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-display font-bold">Dashboard</h1>

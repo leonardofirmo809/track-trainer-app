@@ -30,6 +30,20 @@ export const createCoachAccount = createServerFn({ method: "POST" })
     });
     if (error) throw new Response(error.message, { status: 400 });
 
+    const newUserId = created.user?.id;
+    if (!newUserId) throw new Response("Falha ao criar usuário", { status: 500 });
+
+    // Defensive: ensure profile + coach role even if trigger is missing/failed
+    const { error: profErr } = await supabaseAdmin
+      .from("profiles")
+      .upsert({ id: newUserId, full_name: data.fullName }, { onConflict: "id" });
+    if (profErr) throw new Response(`Perfil: ${profErr.message}`, { status: 500 });
+
+    const { error: roleErr2 } = await supabaseAdmin
+      .from("user_roles")
+      .upsert({ user_id: newUserId, role: "coach" }, { onConflict: "user_id,role" });
+    if (roleErr2) throw new Response(`Papel: ${roleErr2.message}`, { status: 500 });
+
     await supabaseAdmin.from("admin_audit_log").insert({
       event_type: "coach_created_manual",
       target_email: data.email,

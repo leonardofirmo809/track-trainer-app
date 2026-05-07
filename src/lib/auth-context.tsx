@@ -17,11 +17,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
+      // Avoid re-rendering consumers when only the token refreshed but the user is the same.
+      setSession((prev) => {
+        if (prev?.user?.id === s?.user?.id && prev?.access_token === s?.access_token) {
+          return prev;
+        }
+        return s;
+      });
       setLoading(false);
     });
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+      setSession((prev) => {
+        if (prev?.user?.id === data.session?.user?.id && prev?.access_token === data.session?.access_token) {
+          return prev;
+        }
+        return data.session;
+      });
       setLoading(false);
     });
     return () => subscription.unsubscribe();

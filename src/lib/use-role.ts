@@ -6,14 +6,17 @@ export type AppRole = "admin" | "coach";
 
 export function useRoles() {
   const { user } = useAuth();
+  const userId = user?.id;
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) { setRoles([]); setLoading(false); return; }
+    if (!userId) { setRoles([]); setLoadedFor(null); setLoading(false); return; }
+    // Don't flip loading back to true (and unmount gated subtrees) if we already have roles for this user.
+    if (loadedFor !== userId) setLoading(true);
     let cancel = false;
-    setLoading(true);
-    supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data, error }) => {
+    supabase.from("user_roles").select("role").eq("user_id", userId).then(({ data, error }) => {
       if (cancel) return;
       if (error) {
         console.warn("[useRoles] failed to fetch user_roles:", error.message);
@@ -21,10 +24,12 @@ export function useRoles() {
       } else {
         setRoles(((data ?? []) as { role: AppRole }[]).map((r) => r.role));
       }
+      setLoadedFor(userId);
       setLoading(false);
     });
     return () => { cancel = true; };
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   return { roles, isAdmin: roles.includes("admin"), loading };
 }

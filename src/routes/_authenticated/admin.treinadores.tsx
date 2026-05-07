@@ -83,7 +83,14 @@ function AdminCoachesPage() {
       invited_by: user?.id,
     }).select().single();
     setCreating(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      console.error("[invite] erro ao criar convite:", error);
+      return toast.error(`Falha ao criar convite: ${error.message}`);
+    }
+    if (!data?.id) {
+      console.error("[invite] insert sem retorno de dados");
+      return toast.error("Convite não foi salvo. Verifique suas permissões e tente novamente.");
+    }
     await navigator.clipboard.writeText(inviteLink((data as Invite).token)).catch(() => {});
     toast.success("Convite criado! Link copiado para a área de transferência.");
     setName(""); setEmail(""); setOpen(false);

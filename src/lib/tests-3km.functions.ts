@@ -11,8 +11,8 @@ const zoneSchema = z.object({
   phrase: z.string(),
   pctFrom: z.number(),
   pctTo: z.number().nullable(),
-  paceFromSec: z.number().nullable(),
-  paceToSec: z.number(),
+  paceSlowSec: z.number().nullable(),
+  paceFastSec: z.number().nullable(),
   velFrom: z.number(),
   velTo: z.number().nullable(),
 });

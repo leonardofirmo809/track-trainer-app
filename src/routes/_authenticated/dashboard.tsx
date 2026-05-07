@@ -24,6 +24,9 @@ function StatCard({ icon: Icon, label, value }: { icon: any; label: string; valu
 }
 
 function Dashboard() {
+  const { user } = useAuth();
+  const { isAdmin, loading: rolesLoading } = useRoles();
+  const isDev = import.meta.env.DEV;
   const stats = useQuery({
     queryKey: ["dashboard-stats"],
     queryFn: async () => {

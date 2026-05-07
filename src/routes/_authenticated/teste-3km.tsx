@@ -84,7 +84,7 @@ function Teste3kmPage() {
           zones: result.zones.map((z) => ({
             id: z.id, level: z.level, pseMin: z.pseMin, pseMax: z.pseMax, phrase: z.phrase,
             pctFrom: z.pctFrom, pctTo: z.pctTo,
-            paceFromSec: z.paceFromSec, paceToSec: z.paceToSec,
+            paceSlowSec: z.paceSlowSec, paceFastSec: z.paceFastSec,
             velFrom: z.velFrom, velTo: z.velTo,
           })),
         },

@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { createCoachAccount } from "@/lib/admin-coaches.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Copy, Plus, RefreshCw, Trash2, UserPlus } from "lucide-react";
+import { Copy, KeyRound, Plus, RefreshCw, Trash2, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/treinadores")({ component: AdminCoachesPage });
 
@@ -41,6 +43,15 @@ function AdminCoachesPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // Manual create
+  const createCoach = useServerFn(createCoachAccount);
+  const [openManual, setOpenManual] = useState(false);
+  const [mName, setMName] = useState("");
+  const [mEmail, setMEmail] = useState("");
+  const [mPass, setMPass] = useState("");
+  const [mConfirm, setMConfirm] = useState("");
+  const [mCreating, setMCreating] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -105,6 +116,24 @@ function AdminCoachesPage() {
     toast.success("Link copiado.");
   };
 
+  const submitManual = async () => {
+    if (mPass.length < 8) return toast.error("Senha deve ter ao menos 8 caracteres.");
+    if (mPass !== mConfirm) return toast.error("As senhas não conferem.");
+    setMCreating(true);
+    try {
+      await createCoach({ data: { fullName: mName.trim(), email: mEmail.trim(), password: mPass } });
+      toast.success("Conta criada com sucesso.");
+      setMName(""); setMEmail(""); setMPass(""); setMConfirm("");
+      setOpenManual(false);
+      load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao criar conta";
+      toast.error(msg);
+    } finally {
+      setMCreating(false);
+    }
+  };
+
   const statusBadge = (s: Invite["status"]) => {
     if (s === "pending") return <Badge variant="secondary">Pendente</Badge>;
     if (s === "accepted") return <Badge>Aceito</Badge>;
@@ -118,6 +147,40 @@ function AdminCoachesPage() {
           <h1 className="text-3xl font-display font-bold">Treinadores</h1>
           <p className="text-muted-foreground">Convide novos treinadores e gerencie acessos.</p>
         </div>
+        <div className="flex gap-2">
+        <Dialog open={openManual} onOpenChange={setOpenManual}>
+          <DialogTrigger asChild>
+            <Button variant="outline"><KeyRound className="size-4 mr-2" /> Criar conta manual</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar conta manual</DialogTitle>
+              <DialogDescription>Defina nome, e-mail e senha do treinador. A conta fica ativa imediatamente.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="mname">Nome completo</Label>
+                <Input id="mname" value={mName} onChange={(e) => setMName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="memail">Email</Label>
+                <Input id="memail" type="email" value={mEmail} onChange={(e) => setMEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mpass">Senha (mín. 8 caracteres)</Label>
+                <Input id="mpass" type="password" value={mPass} onChange={(e) => setMPass(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mconfirm">Confirmar senha</Label>
+                <Input id="mconfirm" type="password" value={mConfirm} onChange={(e) => setMConfirm(e.target.value)} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenManual(false)}>Cancelar</Button>
+              <Button onClick={submitManual} disabled={mCreating}><Plus className="size-4 mr-2" />{mCreating ? "Criando…" : "Criar conta"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button><UserPlus className="size-4 mr-2" /> Convidar treinador</Button>
@@ -143,6 +206,7 @@ function AdminCoachesPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>

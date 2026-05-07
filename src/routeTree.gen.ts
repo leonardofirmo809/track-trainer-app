@@ -24,6 +24,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAlunosIndexRouteImport } from './routes/_authenticated/alunos.index'
 import { Route as AuthenticatedAlunosNovoRouteImport } from './routes/_authenticated/alunos.novo'
 import { Route as AuthenticatedAlunosStudentIdRouteImport } from './routes/_authenticated/alunos.$studentId'
+import { Route as AuthenticatedAdminTreinadoresRouteImport } from './routes/_authenticated/admin.treinadores'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -105,19 +106,26 @@ const AuthenticatedAlunosStudentIdRoute =
     path: '/alunos/$studentId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminTreinadoresRoute =
+  AuthenticatedAdminTreinadoresRouteImport.update({
+    id: '/treinadores',
+    path: '/treinadores',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof AuthenticatedAdminRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
   '/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
   '/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
   '/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
   '/teste-3km': typeof AuthenticatedTeste3kmRoute
+  '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/alunos/': typeof AuthenticatedAlunosIndexRoute
@@ -127,13 +135,14 @@ export interface FileRoutesByTo {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof AuthenticatedAdminRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
   '/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
   '/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
   '/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
   '/teste-3km': typeof AuthenticatedTeste3kmRoute
+  '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/alunos': typeof AuthenticatedAlunosIndexRoute
@@ -145,13 +154,14 @@ export interface FileRoutesById {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
-  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
   '/_authenticated/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
   '/_authenticated/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
   '/_authenticated/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
   '/_authenticated/teste-3km': typeof AuthenticatedTeste3kmRoute
+  '/_authenticated/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/_authenticated/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
   '/_authenticated/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/_authenticated/alunos/': typeof AuthenticatedAlunosIndexRoute
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/planilha-42km'
     | '/planilha-5km'
     | '/teste-3km'
+    | '/admin/treinadores'
     | '/alunos/$studentId'
     | '/alunos/novo'
     | '/alunos/'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/planilha-42km'
     | '/planilha-5km'
     | '/teste-3km'
+    | '/admin/treinadores'
     | '/alunos/$studentId'
     | '/alunos/novo'
     | '/alunos'
@@ -203,6 +215,7 @@ export interface FileRouteTypes {
     | '/_authenticated/planilha-42km'
     | '/_authenticated/planilha-5km'
     | '/_authenticated/teste-3km'
+    | '/_authenticated/admin/treinadores'
     | '/_authenticated/alunos/$studentId'
     | '/_authenticated/alunos/novo'
     | '/_authenticated/alunos/'
@@ -323,11 +336,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAlunosStudentIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/treinadores': {
+      id: '/_authenticated/admin/treinadores'
+      path: '/treinadores'
+      fullPath: '/admin/treinadores'
+      preLoaderRoute: typeof AuthenticatedAdminTreinadoresRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminTreinadoresRoute: typeof AuthenticatedAdminTreinadoresRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminTreinadoresRoute: AuthenticatedAdminTreinadoresRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
 interface AuthenticatedRouteChildren {
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedPlanilha10kmRoute: typeof AuthenticatedPlanilha10kmRoute
   AuthenticatedPlanilha21kmRoute: typeof AuthenticatedPlanilha21kmRoute
@@ -340,7 +371,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedPlanilha10kmRoute: AuthenticatedPlanilha10kmRoute,
   AuthenticatedPlanilha21kmRoute: AuthenticatedPlanilha21kmRoute,

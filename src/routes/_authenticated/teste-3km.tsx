@@ -117,11 +117,11 @@ function Teste3kmPage() {
         <CardHeader><CardTitle>Dados do teste</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
           <div className="md:col-span-1">
-            <Label htmlFor="aluno">Aluno *</Label>
-            <Select value={studentId} onValueChange={setStudentId}>
-              <SelectTrigger id="aluno"><SelectValue placeholder={students.isLoading ? "Carregando…" : "Selecionar aluno"} /></SelectTrigger>
+            <Label htmlFor="aluno">Aluno (opcional)</Label>
+            <Select value={studentId || "__none__"} onValueChange={(v) => setStudentId(v === "__none__" ? "" : v)}>
+              <SelectTrigger id="aluno"><SelectValue placeholder={students.isLoading ? "Carregando…" : "Nenhum (teste avulso)"} /></SelectTrigger>
               <SelectContent>
-                {students.data?.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum aluno cadastrado</div>}
+                <SelectItem value="__none__">— Nenhum (teste avulso) —</SelectItem>
                 {students.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
               </SelectContent>
             </Select>

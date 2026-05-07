@@ -9,38 +9,211 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedTeste3kmRouteImport } from './routes/_authenticated/teste-3km'
+import { Route as AuthenticatedPlanilha5kmRouteImport } from './routes/_authenticated/planilha-5km'
+import { Route as AuthenticatedPlanilha42kmRouteImport } from './routes/_authenticated/planilha-42km'
+import { Route as AuthenticatedPlanilha21kmRouteImport } from './routes/_authenticated/planilha-21km'
+import { Route as AuthenticatedPlanilha10kmRouteImport } from './routes/_authenticated/planilha-10km'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAlunosIndexRouteImport } from './routes/_authenticated/alunos.index'
+import { Route as AuthenticatedAlunosNovoRouteImport } from './routes/_authenticated/alunos.novo'
+import { Route as AuthenticatedAlunosStudentIdRouteImport } from './routes/_authenticated/alunos.$studentId'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTeste3kmRoute = AuthenticatedTeste3kmRouteImport.update({
+  id: '/teste-3km',
+  path: '/teste-3km',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPlanilha5kmRoute =
+  AuthenticatedPlanilha5kmRouteImport.update({
+    id: '/planilha-5km',
+    path: '/planilha-5km',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlanilha42kmRoute =
+  AuthenticatedPlanilha42kmRouteImport.update({
+    id: '/planilha-42km',
+    path: '/planilha-42km',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlanilha21kmRoute =
+  AuthenticatedPlanilha21kmRouteImport.update({
+    id: '/planilha-21km',
+    path: '/planilha-21km',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPlanilha10kmRoute =
+  AuthenticatedPlanilha10kmRouteImport.update({
+    id: '/planilha-10km',
+    path: '/planilha-10km',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAlunosIndexRoute =
+  AuthenticatedAlunosIndexRouteImport.update({
+    id: '/alunos/',
+    path: '/alunos/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAlunosNovoRoute = AuthenticatedAlunosNovoRouteImport.update({
+  id: '/alunos/novo',
+  path: '/alunos/novo',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAlunosStudentIdRoute =
+  AuthenticatedAlunosStudentIdRouteImport.update({
+    id: '/alunos/$studentId',
+    path: '/alunos/$studentId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
+  '/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
+  '/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
+  '/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
+  '/teste-3km': typeof AuthenticatedTeste3kmRoute
+  '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
+  '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
+  '/alunos/': typeof AuthenticatedAlunosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
+  '/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
+  '/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
+  '/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
+  '/teste-3km': typeof AuthenticatedTeste3kmRoute
+  '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
+  '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
+  '/alunos': typeof AuthenticatedAlunosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
+  '/_authenticated/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
+  '/_authenticated/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
+  '/_authenticated/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
+  '/_authenticated/teste-3km': typeof AuthenticatedTeste3kmRoute
+  '/_authenticated/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
+  '/_authenticated/alunos/novo': typeof AuthenticatedAlunosNovoRoute
+  '/_authenticated/alunos/': typeof AuthenticatedAlunosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/dashboard'
+    | '/planilha-10km'
+    | '/planilha-21km'
+    | '/planilha-42km'
+    | '/planilha-5km'
+    | '/teste-3km'
+    | '/alunos/$studentId'
+    | '/alunos/novo'
+    | '/alunos/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/dashboard'
+    | '/planilha-10km'
+    | '/planilha-21km'
+    | '/planilha-42km'
+    | '/planilha-5km'
+    | '/teste-3km'
+    | '/alunos/$studentId'
+    | '/alunos/novo'
+    | '/alunos'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/login'
+    | '/signup'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/planilha-10km'
+    | '/_authenticated/planilha-21km'
+    | '/_authenticated/planilha-42km'
+    | '/_authenticated/planilha-5km'
+    | '/_authenticated/teste-3km'
+    | '/_authenticated/alunos/$studentId'
+    | '/_authenticated/alunos/novo'
+    | '/_authenticated/alunos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +221,106 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/teste-3km': {
+      id: '/_authenticated/teste-3km'
+      path: '/teste-3km'
+      fullPath: '/teste-3km'
+      preLoaderRoute: typeof AuthenticatedTeste3kmRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/planilha-5km': {
+      id: '/_authenticated/planilha-5km'
+      path: '/planilha-5km'
+      fullPath: '/planilha-5km'
+      preLoaderRoute: typeof AuthenticatedPlanilha5kmRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/planilha-42km': {
+      id: '/_authenticated/planilha-42km'
+      path: '/planilha-42km'
+      fullPath: '/planilha-42km'
+      preLoaderRoute: typeof AuthenticatedPlanilha42kmRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/planilha-21km': {
+      id: '/_authenticated/planilha-21km'
+      path: '/planilha-21km'
+      fullPath: '/planilha-21km'
+      preLoaderRoute: typeof AuthenticatedPlanilha21kmRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/planilha-10km': {
+      id: '/_authenticated/planilha-10km'
+      path: '/planilha-10km'
+      fullPath: '/planilha-10km'
+      preLoaderRoute: typeof AuthenticatedPlanilha10kmRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/alunos/': {
+      id: '/_authenticated/alunos/'
+      path: '/alunos'
+      fullPath: '/alunos/'
+      preLoaderRoute: typeof AuthenticatedAlunosIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/alunos/novo': {
+      id: '/_authenticated/alunos/novo'
+      path: '/alunos/novo'
+      fullPath: '/alunos/novo'
+      preLoaderRoute: typeof AuthenticatedAlunosNovoRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/alunos/$studentId': {
+      id: '/_authenticated/alunos/$studentId'
+      path: '/alunos/$studentId'
+      fullPath: '/alunos/$studentId'
+      preLoaderRoute: typeof AuthenticatedAlunosStudentIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedPlanilha10kmRoute: typeof AuthenticatedPlanilha10kmRoute
+  AuthenticatedPlanilha21kmRoute: typeof AuthenticatedPlanilha21kmRoute
+  AuthenticatedPlanilha42kmRoute: typeof AuthenticatedPlanilha42kmRoute
+  AuthenticatedPlanilha5kmRoute: typeof AuthenticatedPlanilha5kmRoute
+  AuthenticatedTeste3kmRoute: typeof AuthenticatedTeste3kmRoute
+  AuthenticatedAlunosStudentIdRoute: typeof AuthenticatedAlunosStudentIdRoute
+  AuthenticatedAlunosNovoRoute: typeof AuthenticatedAlunosNovoRoute
+  AuthenticatedAlunosIndexRoute: typeof AuthenticatedAlunosIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedPlanilha10kmRoute: AuthenticatedPlanilha10kmRoute,
+  AuthenticatedPlanilha21kmRoute: AuthenticatedPlanilha21kmRoute,
+  AuthenticatedPlanilha42kmRoute: AuthenticatedPlanilha42kmRoute,
+  AuthenticatedPlanilha5kmRoute: AuthenticatedPlanilha5kmRoute,
+  AuthenticatedTeste3kmRoute: AuthenticatedTeste3kmRoute,
+  AuthenticatedAlunosStudentIdRoute: AuthenticatedAlunosStudentIdRoute,
+  AuthenticatedAlunosNovoRoute: AuthenticatedAlunosNovoRoute,
+  AuthenticatedAlunosIndexRoute: AuthenticatedAlunosIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

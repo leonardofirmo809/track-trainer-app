@@ -1,30 +1,36 @@
-## Problema
+## Diagnóstico
 
-Ao trocar de aba do navegador e voltar, o Supabase dispara `onAuthStateChange` (evento `TOKEN_REFRESHED` / `SIGNED_IN`) com uma nova referência de `session`. Isso causa a seguinte cascata:
+O servidor function `createCoachAccount` (e qualquer outra protegida por `requireSupabaseAuth`) **nunca executa com sucesso** porque o navegador não envia o header `Authorization: Bearer <token>` do Supabase para o endpoint interno `/_serverFn/...` do TanStack Start.
 
-1. `AuthProvider` faz `setSession(novaSessão)` → `user` vira um novo objeto.
-2. `useRoles` tem `user` no array de dependências do `useEffect` → re-executa e chama `setLoading(true)`.
-3. `AdminLayout` (`src/routes/_authenticated/admin.tsx`) faz `if (loading) return "Carregando…"` → **desmonta o `<Outlet/>`**.
-4. `AdminCoachesPage` desmonta junto, perdendo todo o estado local — incluindo `openManual` (o Dialog "Criar conta manual"), campos preenchidos, etc.
+Evidências coletadas no banco:
+- `auth.users`: só existe o admin `leonardofirmo809@gmail.com`. O usuário `gustavohdeoli@gmail.com` **nunca foi criado**.
+- `admin_audit_log`: 0 linhas (a função insere um log no fim, então nem chegou até lá).
+- `tests`: 0 linhas (mesmo problema afetaria `saveTeste3km`).
+- Quando chamei a Admin API diretamente (curl com service role), tudo funcionou: o trigger `on_auth_user_created` criou perfil + role `coach` corretamente. Logo, **o backend está OK**; o problema é só o transporte do token.
 
-Quando o fetch termina, o componente remonta zerado → diálogo fechado.
+O middleware `requireSupabaseAuth` lê `request.headers.get('authorization')` e devolve 401 se ausente. Não existe nenhum interceptor de fetch no projeto que adicione esse header — por isso toda chamada de server function autenticada está silenciosamente falhando.
 
 ## Correção
 
-### 1. `src/lib/use-role.ts`
-- Depender de `user?.id` em vez do objeto `user` inteiro, para não re-disparar a cada token refresh.
-- Não voltar para `loading = true` quando já temos roles para o mesmo usuário (evita o flicker que desmonta o Outlet). Manter loading apenas no primeiro fetch.
+Instalar um interceptor global de `fetch` no bundle do cliente que, para chamadas a server functions do TanStack (`/_serverFn/`), injeta automaticamente o `Authorization: Bearer` com o `access_token` da sessão atual do Supabase.
 
-### 2. `src/lib/auth-context.tsx`
-- Ignorar eventos do `onAuthStateChange` quando o `user.id` da sessão não mudou (evita atualizações de referência desnecessárias por `TOKEN_REFRESHED`). Atualizar `session` somente se `s?.user?.id !== session?.user?.id`, ou guardar o token e atualizar sem trocar a referência do `user` para os consumidores que dependem só do id.
+### Passos
 
-### 3. `src/routes/_authenticated/admin.tsx` (defesa em profundidade)
-- Mostrar "Carregando…" apenas no primeiro carregamento (quando `roles` ainda está vazio e `loading` é true). Se já sabemos que é admin, não desmontar o `<Outlet/>` durante um refetch silencioso.
+1. **Criar `src/integrations/supabase/fetch-interceptor.ts`**
+   - Função `installServerFnAuthInterceptor()` que envolve `globalThis.fetch`.
+   - Para URLs que contenham `/_serverFn/` (ou começo relativo `/_serverFn`), chama `supabase.auth.getSession()` e adiciona `Authorization: Bearer <access_token>` se ainda não houver.
+   - Idempotente (não reinstala se já tiver sido instalado).
+   - Roda só no browser (`if (typeof window === 'undefined') return`).
 
-## Resultado esperado
+2. **Ativar o interceptor em `src/lib/auth-context.tsx`**
+   - Chamar `installServerFnAuthInterceptor()` no topo do `AuthProvider` (uma vez), antes de fazer `getSession`.
 
-Trocar de aba e voltar mantém o diálogo "Criar conta manual" (e qualquer outro estado local de página) intacto, pois o `Outlet` não é mais desmontado em refreshes de token.
+3. **Validar**
+   - Reabrir "Criar conta manual" com um e-mail de teste e confirmar que aparece em `Treinadores ativos` e que entra em `admin_audit_log`.
+   - Confirmar que o login com a senha definida funciona.
 
-## Escopo
+### Observação sobre o problema secundário relatado
 
-Apenas frontend; nenhuma mudança em banco, RLS ou edge functions.
+O usuário disse que "ele não consegue logar" — isso é consequência direta: como o usuário nunca foi criado no `auth.users`, qualquer tentativa de login com `gustavohdeoli@gmail.com` retorna "Invalid credentials". Após o fix acima, novas contas funcionarão imediatamente (o `email_confirm: true` já está no `createUser`, então não exige confirmação por e-mail).
+
+Não há mudanças de banco de dados, RLS, triggers ou de UI necessárias.

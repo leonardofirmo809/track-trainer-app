@@ -149,7 +149,7 @@ function PerfilAluno() {
                                         </div>
                                         <div className="text-sm font-mono">
                                           <p className="text-xs text-muted-foreground">PACE</p>
-                                          {z.id === "Z5" ? "Máx" : formatMmss(z.paceFromSec ?? 0)} → {formatMmss(z.paceToSec)}
+                                          {(() => { const slow = z.paceSlowSec ?? z.paceFromSec ?? null; const fast = z.paceFastSec ?? z.paceToSec ?? null; return `${slow == null ? "Máx" : formatMmss(slow)} → ${fast == null ? "Máx" : formatMmss(fast)}`; })()}
                                         </div>
                                         <div className="text-sm font-mono">
                                           <p className="text-xs text-muted-foreground">km/h</p>

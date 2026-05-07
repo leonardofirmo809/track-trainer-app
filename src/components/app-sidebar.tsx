@@ -26,8 +26,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { user, signOut } = useAuth();
-  const { isAdmin, loading: rolesLoading } = useRoles();
-  const isDev = import.meta.env.DEV;
+  const { isAdmin } = useRoles();
   const isActive = (u: string) => path === u || path.startsWith(u + "/");
   const initials = (user?.user_metadata?.full_name || user?.email || "?").slice(0, 2).toUpperCase();
 
@@ -70,16 +69,6 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {rolesLoading && isDev && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Verificando permissões…</SidebarGroupLabel>
-          </SidebarGroup>
-        )}
-        {!rolesLoading && !isAdmin && isDev && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-xs opacity-60">Sem permissão admin</SidebarGroupLabel>
-          </SidebarGroup>
-        )}
         {isAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel>Administração</SidebarGroupLabel>

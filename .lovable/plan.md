@@ -1,35 +1,36 @@
-## Problema
+## Causa raiz
 
-O grupo "Administração" já existe em `src/components/app-sidebar.tsx` e é renderizado quando `isAdmin === true` (vindo de `useRoles()` em `src/lib/use-role.ts`). No banco há 1 usuário com role `admin` (`5c5f18f4-…`), e a policy RLS `users see own roles` permite ao próprio usuário ler sua role. Mesmo assim o grupo não aparece.
+Logs mostram: `permission denied for function has_role`. A função `public.has_role` está com `proacl` apenas para `postgres/service_role/sandbox_exec` — sem `authenticated` nem `anon`.
 
-Causas prováveis:
-1. O usuário logado **não é** o admin do banco (login com outra conta).
-2. `useRoles()` falha silenciosamente (sem tratamento de erro/log) — qualquer rejeição da Promise deixa `roles=[]` e `isAdmin=false` sem aviso.
-3. Não há indicador de loading: enquanto a query roda, o grupo fica oculto e nunca reaparece se algo der errado.
+A tabela `public.user_roles` tem 4 policies; uma delas (`admins see all roles`) usa `has_role(auth.uid(), 'admin')`. Em qualquer `SELECT` do front, o Postgres avalia TODAS as policies aplicáveis, então mesmo o usuário só querendo ler suas próprias roles (via `users see own roles`) cai no `has_role` e recebe permissão negada.
 
-## Correções
+Consequência em cascata: `useRoles()` falha → `isAdmin=false` → grupo "Administração" no sidebar fica oculto → não há botão para criar usuário.
 
-### 1. Hardening de `src/lib/use-role.ts`
-- Tratar `error` da query e logar no console (`console.warn`) com a mensagem retornada por Supabase para facilitar debug futuro.
-- Garantir `setLoading(true)` no início e `setLoading(false)` em todos os caminhos.
-- Tipar a resposta corretamente.
+O mesmo problema afetará policies em `students`, `tests`, `coach_invites`, `admin_audit_log` etc. — qualquer policy que chama `has_role`.
 
-### 2. Sidebar tolerante a estado de loading + diagnóstico
-Em `src/components/app-sidebar.tsx`:
-- Importar `loading` de `useRoles()`.
-- Enquanto `loading === true`, renderizar um item placeholder ("Verificando permissões…") no lugar do grupo, **somente em dev** (`import.meta.env.DEV`), para confirmar que a query roda.
-- Quando `loading === false && !isAdmin`, em dev mostrar um pequeno texto "Sem permissão admin" no rodapé do sidebar (apenas dev), para o usuário entender o porquê. Em produção, comportamento atual (oculto).
+## Correção
 
-### 3. Verificação rápida do usuário logado
-Adicionar no Dashboard (`src/routes/_authenticated/dashboard.tsx`) um aviso de uma linha **só em dev** mostrando o `user.id` atual. Isso permite confirmar visualmente se a conta logada bate com a admin (`5c5f18f4-bc8b-4c63-9e06-4accfd4699ce`).
+Migração SQL única:
 
-> Se após isso ficar claro que o usuário logado **não é** o admin, a solução é simplesmente fazer login com a conta admin correta — ou promover a conta atual via SQL (`INSERT INTO user_roles (user_id, role) VALUES ('<id>', 'admin')`).
+```sql
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated;
+```
+
+Isso restaura o comportamento esperado. A função é `SECURITY DEFINER` e só lê `user_roles` filtrando por `_user_id`, então conceder EXECUTE para `authenticated` é seguro (continua sendo o padrão recomendado pelo guia de RBAC do Supabase). Não concedemos para `anon`.
+
+## Validação
+
+Após a migração:
+1. Recarregar `/dashboard` com a conta `leonardofirmo809@gmail.com`.
+2. Confirmar no console que `[useRoles] failed…` desapareceu.
+3. Conferir que o grupo "Administração" aparece no sidebar com Visão geral / Treinadores / Alunos / Auditoria.
+4. Em `/admin/treinadores`, o botão de criar usuário manual estará visível.
 
 ## Fora de escopo
-- Criar UI de "promover usuário a admin" (já existe a tela `/admin/treinadores`).
-- Mudar layout/posição do menu Admin (usuário pediu apenas que o sidebar volte a mostrar).
+
+- Refatorar policies (continuam corretas).
+- Mexer em código frontend — o problema é puramente de permissão SQL.
 
 ## Arquivos alterados
-- `src/lib/use-role.ts` — tratamento de erro + log
-- `src/components/app-sidebar.tsx` — placeholder de loading e mensagem dev
-- `src/routes/_authenticated/dashboard.tsx` — badge dev com user.id
+
+- Nova migração SQL (apenas o GRANT acima).

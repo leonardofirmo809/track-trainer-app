@@ -147,6 +147,40 @@ function AdminCoachesPage() {
           <h1 className="text-3xl font-display font-bold">Treinadores</h1>
           <p className="text-muted-foreground">Convide novos treinadores e gerencie acessos.</p>
         </div>
+        <div className="flex gap-2">
+        <Dialog open={openManual} onOpenChange={setOpenManual}>
+          <DialogTrigger asChild>
+            <Button variant="outline"><KeyRound className="size-4 mr-2" /> Criar conta manual</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Criar conta manual</DialogTitle>
+              <DialogDescription>Defina nome, e-mail e senha do treinador. A conta fica ativa imediatamente.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="mname">Nome completo</Label>
+                <Input id="mname" value={mName} onChange={(e) => setMName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="memail">Email</Label>
+                <Input id="memail" type="email" value={mEmail} onChange={(e) => setMEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mpass">Senha (mín. 8 caracteres)</Label>
+                <Input id="mpass" type="password" value={mPass} onChange={(e) => setMPass(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mconfirm">Confirmar senha</Label>
+                <Input id="mconfirm" type="password" value={mConfirm} onChange={(e) => setMConfirm(e.target.value)} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenManual(false)}>Cancelar</Button>
+              <Button onClick={submitManual} disabled={mCreating}><Plus className="size-4 mr-2" />{mCreating ? "Criando…" : "Criar conta"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button><UserPlus className="size-4 mr-2" /> Convidar treinador</Button>

@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      coach_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          full_name: string
+          id: string
+          invited_by: string | null
+          status: Database["public"]["Enums"]["invite_status"]
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          full_name: string
+          id?: string
+          invited_by?: string | null
+          status?: Database["public"]["Enums"]["invite_status"]
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          full_name?: string
+          id?: string
+          invited_by?: string | null
+          status?: Database["public"]["Enums"]["invite_status"]
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -206,14 +245,52 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_invite_by_token: {
+        Args: { _token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          full_name: string
+          status: Database["public"]["Enums"]["invite_status"]
+        }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "coach"
+      invite_status: "pending" | "accepted" | "revoked"
       plan_status: "ativa" | "concluida" | "arquivada"
       plan_type: "5km" | "10km" | "21km" | "42km"
       student_level: "iniciante" | "intermediario" | "avancado"
@@ -346,6 +423,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "coach"],
+      invite_status: ["pending", "accepted", "revoked"],
       plan_status: ["ativa", "concluida", "arquivada"],
       plan_type: ["5km", "10km", "21km", "42km"],
       student_level: ["iniciante", "intermediario", "avancado"],

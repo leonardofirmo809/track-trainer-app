@@ -1,91 +1,69 @@
-## Visão Geral
+## Objetivo
 
-Sistema web para professores de corrida prescreverem treinos. Nesta primeira fase, foco em estrutura: autenticação, banco de dados, navegação e telas vazias/visuais — sem lógica de cálculo de planilhas.
+Permitir que apenas treinadores convidados pelo administrador criem suas contas no PaceLab. O fluxo será: admin convida por e-mail → treinador recebe link → define senha → acessa o sistema. Inclui também um painel admin para gerenciar treinadores.
 
-## Stack
+## Fluxo do usuário
 
-- TanStack Start (já configurado) + Tailwind + shadcn/ui
-- Lovable Cloud (Supabase) para auth e banco
-- Sidebar shadcn com navegação por rotas
+1. **Admin** acessa `/admin/treinadores` e clica em "Convidar treinador" → informa nome + e-mail.
+2. Sistema cria um convite (token único, validade 7 dias) e dispara um e-mail com link `/aceitar-convite?token=...`.
+3. **Treinador** abre o link, vê seu nome/e-mail pré-preenchidos e define apenas a senha.
+4. Conta é criada, perfil populado, convite marcado como usado e treinador é redirecionado ao `/dashboard`.
+5. **Cadastro público (`/signup`) é desativado** — toda criação de conta passa pelo convite.
 
-## Banco de Dados (Lovable Cloud)
+## Mudanças no banco
 
-Tabelas com RLS para que cada professor veja apenas seus dados:
+Nova tabela `coach_invites`:
+- `email`, `full_name`, `token` (único), `invited_by` (admin), `status` (`pending` / `accepted` / `revoked` / `expired`), `expires_at`, `accepted_at`.
 
-- `profiles` — dados do professor (id → auth.users, nome, email, avatar)
-- `students` — alunos (id, coach_id → profiles, nome, email, telefone, data_nascimento, sexo, objetivo, nivel [iniciante/intermediário/avançado], distancia_alvo [5/10/21/42], historico_lesoes, observacoes, created_at)
-- `tests` — histórico de testes (id, student_id, tipo [ex: 3km], data, tempo, pace, observacoes, created_at) — sem cálculos por enquanto
-- `training_plans` — planilhas geradas (id, student_id, tipo [5km/10km/21km/42km], data_inicio, data_fim, status, payload jsonb vazio por ora, created_at)
+Nova tabela `user_roles` + enum `app_role` (`admin`, `coach`) seguindo o padrão de segurança recomendado (tabela separada + função `has_role` SECURITY DEFINER). Sem isso não há como diferenciar admin de treinador com segurança.
 
-Trigger: criar `profiles` automaticamente ao registrar usuário.
-RLS: todas as tabelas filtradas por `coach_id = auth.uid()` (direta ou via join em student).
+Atualizações:
+- Trigger `handle_new_user` passará a também: (a) atribuir role `coach` por padrão, (b) consumir o convite correspondente ao e-mail (se houver) e usar o `full_name` do convite.
+- RLS: apenas admins podem ler/criar/revogar convites. Token de convite é consultado por uma server function pública (sem expor a tabela inteira).
 
-## Autenticação
+## Telas novas
 
-- Email + senha (auto-confirm para facilitar testes)
-- Páginas: `/login`, `/signup`
-- Layout `_authenticated` protegendo rotas internas
-- Logout no header
+1. **`/admin/treinadores`** (rota protegida, requer role `admin`)
+   - Lista de treinadores cadastrados (nome, e-mail, data de criação, nº de alunos).
+   - Lista de convites pendentes com ações: reenviar, revogar, copiar link.
+   - Botão "Convidar treinador" abre modal (nome + e-mail).
 
-## Estrutura de Rotas
+2. **`/aceitar-convite`** (rota pública)
+   - Valida token via server function. Mostra nome/e-mail do convite (read-only) e campo "Criar senha" + "Confirmar senha".
+   - Em caso de token inválido/expirado/já usado, mostra mensagem clara.
 
-```
-src/routes/
-  index.tsx                          → redireciona para /dashboard ou /login
-  login.tsx
-  signup.tsx
-  _authenticated.tsx                 → guard + layout com Sidebar
-  _authenticated/
-    dashboard.tsx                    → cards-resumo (nº alunos, testes recentes, planilhas ativas)
-    alunos.index.tsx                 → lista + filtros (nome, nível, distância) + botão "Novo aluno"
-    alunos.novo.tsx                  → formulário de cadastro
-    alunos.$studentId.tsx            → perfil do aluno com abas
-    teste-3km.tsx                    → área Teste de 3KM (placeholder)
-    planilha-5km.tsx                 → placeholder
-    planilha-10km.tsx                → placeholder
-    planilha-21km.tsx                → placeholder
-    planilha-42km.tsx                → placeholder
-```
+3. **Item "Administração"** no menu lateral, visível apenas para admins.
 
-## Layout Visual
+4. **`/signup` desativado**: a página passa a explicar que o acesso é por convite e direciona para `/login`. O link "criar conta" do `/login` é removido.
 
-- **Sidebar fixa esquerda** (shadcn `Sidebar`, collapsible icon):
-  - Dashboard
-  - Alunos
-  - Separador "Prescrição"
-  - Teste de 3KM
-  - Planilha 5KM / 10KM / 21KM / 42KM
-  - Rodapé: avatar + nome do professor + logout
-- **Header** com `SidebarTrigger`, breadcrumb e perfil
-- **Dashboard**: 4 cards de métricas + tabela "Alunos recentes" + tabela "Últimos testes"
-- **Lista de alunos**: tabela com avatar, nome, nível (badge), distância-alvo, último teste, ações (ver / editar)
-- **Perfil do aluno** com abas (`Tabs` do shadcn):
-  1. Dados Pessoais
-  2. Objetivo & Nível
-  3. Histórico de Lesões
-  4. Observações
-  5. Histórico de Testes (tabela)
-  6. Histórico de Planilhas (tabela)
-- **Telas de Planilha (5/10/21/42 KM e Teste 3KM)**: placeholder elegante com card "Em breve — regras de prescrição serão adicionadas aqui", com seletor de aluno já visível para preparar o fluxo.
+## Como o primeiro admin é criado
 
-## Design
+Como ainda não há admins, o primeiro será promovido manualmente: depois que você criar sua própria conta de treinador, eu rodo um insert em `user_roles` atribuindo `admin` ao seu `user_id`. A partir daí você convida os demais treinadores pela própria interface.
 
-- Tema claro e moderno, paleta neutra com accent vibrante (verde-esporte / azul-performance) — definida em `src/styles.css` via tokens oklch
-- Tipografia: par display + sans (ex: Sora + Inter alternativo) carregada via Google Fonts
-- Cards com sombra sutil, badges para nível/distância, tabelas densas mas legíveis
-- Estados vazios ilustrados ("Nenhum aluno cadastrado ainda")
+## Envio do e-mail
 
-## Fora de Escopo (próximas etapas)
+O envio real do e-mail de convite exige configurar o domínio de e-mails do Lovable (passo único, leva alguns minutos para verificar o DNS). Sugestão de abordagem em duas fases para você não ficar bloqueado:
 
-- Cálculos de pace, zonas, progressão semanal
-- Geração automática de planilhas
-- Exportação PDF, notificações, app do aluno
+- **Fase 1 (agora):** criar todo o fluxo + tela admin. O modal de convite já gera o link `/aceitar-convite?token=...` e mostra um botão "Copiar link" para você enviar manualmente enquanto o domínio de e-mail não está configurado.
+- **Fase 2 (quando quiser):** ativar o envio automático do e-mail de convite com template próprio (assunto, corpo, marca PaceLab).
 
-## Entregáveis desta fase
+## Server functions
 
-1. Lovable Cloud habilitado + tabelas + RLS + trigger
-2. Auth completo (login/signup/logout/guard)
-3. Sidebar + layout autenticado
-4. CRUD de alunos (criar, listar, ver perfil) — edição/remoção podem vir junto se couber
-5. Telas de perfil com abas e tabelas vazias prontas
-6. Placeholders das 5 áreas de prescrição
+- `createCoachInvite({ email, fullName })` — apenas admin; insere em `coach_invites`.
+- `getInviteByToken({ token })` — pública; retorna apenas `email`, `full_name` e validade do convite.
+- `acceptCoachInvite({ token, password })` — pública; cria o usuário no auth com o e-mail do convite, marca convite como usado.
+- `revokeCoachInvite({ id })` / `resendCoachInvite({ id })` — admin.
+
+## Detalhes técnicos
+
+- Validação client + server com Zod (e-mail válido, senha mínima 8, nome 2-100).
+- Token: `crypto.randomUUID()` + sufixo aleatório, armazenado em texto (tabela protegida por RLS; lookup só via server function).
+- Validade padrão: 7 dias. Reenviar gera novo token.
+- Sidebar usa `auth.user` + role para mostrar/esconder o item "Administração".
+- `_authenticated` ganha rota filha `_admin` com `beforeLoad` que redireciona para `/dashboard` se o usuário não tiver role `admin`.
+
+## Fora de escopo (para depois)
+
+- Integração com gateway de pagamento (Stripe/Paddle) gerando convite automaticamente após a compra.
+- Limite de alunos por treinador / planos.
+- Auditoria detalhada de convites.

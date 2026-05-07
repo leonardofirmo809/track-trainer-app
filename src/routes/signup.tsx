@@ -1,36 +1,11 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import { Activity } from "lucide-react";
+import { Activity, Mail } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/signup")({ component: SignupPage });
+export const Route = createFileRoute("/signup")({ component: SignupClosed });
 
-function SignupPage() {
-  const navigate = useNavigate();
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const redirect = typeof window !== "undefined" ? window.location.origin : undefined;
-    const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { full_name: fullName }, emailRedirectTo: redirect },
-    });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Conta criada! Você já pode entrar.");
-    navigate({ to: "/dashboard" });
-  };
-
+function SignupClosed() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       <div className="hidden lg:flex flex-col justify-between p-12 bg-sidebar text-sidebar-foreground">
@@ -39,36 +14,25 @@ function SignupPage() {
           <span className="font-display text-xl font-bold">PaceLab</span>
         </div>
         <div>
-          <h1 className="text-4xl font-bold leading-tight">Comece a prescrever em minutos.</h1>
-          <p className="mt-4 text-sidebar-foreground/70 max-w-md">Crie sua conta de professor e centralize alunos, testes e planilhas de corrida.</p>
+          <h1 className="text-4xl font-bold leading-tight">Acesso por convite.</h1>
+          <p className="mt-4 text-sidebar-foreground/70 max-w-md">O PaceLab é exclusivo para treinadores cadastrados. Após a compra, você recebe um link para criar sua conta.</p>
         </div>
         <p className="text-xs text-sidebar-foreground/50">© {new Date().getFullYear()} PaceLab</p>
       </div>
       <div className="flex items-center justify-center p-6">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl">Criar conta</CardTitle>
-            <CardDescription>Cadastro de professor</CardDescription>
+            <CardTitle className="text-2xl">Cadastro por convite</CardTitle>
+            <CardDescription>Você precisa de um link de convite para criar sua conta.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome completo</Label>
-                <Input id="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>{loading ? "Criando…" : "Criar conta"}</Button>
-              <p className="text-sm text-muted-foreground text-center">
-                Já tem conta? <Link to="/login" className="text-primary font-medium hover:underline">Entrar</Link>
-              </p>
-            </form>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
+              <Mail className="size-4 mt-0.5 shrink-0" />
+              <p>Após adquirir o sistema, você receberá um e-mail com o link para definir sua senha e ativar a conta.</p>
+            </div>
+            <Button asChild className="w-full" variant="outline">
+              <Link to="/login">Já tenho conta — Entrar</Link>
+            </Button>
           </CardContent>
         </Card>
       </div>

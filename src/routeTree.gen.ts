@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTeste3kmRouteImport } from './routes/_authenticated/teste-3km'
@@ -19,9 +20,11 @@ import { Route as AuthenticatedPlanilha42kmRouteImport } from './routes/_authent
 import { Route as AuthenticatedPlanilha21kmRouteImport } from './routes/_authenticated/planilha-21km'
 import { Route as AuthenticatedPlanilha10kmRouteImport } from './routes/_authenticated/planilha-10km'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAlunosIndexRouteImport } from './routes/_authenticated/alunos.index'
 import { Route as AuthenticatedAlunosNovoRouteImport } from './routes/_authenticated/alunos.novo'
 import { Route as AuthenticatedAlunosStudentIdRouteImport } from './routes/_authenticated/alunos.$studentId'
+import { Route as AuthenticatedAdminTreinadoresRouteImport } from './routes/_authenticated/admin.treinadores'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -31,6 +34,11 @@ const SignupRoute = SignupRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AceitarConviteRoute = AceitarConviteRouteImport.update({
+  id: '/aceitar-convite',
+  path: '/aceitar-convite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -76,6 +84,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAlunosIndexRoute =
   AuthenticatedAlunosIndexRouteImport.update({
     id: '/alunos/',
@@ -93,31 +106,43 @@ const AuthenticatedAlunosStudentIdRoute =
     path: '/alunos/$studentId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminTreinadoresRoute =
+  AuthenticatedAdminTreinadoresRouteImport.update({
+    id: '/treinadores',
+    path: '/treinadores',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
   '/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
   '/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
   '/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
   '/teste-3km': typeof AuthenticatedTeste3kmRoute
+  '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/alunos/': typeof AuthenticatedAlunosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
   '/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
   '/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
   '/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
   '/teste-3km': typeof AuthenticatedTeste3kmRoute
+  '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/alunos': typeof AuthenticatedAlunosIndexRoute
@@ -126,14 +151,17 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
   '/_authenticated/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
   '/_authenticated/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
   '/_authenticated/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
   '/_authenticated/teste-3km': typeof AuthenticatedTeste3kmRoute
+  '/_authenticated/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/_authenticated/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
   '/_authenticated/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/_authenticated/alunos/': typeof AuthenticatedAlunosIndexRoute
@@ -142,28 +170,34 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/aceitar-convite'
     | '/login'
     | '/signup'
+    | '/admin'
     | '/dashboard'
     | '/planilha-10km'
     | '/planilha-21km'
     | '/planilha-42km'
     | '/planilha-5km'
     | '/teste-3km'
+    | '/admin/treinadores'
     | '/alunos/$studentId'
     | '/alunos/novo'
     | '/alunos/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/aceitar-convite'
     | '/login'
     | '/signup'
+    | '/admin'
     | '/dashboard'
     | '/planilha-10km'
     | '/planilha-21km'
     | '/planilha-42km'
     | '/planilha-5km'
     | '/teste-3km'
+    | '/admin/treinadores'
     | '/alunos/$studentId'
     | '/alunos/novo'
     | '/alunos'
@@ -171,14 +205,17 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/aceitar-convite'
     | '/login'
     | '/signup'
+    | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/planilha-10km'
     | '/_authenticated/planilha-21km'
     | '/_authenticated/planilha-42km'
     | '/_authenticated/planilha-5km'
     | '/_authenticated/teste-3km'
+    | '/_authenticated/admin/treinadores'
     | '/_authenticated/alunos/$studentId'
     | '/_authenticated/alunos/novo'
     | '/_authenticated/alunos/'
@@ -187,6 +224,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AceitarConviteRoute: typeof AceitarConviteRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
 }
@@ -205,6 +243,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aceitar-convite': {
+      id: '/aceitar-convite'
+      path: '/aceitar-convite'
+      fullPath: '/aceitar-convite'
+      preLoaderRoute: typeof AceitarConviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -263,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/alunos/': {
       id: '/_authenticated/alunos/'
       path: '/alunos'
@@ -284,10 +336,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAlunosStudentIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/treinadores': {
+      id: '/_authenticated/admin/treinadores'
+      path: '/treinadores'
+      fullPath: '/admin/treinadores'
+      preLoaderRoute: typeof AuthenticatedAdminTreinadoresRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminTreinadoresRoute: typeof AuthenticatedAdminTreinadoresRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminTreinadoresRoute: AuthenticatedAdminTreinadoresRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
 interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedPlanilha10kmRoute: typeof AuthenticatedPlanilha10kmRoute
   AuthenticatedPlanilha21kmRoute: typeof AuthenticatedPlanilha21kmRoute
@@ -300,6 +371,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedPlanilha10kmRoute: AuthenticatedPlanilha10kmRoute,
   AuthenticatedPlanilha21kmRoute: AuthenticatedPlanilha21kmRoute,
@@ -318,6 +390,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AceitarConviteRoute: AceitarConviteRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
 }

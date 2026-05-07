@@ -183,8 +183,9 @@ function Teste3kmPage() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-end">
-              <Button onClick={handleSalvar} disabled={saving}><Save /> {saving ? "Salvando…" : "Salvar no perfil do aluno"}</Button>
+            <div className="flex justify-end items-center gap-3">
+              {!studentId && <p className="text-sm text-muted-foreground">Selecione um aluno acima para salvar este resultado.</p>}
+              <Button onClick={handleSalvar} disabled={saving || !studentId}><Save /> {saving ? "Salvando…" : "Salvar no perfil do aluno"}</Button>
             </div>
           </CardContent>
         </Card>

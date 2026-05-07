@@ -1,20 +1,29 @@
-## Objetivo
-Permitir realizar testes de 3KM avulsos, sem precisar selecionar um aluno. O cálculo de FTP e zonas funciona normalmente; o salvamento no perfil do aluno só fica disponível quando há aluno selecionado.
+## Diagnóstico
 
-## Mudanças
+Verifiquei o banco: a tabela de convites (`coach_invites`) está **completamente vazia** e o log de auditoria (`admin_audit_log`) também não tem nenhum registro de `invite_created`. O único usuário existente é o seu (LEONARDO, admin). Ou seja, o `INSERT` do convite **nunca chegou ao banco**, embora você tenha visto o toast de sucesso.
 
-### 1. `src/routes/_authenticated/teste-3km.tsx`
-- Tornar o campo "Aluno" opcional (remover o `*` e a validação que bloqueia o cálculo).
-- Em `handleCalcular`: remover o `if (!studentId)` — basta validar o tempo.
-- No cabeçalho do resultado: mostrar "Aluno: {nome}" só quando houver aluno; caso contrário exibir "Teste avulso".
-- Botão "Salvar no perfil do aluno":
-  - Se não houver aluno selecionado → botão desabilitado com tooltip/hint "Selecione um aluno para salvar".
-  - Adicionar texto auxiliar próximo: "Para salvar este resultado, selecione um aluno acima."
-- Adicionar botão secundário "Limpar" para reiniciar o formulário rapidamente entre testes avulsos.
-- Trocar placeholder do select para incluir opção implícita "Nenhum (teste avulso)" — manter o select limpável (ou adicionar um item "— Nenhum (avulso) —" no topo da lista que zera `studentId`).
+Hipóteses prováveis:
+1. **Site publicado desatualizado.** Mudanças de frontend só vão ao ar quando você clica em **Publish → Update**. Se a versão publicada ainda não tem a tela de convite atual, o botão pode estar exibindo sucesso sem realmente persistir (versão antiga do código).
+2. **Toast otimista com erro silencioso.** O código atual mostra erro via `toast.error(error.message)` — então isso é menos provável, mas vale confirmar.
+3. **E-mail digitado em outra tela** (ex.: cadastro de aluno) por engano.
+
+## Plano de correção
+
+### 1. Republicar o app
+- Abrir o diálogo de Publish e clicar em **Update** para garantir que a versão publicada tem a tela atual de Treinadores.
+
+### 2. Endurecer a tela `admin.treinadores.tsx`
+Para evitar "sucesso fantasma" no futuro:
+- No `createInvite`, só mostrar toast de sucesso se `data?.id` estiver presente; caso contrário mostrar erro detalhado.
+- Logar `error` no console com prefixo `[invite]` para facilitar debug pelo console do navegador.
+- Após `load()`, validar que o novo convite aparece na lista; se não aparecer, mostrar aviso.
+
+### 3. Reproduzir o caso do gustavohdeoli@gmail.com
+- Após republicar, refazer o convite com o console do navegador aberto.
+- Se ainda falhar, capturar o erro do console/network (request `POST /rest/v1/coach_invites`) — aí teremos a causa raiz (RLS, validação, etc.).
 
 ### Fora do escopo
-- Persistir testes avulsos no banco (não há vínculo com aluno/coach, e a tabela `tests` exige `student_id` e `coach_id` NOT NULL).
-- Histórico de testes avulsos.
+- Mudar o fluxo de convite (continua sendo link copiado).
+- Envio de e-mail automático para o convidado.
 
-Apenas mudanças de frontend; nenhuma migração ou alteração de lógica de cálculo.
+Apenas mudanças de frontend em `src/routes/_authenticated/admin.treinadores.tsx`.

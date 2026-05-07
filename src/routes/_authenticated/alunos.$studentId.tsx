@@ -121,18 +121,51 @@ function PerfilAluno() {
               {tests.data && tests.data.length > 0 ? (
                 <Table>
                   <TableHeader><TableRow>
-                    <TableHead>Data</TableHead><TableHead>Tipo</TableHead><TableHead>Tempo (s)</TableHead><TableHead>Pace (s/km)</TableHead><TableHead>Observações</TableHead>
+                    <TableHead>Data</TableHead><TableHead>Tipo</TableHead><TableHead>Tempo</TableHead><TableHead>FTP (min/km)</TableHead><TableHead>Zonas</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
-                    {tests.data.map((t) => (
-                      <TableRow key={t.id}>
-                        <TableCell>{new Date(t.test_date).toLocaleDateString("pt-BR")}</TableCell>
-                        <TableCell><Badge variant="outline">{t.test_type}</Badge></TableCell>
-                        <TableCell>{t.duration_seconds ?? "—"}</TableCell>
-                        <TableCell>{t.pace_seconds_per_km ?? "—"}</TableCell>
-                        <TableCell className="max-w-[300px] truncate">{t.notes ?? "—"}</TableCell>
-                      </TableRow>
-                    ))}
+                    {tests.data.map((t) => {
+                      const meta = (t.metadata ?? {}) as { ftp_seconds_per_km?: number; zones?: Array<{ id: string; level: string; pseMin: number; pseMax: number; phrase: string; paceFromSec: number | null; paceToSec: number; velFrom: number; velTo: number | null }> };
+                      return (
+                        <TableRow key={t.id}>
+                          <TableCell>{new Date(t.test_date).toLocaleDateString("pt-BR")}</TableCell>
+                          <TableCell><Badge variant="outline">{t.test_type}</Badge></TableCell>
+                          <TableCell className="font-mono">{t.duration_seconds ? formatMmss(t.duration_seconds) : "—"}</TableCell>
+                          <TableCell className="font-mono">{meta.ftp_seconds_per_km ? formatMmss(meta.ftp_seconds_per_km) : (t.pace_seconds_per_km ? formatMmss(t.pace_seconds_per_km) : "—")}</TableCell>
+                          <TableCell>
+                            {meta.zones && meta.zones.length > 0 ? (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button size="sm" variant="outline"><Eye /> Ver zonas</Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-3xl">
+                                  <DialogHeader><DialogTitle>Zonas — {new Date(t.test_date).toLocaleDateString("pt-BR")}</DialogTitle></DialogHeader>
+                                  <div className="space-y-2">
+                                    {meta.zones.map((z) => (
+                                      <div key={z.id} className="rounded-md border p-3 grid gap-2 sm:grid-cols-4 items-center">
+                                        <div>
+                                          <p className="font-display font-bold">{z.id}</p>
+                                          <p className="text-xs text-muted-foreground">{z.level}</p>
+                                        </div>
+                                        <div className="text-sm font-mono">
+                                          <p className="text-xs text-muted-foreground">PACE</p>
+                                          {z.id === "Z5" ? "Máx" : formatMmss(z.paceFromSec ?? 0)} → {formatMmss(z.paceToSec)}
+                                        </div>
+                                        <div className="text-sm font-mono">
+                                          <p className="text-xs text-muted-foreground">km/h</p>
+                                          {z.velFrom.toFixed(2)} → {z.velTo == null ? "+" : z.velTo.toFixed(2)}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">PSE {z.pseMin}–{z.pseMax}<br/><span className="italic">"{z.phrase}"</span></div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            ) : <span className="text-xs text-muted-foreground">—</span>}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               ) : (

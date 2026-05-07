@@ -20,6 +20,8 @@ export type Teste3kmResult = {
   zones: Zone[];
 };
 
+// from = limite mais lento (menor %), to = limite mais rápido (maior %).
+// Display: "De" = pace/vel no `to` (mais rápido), "Até" = pace/vel no `from` (mais lento).
 const ZONE_DEFS = [
   { id: "Z1", from: 60, to: 76, pseMin: 1, pseMax: 2, level: "Muito Leve / Leve",
     phrase: "Posso correr para sempre nesse ritmo",
@@ -27,7 +29,7 @@ const ZONE_DEFS = [
   { id: "Z2", from: 76, to: 87, pseMin: 3, pseMax: 4, level: "Moderado / Um pouco Difícil",
     phrase: "Estou me segurando um pouco",
     color: "border-emerald-500 bg-emerald-100 dark:bg-emerald-900/40" },
-  { id: "Z3", from: 87, to: 100, pseMin: 5, pseMax: 6, level: "Difícil",
+  { id: "Z3", from: 93, to: 100, pseMin: 5, pseMax: 6, level: "Difícil",
     phrase: "Posso manter esse ritmo por 30 a 40 minutos",
     color: "border-amber-400 bg-amber-50 dark:bg-amber-950/40" },
   { id: "Z4", from: 102, to: 115, pseMin: 7, pseMax: 8, level: "Muito Difícil",

@@ -44,6 +44,15 @@ function AdminCoachesPage() {
   const [email, setEmail] = useState("");
   const [creating, setCreating] = useState(false);
 
+  // Manual create
+  const createCoach = useServerFn(createCoachAccount);
+  const [openManual, setOpenManual] = useState(false);
+  const [mName, setMName] = useState("");
+  const [mEmail, setMEmail] = useState("");
+  const [mPass, setMPass] = useState("");
+  const [mConfirm, setMConfirm] = useState("");
+  const [mCreating, setMCreating] = useState(false);
+
   const load = async () => {
     setLoading(true);
     const [{ data: inv }, { data: roleRows }] = await Promise.all([

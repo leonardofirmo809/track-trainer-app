@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { installServerFnAuthInterceptor } from "@/integrations/supabase/fetch-interceptor";
+
+if (typeof window !== "undefined") installServerFnAuthInterceptor();
 
 interface AuthCtx {
   user: User | null;

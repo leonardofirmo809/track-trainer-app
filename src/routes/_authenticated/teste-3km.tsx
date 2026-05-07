@@ -169,13 +169,13 @@ function Teste3kmPage() {
                     <div>
                       <p className="text-muted-foreground">PACE (min/km)</p>
                       <p className="font-mono font-semibold">
-                        {z.paceSlowSec == null ? "Máx" : formatMmss(z.paceSlowSec)} → {z.paceFastSec == null ? "Máx" : formatMmss(z.paceFastSec)}
+                        {z.paceFastSec == null ? "Máx" : formatMmss(z.paceFastSec)} → {z.paceSlowSec == null ? "Máx" : formatMmss(z.paceSlowSec)}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Esteira (km/h)</p>
                       <p className="font-mono font-semibold">
-                        {z.velFrom.toFixed(2)} → {z.velTo == null ? "+" : z.velTo.toFixed(2)}
+                        {z.velTo == null ? "Máx" : z.velTo.toFixed(1)} → {z.velFrom.toFixed(1)}
                       </p>
                     </div>
                   </div>

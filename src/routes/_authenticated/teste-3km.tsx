@@ -204,8 +204,11 @@ function Teste3kmPage() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-end items-center gap-3">
+            <div className="flex justify-end items-center gap-3 flex-wrap">
               {!studentId && <p className="text-sm text-muted-foreground">Selecione um aluno acima para salvar este resultado.</p>}
+              <Button variant="outline" onClick={handleExportPdf} disabled={exporting || !branding.data}>
+                <FileDown /> {exporting ? "Gerando…" : "Exportar PDF"}
+              </Button>
               <Button onClick={handleSalvar} disabled={saving || !studentId}><Save /> {saving ? "Salvando…" : "Salvar no perfil do aluno"}</Button>
             </div>
           </CardContent>

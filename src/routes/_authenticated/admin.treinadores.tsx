@@ -134,7 +134,13 @@ function AdminCoachesPage() {
       setOpenManual(false);
       load();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao criar conta";
+      let msg = "Erro ao criar conta";
+      if (e instanceof Response) {
+        try { msg = await e.text(); } catch { msg = `${e.status} ${e.statusText}`; }
+      } else if (e instanceof Error) {
+        msg = e.message;
+      }
+      console.error("[createCoachAccount] erro:", e);
       toast.error(msg);
     } finally {
       setMCreating(false);

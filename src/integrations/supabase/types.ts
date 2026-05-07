@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_type: Database["public"]["Enums"]["audit_event"]
+          id: string
+          metadata: Json
+          target_email: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_type: Database["public"]["Enums"]["audit_event"]
+          id?: string
+          metadata?: Json
+          target_email?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["audit_event"]
+          id?: string
+          metadata?: Json
+          target_email?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       coach_invites: {
         Row: {
           accepted_at: string | null
@@ -290,6 +320,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "coach"
+      audit_event:
+        | "invite_created"
+        | "invite_revoked"
+        | "invite_resent"
+        | "invite_accepted"
+        | "coach_created_manual"
       invite_status: "pending" | "accepted" | "revoked"
       plan_status: "ativa" | "concluida" | "arquivada"
       plan_type: "5km" | "10km" | "21km" | "42km"
@@ -424,6 +460,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "coach"],
+      audit_event: [
+        "invite_created",
+        "invite_revoked",
+        "invite_resent",
+        "invite_accepted",
+        "coach_created_manual",
+      ],
       invite_status: ["pending", "accepted", "revoked"],
       plan_status: ["ativa", "concluida", "arquivada"],
       plan_type: ["5km", "10km", "21km", "42km"],

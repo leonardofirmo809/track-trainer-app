@@ -26,7 +26,8 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { user, signOut } = useAuth();
-  const { isAdmin } = useRoles();
+  const { isAdmin, loading: rolesLoading } = useRoles();
+  const isDev = import.meta.env.DEV;
   const isActive = (u: string) => path === u || path.startsWith(u + "/");
   const initials = (user?.user_metadata?.full_name || user?.email || "?").slice(0, 2).toUpperCase();
 

@@ -26,6 +26,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAlunosNovoRouteImport } from './routes/_authenticated/alunos.novo'
 import { Route as AuthenticatedAlunosStudentIdRouteImport } from './routes/_authenticated/alunos.$studentId'
 import { Route as AuthenticatedAdminTreinadoresRouteImport } from './routes/_authenticated/admin.treinadores'
+import { Route as AuthenticatedAdminAuditoriaRouteImport } from './routes/_authenticated/admin.auditoria'
 import { Route as AuthenticatedAdminAlunosRouteImport } from './routes/_authenticated/admin.alunos'
 
 const SignupRoute = SignupRouteImport.update({
@@ -119,6 +120,12 @@ const AuthenticatedAdminTreinadoresRoute =
     path: '/treinadores',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminAuditoriaRoute =
+  AuthenticatedAdminAuditoriaRouteImport.update({
+    id: '/auditoria',
+    path: '/auditoria',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminAlunosRoute =
   AuthenticatedAdminAlunosRouteImport.update({
     id: '/alunos',
@@ -139,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
   '/teste-3km': typeof AuthenticatedTeste3kmRoute
   '/admin/alunos': typeof AuthenticatedAdminAlunosRoute
+  '/admin/auditoria': typeof AuthenticatedAdminAuditoriaRoute
   '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
@@ -157,6 +165,7 @@ export interface FileRoutesByTo {
   '/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
   '/teste-3km': typeof AuthenticatedTeste3kmRoute
   '/admin/alunos': typeof AuthenticatedAdminAlunosRoute
+  '/admin/auditoria': typeof AuthenticatedAdminAuditoriaRoute
   '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
@@ -178,6 +187,7 @@ export interface FileRoutesById {
   '/_authenticated/planilha-5km': typeof AuthenticatedPlanilha5kmRoute
   '/_authenticated/teste-3km': typeof AuthenticatedTeste3kmRoute
   '/_authenticated/admin/alunos': typeof AuthenticatedAdminAlunosRoute
+  '/_authenticated/admin/auditoria': typeof AuthenticatedAdminAuditoriaRoute
   '/_authenticated/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/_authenticated/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
   '/_authenticated/alunos/novo': typeof AuthenticatedAlunosNovoRoute
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/planilha-5km'
     | '/teste-3km'
     | '/admin/alunos'
+    | '/admin/auditoria'
     | '/admin/treinadores'
     | '/alunos/$studentId'
     | '/alunos/novo'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/planilha-5km'
     | '/teste-3km'
     | '/admin/alunos'
+    | '/admin/auditoria'
     | '/admin/treinadores'
     | '/alunos/$studentId'
     | '/alunos/novo'
@@ -237,6 +249,7 @@ export interface FileRouteTypes {
     | '/_authenticated/planilha-5km'
     | '/_authenticated/teste-3km'
     | '/_authenticated/admin/alunos'
+    | '/_authenticated/admin/auditoria'
     | '/_authenticated/admin/treinadores'
     | '/_authenticated/alunos/$studentId'
     | '/_authenticated/alunos/novo'
@@ -373,6 +386,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminTreinadoresRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/auditoria': {
+      id: '/_authenticated/admin/auditoria'
+      path: '/auditoria'
+      fullPath: '/admin/auditoria'
+      preLoaderRoute: typeof AuthenticatedAdminAuditoriaRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/alunos': {
       id: '/_authenticated/admin/alunos'
       path: '/alunos'
@@ -385,12 +405,14 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAlunosRoute: typeof AuthenticatedAdminAlunosRoute
+  AuthenticatedAdminAuditoriaRoute: typeof AuthenticatedAdminAuditoriaRoute
   AuthenticatedAdminTreinadoresRoute: typeof AuthenticatedAdminTreinadoresRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAlunosRoute: AuthenticatedAdminAlunosRoute,
+  AuthenticatedAdminAuditoriaRoute: AuthenticatedAdminAuditoriaRoute,
   AuthenticatedAdminTreinadoresRoute: AuthenticatedAdminTreinadoresRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }

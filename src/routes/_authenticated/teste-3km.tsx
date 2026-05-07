@@ -31,6 +31,25 @@ function Teste3kmPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Teste3kmResult | null>(null);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const branding = useCoachBranding();
+
+  async function handleExportPdf() {
+    if (!result || !branding.data) return;
+    setExporting(true);
+    try {
+      const blob = await generateTeste3kmPdf({
+        result, studentName: studentName || null, testDate: date, branding: branding.data,
+      });
+      const safe = (studentName || "teste-avulso").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      downloadPdf(blob, `teste-3km-${safe}-${date}.pdf`);
+      toast.success("PDF gerado.");
+    } catch (e) {
+      toast.error(`Falha ao gerar PDF: ${(e as Error).message}`);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const students = useQuery({
     queryKey: ["students-list"],

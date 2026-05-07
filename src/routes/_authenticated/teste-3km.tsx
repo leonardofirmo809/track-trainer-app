@@ -135,8 +135,9 @@ function Teste3kmPage() {
             <Input id="data" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           {error && <div className="md:col-span-3 text-sm text-destructive">{error}</div>}
-          <div className="md:col-span-3">
+          <div className="md:col-span-3 flex gap-2">
             <Button onClick={handleCalcular}><Calculator /> Calcular</Button>
+            <Button variant="outline" onClick={handleLimpar}>Limpar</Button>
           </div>
         </CardContent>
       </Card>

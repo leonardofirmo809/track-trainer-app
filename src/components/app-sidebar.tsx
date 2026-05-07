@@ -70,6 +70,16 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {rolesLoading && isDev && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Verificando permissões…</SidebarGroupLabel>
+          </SidebarGroup>
+        )}
+        {!rolesLoading && !isAdmin && isDev && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs opacity-60">Sem permissão admin</SidebarGroupLabel>
+          </SidebarGroup>
+        )}
         {isAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel>Administração</SidebarGroupLabel>

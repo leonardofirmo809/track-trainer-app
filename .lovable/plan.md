@@ -1,36 +1,52 @@
-## Diagnóstico
+## Objetivo
 
-O servidor function `createCoachAccount` (e qualquer outra protegida por `requireSupabaseAuth`) **nunca executa com sucesso** porque o navegador não envia o header `Authorization: Bearer <token>` do Supabase para o endpoint interno `/_serverFn/...` do TanStack Start.
+Adicionar botão "Exportar PDF" na tela do Teste de 3km que gera um PDF completo personalizado com a logo e as cores do treinador logado.
 
-Evidências coletadas no banco:
-- `auth.users`: só existe o admin `leonardofirmo809@gmail.com`. O usuário `gustavohdeoli@gmail.com` **nunca foi criado**.
-- `admin_audit_log`: 0 linhas (a função insere um log no fim, então nem chegou até lá).
-- `tests`: 0 linhas (mesmo problema afetaria `saveTeste3km`).
-- Quando chamei a Admin API diretamente (curl com service role), tudo funcionou: o trigger `on_auth_user_created` criou perfil + role `coach` corretamente. Logo, **o backend está OK**; o problema é só o transporte do token.
+## 1. Configuração da marca do treinador (uma vez)
 
-O middleware `requireSupabaseAuth` lê `request.headers.get('authorization')` e devolve 401 se ausente. Não existe nenhum interceptor de fetch no projeto que adicione esse header — por isso toda chamada de server function autenticada está silenciosamente falhando.
+Estender a tabela `profiles` com:
+- `brand_logo_url` (text) — URL pública da logo
+- `brand_primary_color` (text) — cor primária em hex (ex: `#0EA5E9`)
+- `brand_secondary_color` (text) — cor secundária em hex
 
-## Correção
+Criar bucket de storage `coach-branding` (público para leitura, escrita restrita ao próprio treinador via RLS por path `{user_id}/...`).
 
-Instalar um interceptor global de `fetch` no bundle do cliente que, para chamadas a server functions do TanStack (`/_serverFn/`), injeta automaticamente o `Authorization: Bearer` com o `access_token` da sessão atual do Supabase.
+Nova página **"Minha marca"** em `src/routes/_authenticated/minha-marca.tsx` (link na sidebar) com:
+- Upload da logo (PNG/JPG/SVG, até 2MB) → sobe para `coach-branding/{userId}/logo.{ext}`
+- Color pickers para cor primária e secundária
+- Preview de como ficará no PDF
+- Botão Salvar (atualiza `profiles`)
 
-### Passos
+## 2. Geração do PDF
 
-1. **Criar `src/integrations/supabase/fetch-interceptor.ts`**
-   - Função `installServerFnAuthInterceptor()` que envolve `globalThis.fetch`.
-   - Para URLs que contenham `/_serverFn/` (ou começo relativo `/_serverFn`), chama `supabase.auth.getSession()` e adiciona `Authorization: Bearer <access_token>` se ainda não houver.
-   - Idempotente (não reinstala se já tiver sido instalado).
-   - Roda só no browser (`if (typeof window === 'undefined') return`).
+Adicionar botão **"Exportar PDF"** ao lado de "Salvar no perfil do aluno" em `src/routes/_authenticated/teste-3km.tsx`, ativo sempre que houver resultado calculado (não exige aluno selecionado, mas usa nome do aluno se houver).
 
-2. **Ativar o interceptor em `src/lib/auth-context.tsx`**
-   - Chamar `installServerFnAuthInterceptor()` no topo do `AuthProvider` (uma vez), antes de fazer `getSession`.
+Conteúdo do PDF (1 página A4):
+- **Cabeçalho**: faixa com cor primária, logo do treinador à esquerda, título "Teste de 3KM — Zonas de Treinamento" à direita
+- **Bloco do aluno**: nome do aluno (ou "Teste avulso"), data do teste, tempo do teste, FTP em destaque com cor primária
+- **Tabela de zonas** (5 linhas, bordas com cor secundária): Zona | Nível | PSE | Pace De → Até (min/km) | Esteira De → Até (km/h) | Frase PSE
+- **Rodapé**: nome do treinador (de `profiles.full_name`), gerado em DD/MM/AAAA
 
-3. **Validar**
-   - Reabrir "Criar conta manual" com um e-mail de teste e confirmar que aparece em `Treinadores ativos` e que entra em `admin_audit_log`.
-   - Confirmar que o login com a senha definida funciona.
+Biblioteca: `pdf-lib` (puro JS, funciona no browser, suporta cores e imagens). Geração 100% no client — sem server function. Fonte embutida (Helvetica padrão do PDF).
 
-### Observação sobre o problema secundário relatado
+## 3. Detalhes técnicos
 
-O usuário disse que "ele não consegue logar" — isso é consequência direta: como o usuário nunca foi criado no `auth.users`, qualquer tentativa de login com `gustavohdeoli@gmail.com` retorna "Invalid credentials". Após o fix acima, novas contas funcionarão imediatamente (o `email_confirm: true` já está no `createUser`, então não exige confirmação por e-mail).
+- Hook `useCoachBranding()` que faz query do `profiles` do usuário logado e retorna `{ logoUrl, primary, secondary, coachName }` com defaults caso ainda não tenha configurado.
+- Função `generateTeste3kmPdf(result, student, branding)` em `src/lib/teste-3km-pdf.ts` que retorna um `Blob` e dispara download via `URL.createObjectURL` + `<a download>`.
+- Logo carregada via `fetch` → `arrayBuffer` → `pdfDoc.embedPng/embedJpg`.
+- Validação de cor hex; fallback para cores neutras se inválida.
 
-Não há mudanças de banco de dados, RLS, triggers ou de UI necessárias.
+## 4. Entregáveis
+
+- Migração: 3 colunas em `profiles` + bucket `coach-branding` + RLS de storage
+- Nova rota `/minha-marca` com upload e color pickers
+- Item na sidebar
+- `src/lib/teste-3km-pdf.ts` (geração do PDF)
+- Botão "Exportar PDF" na tela do Teste de 3km
+- Dependência: `pdf-lib`
+
+## Fora do escopo
+
+- Exportação a partir do histórico no perfil do aluno (pode ser adicionada depois)
+- Múltiplos templates de PDF
+- Marca por aluno

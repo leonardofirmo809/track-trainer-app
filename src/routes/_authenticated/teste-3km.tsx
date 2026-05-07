@@ -10,12 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Home, ChevronRight, Save, Calculator } from "lucide-react";
+import { Home, ChevronRight, Save, Calculator, FileDown } from "lucide-react";
 import {
   calcularTeste3km, formatMmss, parseMmss,
   TEST_MIN_SECONDS, TEST_MAX_SECONDS, type Teste3kmResult,
 } from "@/lib/teste-3km";
 import { saveTeste3km } from "@/lib/tests-3km.functions";
+import { useCoachBranding } from "@/lib/use-coach-branding";
+import { generateTeste3kmPdf, downloadPdf } from "@/lib/teste-3km-pdf";
 
 export const Route = createFileRoute("/_authenticated/teste-3km")({ component: Teste3kmPage });
 
@@ -29,6 +31,25 @@ function Teste3kmPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Teste3kmResult | null>(null);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const branding = useCoachBranding();
+
+  async function handleExportPdf() {
+    if (!result || !branding.data) return;
+    setExporting(true);
+    try {
+      const blob = await generateTeste3kmPdf({
+        result, studentName: studentName || null, testDate: date, branding: branding.data,
+      });
+      const safe = (studentName || "teste-avulso").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      downloadPdf(blob, `teste-3km-${safe}-${date}.pdf`);
+      toast.success("PDF gerado.");
+    } catch (e) {
+      toast.error(`Falha ao gerar PDF: ${(e as Error).message}`);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const students = useQuery({
     queryKey: ["students-list"],
@@ -183,8 +204,11 @@ function Teste3kmPage() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-end items-center gap-3">
+            <div className="flex justify-end items-center gap-3 flex-wrap">
               {!studentId && <p className="text-sm text-muted-foreground">Selecione um aluno acima para salvar este resultado.</p>}
+              <Button variant="outline" onClick={handleExportPdf} disabled={exporting || !branding.data}>
+                <FileDown /> {exporting ? "Gerando…" : "Exportar PDF"}
+              </Button>
               <Button onClick={handleSalvar} disabled={saving || !studentId}><Save /> {saving ? "Salvando…" : "Salvar no perfil do aluno"}</Button>
             </div>
           </CardContent>

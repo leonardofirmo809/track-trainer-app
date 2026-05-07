@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, Users, Timer, Route as RouteIcon, LogOut, Shield, ClipboardList, ScrollText } from "lucide-react";
+import { Activity, LayoutDashboard, Users, Timer, Route as RouteIcon, LogOut, Shield, ClipboardList, ScrollText, Palette } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
@@ -12,6 +12,7 @@ import { Button } from "./ui/button";
 const main = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Alunos", url: "/alunos", icon: Users },
+  { title: "Minha marca", url: "/minha-marca", icon: Palette },
 ];
 const planos = [
   { title: "Teste de 3KM", url: "/teste-3km", icon: Timer },

@@ -19,6 +19,7 @@ import { Route as AuthenticatedPlanilha5kmRouteImport } from './routes/_authenti
 import { Route as AuthenticatedPlanilha42kmRouteImport } from './routes/_authenticated/planilha-42km'
 import { Route as AuthenticatedPlanilha21kmRouteImport } from './routes/_authenticated/planilha-21km'
 import { Route as AuthenticatedPlanilha10kmRouteImport } from './routes/_authenticated/planilha-10km'
+import { Route as AuthenticatedMinhaMarcaRouteImport } from './routes/_authenticated/minha-marca'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAlunosIndexRouteImport } from './routes/_authenticated/alunos.index'
@@ -82,6 +83,11 @@ const AuthenticatedPlanilha10kmRoute =
     path: '/planilha-10km',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedMinhaMarcaRoute = AuthenticatedMinhaMarcaRouteImport.update({
+  id: '/minha-marca',
+  path: '/minha-marca',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/minha-marca': typeof AuthenticatedMinhaMarcaRoute
   '/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
   '/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
   '/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/minha-marca': typeof AuthenticatedMinhaMarcaRoute
   '/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
   '/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
   '/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/minha-marca': typeof AuthenticatedMinhaMarcaRoute
   '/_authenticated/planilha-10km': typeof AuthenticatedPlanilha10kmRoute
   '/_authenticated/planilha-21km': typeof AuthenticatedPlanilha21kmRoute
   '/_authenticated/planilha-42km': typeof AuthenticatedPlanilha42kmRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/dashboard'
+    | '/minha-marca'
     | '/planilha-10km'
     | '/planilha-21km'
     | '/planilha-42km'
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/dashboard'
+    | '/minha-marca'
     | '/planilha-10km'
     | '/planilha-21km'
     | '/planilha-42km'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
+    | '/_authenticated/minha-marca'
     | '/_authenticated/planilha-10km'
     | '/_authenticated/planilha-21km'
     | '/_authenticated/planilha-42km'
@@ -337,6 +349,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlanilha10kmRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/minha-marca': {
+      id: '/_authenticated/minha-marca'
+      path: '/minha-marca'
+      fullPath: '/minha-marca'
+      preLoaderRoute: typeof AuthenticatedMinhaMarcaRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -423,6 +442,7 @@ const AuthenticatedAdminRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedMinhaMarcaRoute: typeof AuthenticatedMinhaMarcaRoute
   AuthenticatedPlanilha10kmRoute: typeof AuthenticatedPlanilha10kmRoute
   AuthenticatedPlanilha21kmRoute: typeof AuthenticatedPlanilha21kmRoute
   AuthenticatedPlanilha42kmRoute: typeof AuthenticatedPlanilha42kmRoute
@@ -436,6 +456,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedMinhaMarcaRoute: AuthenticatedMinhaMarcaRoute,
   AuthenticatedPlanilha10kmRoute: AuthenticatedPlanilha10kmRoute,
   AuthenticatedPlanilha21kmRoute: AuthenticatedPlanilha21kmRoute,
   AuthenticatedPlanilha42kmRoute: AuthenticatedPlanilha42kmRoute,

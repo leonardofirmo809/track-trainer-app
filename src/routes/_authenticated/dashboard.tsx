@@ -44,11 +44,6 @@ function Dashboard() {
 
   return (
     <div className="space-y-6 max-w-7xl">
-      {isDev && (
-        <div className="text-xs text-muted-foreground border rounded-md px-3 py-2 font-mono break-all">
-          [dev] user.id: {user?.id ?? "—"} • role: {rolesLoading ? "carregando…" : isAdmin ? "admin ✓" : "não-admin"}
-        </div>
-      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-display font-bold">Dashboard</h1>

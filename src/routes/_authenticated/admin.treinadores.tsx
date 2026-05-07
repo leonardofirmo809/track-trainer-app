@@ -206,6 +206,7 @@ function AdminCoachesPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>

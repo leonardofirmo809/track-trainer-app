@@ -6,11 +6,11 @@ export type Zone = {
   phrase: string;
   pctFrom: number;
   pctTo: number | null; // null = sem teto (Z5)
-  paceFromSec: number | null; // pace mais lento (limite inferior de velocidade) — null para Z5 (= máximo)
-  paceToSec: number; // pace mais rápido (limite superior de velocidade)
-  velFrom: number; // km/h
-  velTo: number | null; // km/h, null para Z5 (sem cap)
-  color: string; // tailwind classes
+  paceSlowSec: number | null; // pace mais lento (limite "De"). null = sem cap inferior de velocidade
+  paceFastSec: number | null; // pace mais rápido (limite "Até"). null em Z5 = "Máx"
+  velFrom: number; // km/h, vel no pctFrom (menor velocidade da zona)
+  velTo: number | null; // km/h no pctTo, null em Z5 = sem cap
+  color: string;
 };
 
 export type Teste3kmResult = {
@@ -61,12 +61,15 @@ export function calcularTeste3km(durationSeconds: number): Teste3kmResult {
   const ftpSecondsPerKm = ftpMin * 60;
   const baseSpeed = 60 / ftpMin; // km/h, equivale ao 100%
 
+  const paceSecAtPct = (pct: number) => (60 / ((baseSpeed * pct) / 100)) * 60;
+
   const zones: Zone[] = ZONE_DEFS.map((z) => {
     const velFrom = (baseSpeed * z.from) / 100;
     const velTo = z.to == null ? null : (baseSpeed * z.to) / 100;
-    // pace em segundos por km. pace mais lento = limite inferior de velocidade.
-    const paceFromSec = (60 / velFrom) * 60;
-    const paceToSec = velTo == null ? 0 : (60 / velTo) * 60;
+    // De = pace mais lento (menor velocidade = pctFrom)
+    // Até = pace mais rápido (maior velocidade = pctTo). Em Z5 não há teto: "Máx".
+    const paceSlowSec = paceSecAtPct(z.from);
+    const paceFastSec = z.to == null ? null : paceSecAtPct(z.to);
     return {
       id: z.id,
       level: z.level,
@@ -75,17 +78,13 @@ export function calcularTeste3km(durationSeconds: number): Teste3kmResult {
       phrase: z.phrase,
       pctFrom: z.from,
       pctTo: z.to,
-      paceFromSec: z.id === "Z5" ? null : paceFromSec, // Z5 sem teto de pace lento (ele já é o teto da Z4)
-      paceToSec: z.id === "Z5" ? (60 / ((baseSpeed * z.from) / 100)) * 60 : paceToSec,
+      paceSlowSec,
+      paceFastSec,
       velFrom,
       velTo,
       color: z.color,
     };
   });
-
-  // Ajuste Z5: pace_min = velocidade do limite inferior (z.from = 115%)
-  const z5 = zones[4];
-  z5.paceToSec = (60 / z5.velFrom) * 60;
 
   return { durationSeconds, ftpSecondsPerKm, baseSpeedKmh: baseSpeed, zones };
 }

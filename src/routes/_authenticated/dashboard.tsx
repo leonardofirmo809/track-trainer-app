@@ -4,8 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, ClipboardList, Timer, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth-context";
-import { useRoles } from "@/lib/use-role";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({ component: Dashboard });
 

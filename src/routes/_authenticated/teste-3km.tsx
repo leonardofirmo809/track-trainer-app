@@ -169,7 +169,7 @@ function Teste3kmPage() {
                     <div>
                       <p className="text-muted-foreground">PACE (min/km)</p>
                       <p className="font-mono font-semibold">
-                        {z.id === "Z5" ? "Máx" : formatMmss(z.paceFromSec!)} → {formatMmss(z.paceToSec)}
+                        {z.paceSlowSec == null ? "Máx" : formatMmss(z.paceSlowSec)} → {z.paceFastSec == null ? "Máx" : formatMmss(z.paceFastSec)}
                       </p>
                     </div>
                     <div>

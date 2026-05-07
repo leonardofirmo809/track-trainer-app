@@ -52,10 +52,16 @@ function Teste3kmPage() {
     setTempo(masked);
   }
 
+  function handleLimpar() {
+    setStudentId("");
+    setTempo("");
+    setResult(null);
+    setError(null);
+  }
+
   function handleCalcular() {
     setError(null);
     setResult(null);
-    if (!studentId) { setError("Selecione um aluno."); return; }
     let secs: number;
     try { secs = parseMmss(tempo); } catch (e) { setError((e as Error).message); return; }
     if (secs < TEST_MIN_SECONDS || secs > TEST_MAX_SECONDS) {
@@ -111,11 +117,11 @@ function Teste3kmPage() {
         <CardHeader><CardTitle>Dados do teste</CardTitle></CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
           <div className="md:col-span-1">
-            <Label htmlFor="aluno">Aluno *</Label>
-            <Select value={studentId} onValueChange={setStudentId}>
-              <SelectTrigger id="aluno"><SelectValue placeholder={students.isLoading ? "Carregando…" : "Selecionar aluno"} /></SelectTrigger>
+            <Label htmlFor="aluno">Aluno (opcional)</Label>
+            <Select value={studentId || "__none__"} onValueChange={(v) => setStudentId(v === "__none__" ? "" : v)}>
+              <SelectTrigger id="aluno"><SelectValue placeholder={students.isLoading ? "Carregando…" : "Nenhum (teste avulso)"} /></SelectTrigger>
               <SelectContent>
-                {students.data?.length === 0 && <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum aluno cadastrado</div>}
+                <SelectItem value="__none__">— Nenhum (teste avulso) —</SelectItem>
                 {students.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -129,8 +135,9 @@ function Teste3kmPage() {
             <Input id="data" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           {error && <div className="md:col-span-3 text-sm text-destructive">{error}</div>}
-          <div className="md:col-span-3">
+          <div className="md:col-span-3 flex gap-2">
             <Button onClick={handleCalcular}><Calculator /> Calcular</Button>
+            <Button variant="outline" onClick={handleLimpar}>Limpar</Button>
           </div>
         </CardContent>
       </Card>
@@ -141,7 +148,7 @@ function Teste3kmPage() {
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <CardTitle>Resultado</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">Aluno: <span className="font-medium text-foreground">{studentName}</span> • Tempo: <span className="font-medium text-foreground">{formatMmss(result.durationSeconds)}</span></p>
+                <p className="text-sm text-muted-foreground mt-1">{studentId ? <>Aluno: <span className="font-medium text-foreground">{studentName}</span></> : <span className="font-medium text-foreground">Teste avulso</span>} • Tempo: <span className="font-medium text-foreground">{formatMmss(result.durationSeconds)}</span></p>
               </div>
               <div className="text-right">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">FTP</p>
@@ -176,8 +183,9 @@ function Teste3kmPage() {
                 </div>
               ))}
             </div>
-            <div className="flex justify-end">
-              <Button onClick={handleSalvar} disabled={saving}><Save /> {saving ? "Salvando…" : "Salvar no perfil do aluno"}</Button>
+            <div className="flex justify-end items-center gap-3">
+              {!studentId && <p className="text-sm text-muted-foreground">Selecione um aluno acima para salvar este resultado.</p>}
+              <Button onClick={handleSalvar} disabled={saving || !studentId}><Save /> {saving ? "Salvando…" : "Salvar no perfil do aluno"}</Button>
             </div>
           </CardContent>
         </Card>

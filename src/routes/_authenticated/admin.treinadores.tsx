@@ -116,6 +116,24 @@ function AdminCoachesPage() {
     toast.success("Link copiado.");
   };
 
+  const submitManual = async () => {
+    if (mPass.length < 8) return toast.error("Senha deve ter ao menos 8 caracteres.");
+    if (mPass !== mConfirm) return toast.error("As senhas não conferem.");
+    setMCreating(true);
+    try {
+      await createCoach({ data: { fullName: mName.trim(), email: mEmail.trim(), password: mPass } });
+      toast.success("Conta criada com sucesso.");
+      setMName(""); setMEmail(""); setMPass(""); setMConfirm("");
+      setOpenManual(false);
+      load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao criar conta";
+      toast.error(msg);
+    } finally {
+      setMCreating(false);
+    }
+  };
+
   const statusBadge = (s: Invite["status"]) => {
     if (s === "pending") return <Badge variant="secondary">Pendente</Badge>;
     if (s === "accepted") return <Badge>Aceito</Badge>;

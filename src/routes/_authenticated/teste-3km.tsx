@@ -52,10 +52,16 @@ function Teste3kmPage() {
     setTempo(masked);
   }
 
+  function handleLimpar() {
+    setStudentId("");
+    setTempo("");
+    setResult(null);
+    setError(null);
+  }
+
   function handleCalcular() {
     setError(null);
     setResult(null);
-    if (!studentId) { setError("Selecione um aluno."); return; }
     let secs: number;
     try { secs = parseMmss(tempo); } catch (e) { setError((e as Error).message); return; }
     if (secs < TEST_MIN_SECONDS || secs > TEST_MAX_SECONDS) {

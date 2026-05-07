@@ -14,7 +14,198 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      students: {
+        Row: {
+          birth_date: string | null
+          coach_id: string
+          created_at: string
+          email: string | null
+          full_name: string
+          gender: string | null
+          goal: string | null
+          id: string
+          injury_history: string | null
+          level: Database["public"]["Enums"]["student_level"] | null
+          notes: string | null
+          phone: string | null
+          target_distance: Database["public"]["Enums"]["target_distance"] | null
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          coach_id: string
+          created_at?: string
+          email?: string | null
+          full_name: string
+          gender?: string | null
+          goal?: string | null
+          id?: string
+          injury_history?: string | null
+          level?: Database["public"]["Enums"]["student_level"] | null
+          notes?: string | null
+          phone?: string | null
+          target_distance?:
+            | Database["public"]["Enums"]["target_distance"]
+            | null
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          coach_id?: string
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          gender?: string | null
+          goal?: string | null
+          id?: string
+          injury_history?: string | null
+          level?: Database["public"]["Enums"]["student_level"] | null
+          notes?: string | null
+          phone?: string | null
+          target_distance?:
+            | Database["public"]["Enums"]["target_distance"]
+            | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tests: {
+        Row: {
+          coach_id: string
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          notes: string | null
+          pace_seconds_per_km: number | null
+          student_id: string
+          test_date: string
+          test_type: Database["public"]["Enums"]["test_type"]
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          notes?: string | null
+          pace_seconds_per_km?: number | null
+          student_id: string
+          test_date?: string
+          test_type?: Database["public"]["Enums"]["test_type"]
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          notes?: string | null
+          pace_seconds_per_km?: number | null
+          student_id?: string
+          test_date?: string
+          test_type?: Database["public"]["Enums"]["test_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tests_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plans: {
+        Row: {
+          coach_id: string
+          created_at: string
+          end_date: string | null
+          id: string
+          payload: Json
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          start_date: string | null
+          status: Database["public"]["Enums"]["plan_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          payload?: Json
+          plan_type: Database["public"]["Enums"]["plan_type"]
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["plan_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          payload?: Json
+          plan_type?: Database["public"]["Enums"]["plan_type"]
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["plan_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plans_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plans_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +214,11 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      plan_status: "ativa" | "concluida" | "arquivada"
+      plan_type: "5km" | "10km" | "21km" | "42km"
+      student_level: "iniciante" | "intermediario" | "avancado"
+      target_distance: "5km" | "10km" | "21km" | "42km"
+      test_type: "3km" | "5km" | "10km" | "outro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +345,12 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      plan_status: ["ativa", "concluida", "arquivada"],
+      plan_type: ["5km", "10km", "21km", "42km"],
+      student_level: ["iniciante", "intermediario", "avancado"],
+      target_distance: ["5km", "10km", "21km", "42km"],
+      test_type: ["3km", "5km", "10km", "outro"],
+    },
   },
 } as const

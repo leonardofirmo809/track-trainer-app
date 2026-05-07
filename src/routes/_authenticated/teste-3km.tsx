@@ -10,12 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Home, ChevronRight, Save, Calculator } from "lucide-react";
+import { Home, ChevronRight, Save, Calculator, FileDown } from "lucide-react";
 import {
   calcularTeste3km, formatMmss, parseMmss,
   TEST_MIN_SECONDS, TEST_MAX_SECONDS, type Teste3kmResult,
 } from "@/lib/teste-3km";
 import { saveTeste3km } from "@/lib/tests-3km.functions";
+import { useCoachBranding } from "@/lib/use-coach-branding";
+import { generateTeste3kmPdf, downloadPdf } from "@/lib/teste-3km-pdf";
 
 export const Route = createFileRoute("/_authenticated/teste-3km")({ component: Teste3kmPage });
 

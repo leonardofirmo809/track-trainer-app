@@ -30,5 +30,13 @@ export const createCoachAccount = createServerFn({ method: "POST" })
     });
     if (error) throw new Response(error.message, { status: 400 });
 
+    await supabaseAdmin.from("admin_audit_log").insert({
+      event_type: "coach_created_manual",
+      target_email: data.email,
+      target_user_id: created.user?.id,
+      actor_id: userId,
+      metadata: { full_name: data.fullName },
+    });
+
     return { id: created.user?.id };
   });

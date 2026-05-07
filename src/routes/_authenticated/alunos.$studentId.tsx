@@ -125,7 +125,7 @@ function PerfilAluno() {
                   </TableRow></TableHeader>
                   <TableBody>
                     {tests.data.map((t) => {
-                      const meta = (t.metadata ?? {}) as { ftp_seconds_per_km?: number; zones?: Array<{ id: string; level: string; pseMin: number; pseMax: number; phrase: string; paceFromSec: number | null; paceToSec: number; velFrom: number; velTo: number | null }> };
+                      const meta = (t.metadata ?? {}) as { ftp_seconds_per_km?: number; zones?: Array<{ id: string; level: string; pseMin: number; pseMax: number; phrase: string; paceSlowSec?: number | null; paceFastSec?: number | null; paceFromSec?: number | null; paceToSec?: number; velFrom: number; velTo: number | null }> };
                       return (
                         <TableRow key={t.id}>
                           <TableCell>{new Date(t.test_date).toLocaleDateString("pt-BR")}</TableCell>

@@ -149,11 +149,11 @@ function PerfilAluno() {
                                         </div>
                                         <div className="text-sm font-mono">
                                           <p className="text-xs text-muted-foreground">PACE</p>
-                                          {(() => { const slow = z.paceSlowSec ?? z.paceFromSec ?? null; const fast = z.paceFastSec ?? z.paceToSec ?? null; return `${slow == null ? "Máx" : formatMmss(slow)} → ${fast == null ? "Máx" : formatMmss(fast)}`; })()}
+                                          {(() => { const slow = z.paceSlowSec ?? z.paceFromSec ?? null; const fast = z.paceFastSec ?? z.paceToSec ?? null; return `${fast == null ? "Máx" : formatMmss(fast)} → ${slow == null ? "Máx" : formatMmss(slow)}`; })()}
                                         </div>
                                         <div className="text-sm font-mono">
                                           <p className="text-xs text-muted-foreground">km/h</p>
-                                          {z.velFrom.toFixed(2)} → {z.velTo == null ? "+" : z.velTo.toFixed(2)}
+                                          {z.velTo == null ? "Máx" : z.velTo.toFixed(1)} → {z.velFrom.toFixed(1)}
                                         </div>
                                         <div className="text-xs text-muted-foreground">PSE {z.pseMin}–{z.pseMax}<br/><span className="italic">"{z.phrase}"</span></div>
                                       </div>

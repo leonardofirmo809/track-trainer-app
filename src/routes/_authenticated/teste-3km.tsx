@@ -84,7 +84,7 @@ function Teste3kmPage() {
           zones: result.zones.map((z) => ({
             id: z.id, level: z.level, pseMin: z.pseMin, pseMax: z.pseMax, phrase: z.phrase,
             pctFrom: z.pctFrom, pctTo: z.pctTo,
-            paceFromSec: z.paceFromSec, paceToSec: z.paceToSec,
+            paceSlowSec: z.paceSlowSec, paceFastSec: z.paceFastSec,
             velFrom: z.velFrom, velTo: z.velTo,
           })),
         },
@@ -169,7 +169,7 @@ function Teste3kmPage() {
                     <div>
                       <p className="text-muted-foreground">PACE (min/km)</p>
                       <p className="font-mono font-semibold">
-                        {z.id === "Z5" ? "Máx" : formatMmss(z.paceFromSec!)} → {formatMmss(z.paceToSec)}
+                        {z.paceSlowSec == null ? "Máx" : formatMmss(z.paceSlowSec)} → {z.paceFastSec == null ? "Máx" : formatMmss(z.paceFastSec)}
                       </p>
                     </div>
                     <div>

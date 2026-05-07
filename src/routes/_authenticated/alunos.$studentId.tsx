@@ -125,7 +125,7 @@ function PerfilAluno() {
                   </TableRow></TableHeader>
                   <TableBody>
                     {tests.data.map((t) => {
-                      const meta = (t.metadata ?? {}) as { ftp_seconds_per_km?: number; zones?: Array<{ id: string; level: string; pseMin: number; pseMax: number; phrase: string; paceFromSec: number | null; paceToSec: number; velFrom: number; velTo: number | null }> };
+                      const meta = (t.metadata ?? {}) as { ftp_seconds_per_km?: number; zones?: Array<{ id: string; level: string; pseMin: number; pseMax: number; phrase: string; paceSlowSec?: number | null; paceFastSec?: number | null; paceFromSec?: number | null; paceToSec?: number; velFrom: number; velTo: number | null }> };
                       return (
                         <TableRow key={t.id}>
                           <TableCell>{new Date(t.test_date).toLocaleDateString("pt-BR")}</TableCell>
@@ -149,7 +149,7 @@ function PerfilAluno() {
                                         </div>
                                         <div className="text-sm font-mono">
                                           <p className="text-xs text-muted-foreground">PACE</p>
-                                          {z.id === "Z5" ? "Máx" : formatMmss(z.paceFromSec ?? 0)} → {formatMmss(z.paceToSec)}
+                                          {(() => { const slow = z.paceSlowSec ?? z.paceFromSec ?? null; const fast = z.paceFastSec ?? z.paceToSec ?? null; return `${slow == null ? "Máx" : formatMmss(slow)} → ${fast == null ? "Máx" : formatMmss(fast)}`; })()}
                                         </div>
                                         <div className="text-sm font-mono">
                                           <p className="text-xs text-muted-foreground">km/h</p>

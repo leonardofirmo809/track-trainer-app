@@ -1,72 +1,35 @@
-## Objetivo
+## Problema
 
-Criar a área de **Administração** com 4 seções: visão geral, treinadores (já existe), alunos (todos) e auditoria. Acessível apenas para usuários com role `admin`.
+O grupo "Administração" já existe em `src/components/app-sidebar.tsx` e é renderizado quando `isAdmin === true` (vindo de `useRoles()` em `src/lib/use-role.ts`). No banco há 1 usuário com role `admin` (`5c5f18f4-…`), e a policy RLS `users see own roles` permite ao próprio usuário ler sua role. Mesmo assim o grupo não aparece.
 
-## Estrutura de rotas
+Causas prováveis:
+1. O usuário logado **não é** o admin do banco (login com outra conta).
+2. `useRoles()` falha silenciosamente (sem tratamento de erro/log) — qualquer rejeição da Promise deixa `roles=[]` e `isAdmin=false` sem aviso.
+3. Não há indicador de loading: enquanto a query roda, o grupo fica oculto e nunca reaparece se algo der errado.
 
-```
-src/routes/_authenticated/
-  admin.tsx                    (já existe — guard de role)
-  admin.index.tsx              NOVO — /admin (visão geral)
-  admin.treinadores.tsx        (já existe)
-  admin.alunos.tsx             NOVO — /admin/alunos
-  admin.auditoria.tsx          NOVO — /admin/auditoria
-```
+## Correções
 
-## Telas
+### 1. Hardening de `src/lib/use-role.ts`
+- Tratar `error` da query e logar no console (`console.warn`) com a mensagem retornada por Supabase para facilitar debug futuro.
+- Garantir `setLoading(true)` no início e `setLoading(false)` em todos os caminhos.
+- Tipar a resposta corretamente.
 
-### 1. `/admin` — Visão geral
-Painel com:
-- **4 cards de métricas**: Treinadores ativos, Convites pendentes, Alunos cadastrados (total), Testes registrados (total).
-- **Atalhos** (cards clicáveis): Treinadores, Alunos, Auditoria.
-- **Últimos eventos** (mini-lista): últimos 5 eventos da auditoria.
+### 2. Sidebar tolerante a estado de loading + diagnóstico
+Em `src/components/app-sidebar.tsx`:
+- Importar `loading` de `useRoles()`.
+- Enquanto `loading === true`, renderizar um item placeholder ("Verificando permissões…") no lugar do grupo, **somente em dev** (`import.meta.env.DEV`), para confirmar que a query roda.
+- Quando `loading === false && !isAdmin`, em dev mostrar um pequeno texto "Sem permissão admin" no rodapé do sidebar (apenas dev), para o usuário entender o porquê. Em produção, comportamento atual (oculto).
 
-### 2. `/admin/alunos` — Alunos (todos)
-Lista global de todos os alunos do sistema:
-- Tabela com nome, e-mail, treinador (nome do coach), nível, distância-alvo, data de cadastro.
-- Filtros: busca por nome/e-mail, filtro por treinador.
-- Apenas leitura (admin não edita aluno de outro treinador).
+### 3. Verificação rápida do usuário logado
+Adicionar no Dashboard (`src/routes/_authenticated/dashboard.tsx`) um aviso de uma linha **só em dev** mostrando o `user.id` atual. Isso permite confirmar visualmente se a conta logada bate com a admin (`5c5f18f4-bc8b-4c63-9e06-4accfd4699ce`).
 
-### 3. `/admin/auditoria` — Auditoria
-Histórico de eventos administrativos (criação/aceite/revogação de convites e criação manual de contas):
-- Tabela com data, evento, alvo (e-mail), feito por (admin).
-- Ordenado do mais recente para o mais antigo.
-
-## Mudanças no banco
-
-Nova tabela `admin_audit_log`:
-- `event_type` (enum: `invite_created`, `invite_revoked`, `invite_resent`, `invite_accepted`, `coach_created_manual`)
-- `target_email` (text)
-- `target_user_id` (uuid, nullable)
-- `actor_id` (uuid — admin que fez a ação)
-- `metadata` (jsonb)
-- `created_at`
-
-RLS: apenas admin pode ler. Inserts feitos por triggers/server functions com SECURITY DEFINER.
-
-Triggers:
-- Em `coach_invites`: log automático em INSERT (`invite_created`), em UPDATE quando `status` muda (`invite_revoked`, `invite_accepted`).
-
-A server function `createCoachAccount` insere manualmente o evento `coach_created_manual` após criar o usuário.
-
-Para "Alunos (todos)": admin precisa enxergar todos os students. Adicionar policy `admins see all students` em `public.students`. Mesma coisa para `tests` (para a métrica de total de testes).
-
-## Mudanças no UI
-
-### Sidebar
-Substituir o item único "Treinadores" pelo grupo **Administração** com 4 itens:
-- Visão geral (`/admin`)
-- Treinadores (`/admin/treinadores`)
-- Alunos (`/admin/alunos`)
-- Auditoria (`/admin/auditoria`)
-
-### Server functions / queries
-- `/admin` busca contagens via 4 queries `count` paralelas + 5 últimos logs.
-- `/admin/alunos` faz join `students` + `profiles` (treinador) via duas queries (lista + map de coaches).
-- `/admin/auditoria` lista direto da tabela `admin_audit_log` com nome do admin via join em profiles.
+> Se após isso ficar claro que o usuário logado **não é** o admin, a solução é simplesmente fazer login com a conta admin correta — ou promover a conta atual via SQL (`INSERT INTO user_roles (user_id, role) VALUES ('<id>', 'admin')`).
 
 ## Fora de escopo
+- Criar UI de "promover usuário a admin" (já existe a tela `/admin/treinadores`).
+- Mudar layout/posição do menu Admin (usuário pediu apenas que o sidebar volte a mostrar).
 
-- Edição/exclusão de alunos pelo admin.
-- Filtros avançados de auditoria (por tipo, intervalo de data).
-- Exportação CSV.
+## Arquivos alterados
+- `src/lib/use-role.ts` — tratamento de erro + log
+- `src/components/app-sidebar.tsx` — placeholder de loading e mensagem dev
+- `src/routes/_authenticated/dashboard.tsx` — badge dev com user.id

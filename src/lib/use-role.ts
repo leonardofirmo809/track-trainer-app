@@ -12,9 +12,15 @@ export function useRoles() {
   useEffect(() => {
     if (!user) { setRoles([]); setLoading(false); return; }
     let cancel = false;
-    supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data }) => {
+    setLoading(true);
+    supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data, error }) => {
       if (cancel) return;
-      setRoles(((data ?? []) as { role: AppRole }[]).map((r) => r.role));
+      if (error) {
+        console.warn("[useRoles] failed to fetch user_roles:", error.message);
+        setRoles([]);
+      } else {
+        setRoles(((data ?? []) as { role: AppRole }[]).map((r) => r.role));
+      }
       setLoading(false);
     });
     return () => { cancel = true; };

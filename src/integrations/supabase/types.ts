@@ -176,6 +176,7 @@ export type Database = {
           created_at: string
           duration_seconds: number | null
           id: string
+          metadata: Json
           notes: string | null
           pace_seconds_per_km: number | null
           student_id: string
@@ -187,6 +188,7 @@ export type Database = {
           created_at?: string
           duration_seconds?: number | null
           id?: string
+          metadata?: Json
           notes?: string | null
           pace_seconds_per_km?: number | null
           student_id: string
@@ -198,6 +200,7 @@ export type Database = {
           created_at?: string
           duration_seconds?: number | null
           id?: string
+          metadata?: Json
           notes?: string | null
           pace_seconds_per_km?: number | null
           student_id?: string

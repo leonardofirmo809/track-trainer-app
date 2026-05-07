@@ -1,0 +1,94 @@
+export type Zone = {
+  id: "Z1" | "Z2" | "Z3" | "Z4" | "Z5";
+  level: string;
+  pseMin: number;
+  pseMax: number;
+  phrase: string;
+  pctFrom: number;
+  pctTo: number | null; // null = sem teto (Z5)
+  paceFromSec: number | null; // pace mais lento (limite inferior de velocidade) — null para Z5 (= máximo)
+  paceToSec: number; // pace mais rápido (limite superior de velocidade)
+  velFrom: number; // km/h
+  velTo: number | null; // km/h, null para Z5 (sem cap)
+  color: string; // tailwind classes
+};
+
+export type Teste3kmResult = {
+  durationSeconds: number;
+  ftpSecondsPerKm: number;
+  baseSpeedKmh: number;
+  zones: Zone[];
+};
+
+const ZONE_DEFS = [
+  { id: "Z1", from: 60, to: 76, pseMin: 1, pseMax: 2, level: "Muito Leve / Leve",
+    phrase: "Posso correr para sempre nesse ritmo",
+    color: "border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40" },
+  { id: "Z2", from: 76, to: 87, pseMin: 3, pseMax: 4, level: "Moderado / Um pouco Difícil",
+    phrase: "Estou me segurando um pouco",
+    color: "border-emerald-500 bg-emerald-100 dark:bg-emerald-900/40" },
+  { id: "Z3", from: 87, to: 100, pseMin: 5, pseMax: 6, level: "Difícil",
+    phrase: "Posso manter esse ritmo por 30 a 40 minutos",
+    color: "border-amber-400 bg-amber-50 dark:bg-amber-950/40" },
+  { id: "Z4", from: 102, to: 115, pseMin: 7, pseMax: 8, level: "Muito Difícil",
+    phrase: "Sinto que vou explodir em 10 a 15 minutos",
+    color: "border-orange-500 bg-orange-100 dark:bg-orange-900/40" },
+  { id: "Z5", from: 115, to: null, pseMin: 9, pseMax: 10, level: "Extremamente Difícil / Máximo",
+    phrase: "Posso manter esse ritmo por alguns minutos, talvez três",
+    color: "border-red-500 bg-red-100 dark:bg-red-900/40" },
+] as const;
+
+export function parseMmss(input: string): number {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(input.trim());
+  if (!m) throw new Error("Formato inválido. Use mm:ss (ex: 17:42).");
+  const min = Number(m[1]);
+  const sec = Number(m[2]);
+  if (sec >= 60) throw new Error("Segundos devem ser entre 00 e 59.");
+  return min * 60 + sec;
+}
+
+export function formatMmss(totalSec: number): string {
+  if (!isFinite(totalSec) || totalSec < 0) return "—";
+  const s = Math.round(totalSec);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}:${r.toString().padStart(2, "0")}`;
+}
+
+export function calcularTeste3km(durationSeconds: number): Teste3kmResult {
+  const tempoMin = durationSeconds / 60;
+  const ftpMin = (tempoMin * 1.06) / 3; // pace em min/km
+  const ftpSecondsPerKm = ftpMin * 60;
+  const baseSpeed = 60 / ftpMin; // km/h, equivale ao 100%
+
+  const zones: Zone[] = ZONE_DEFS.map((z) => {
+    const velFrom = (baseSpeed * z.from) / 100;
+    const velTo = z.to == null ? null : (baseSpeed * z.to) / 100;
+    // pace em segundos por km. pace mais lento = limite inferior de velocidade.
+    const paceFromSec = (60 / velFrom) * 60;
+    const paceToSec = velTo == null ? 0 : (60 / velTo) * 60;
+    return {
+      id: z.id,
+      level: z.level,
+      pseMin: z.pseMin,
+      pseMax: z.pseMax,
+      phrase: z.phrase,
+      pctFrom: z.from,
+      pctTo: z.to,
+      paceFromSec: z.id === "Z5" ? null : paceFromSec, // Z5 sem teto de pace lento (ele já é o teto da Z4)
+      paceToSec: z.id === "Z5" ? (60 / ((baseSpeed * z.from) / 100)) * 60 : paceToSec,
+      velFrom,
+      velTo,
+      color: z.color,
+    };
+  });
+
+  // Ajuste Z5: pace_min = velocidade do limite inferior (z.from = 115%)
+  const z5 = zones[4];
+  z5.paceToSec = (60 / z5.velFrom) * 60;
+
+  return { durationSeconds, ftpSecondsPerKm, baseSpeedKmh: baseSpeed, zones };
+}
+
+export const TEST_MIN_SECONDS = 10 * 60;
+export const TEST_MAX_SECONDS = 40 * 60;

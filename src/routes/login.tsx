@@ -56,8 +56,8 @@ function LoginPage() {
                 <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>{loading ? "Entrando…" : "Entrar"}</Button>
-              <p className="text-sm text-muted-foreground text-center">
-                Não tem conta? <Link to="/signup" className="text-primary font-medium hover:underline">Cadastre-se</Link>
+              <p className="text-xs text-muted-foreground text-center">
+                Acesso por convite. <Link to="/signup" className="text-primary font-medium hover:underline">Saiba mais</Link>
               </p>
             </form>
           </CardContent>

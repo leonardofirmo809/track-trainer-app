@@ -148,7 +148,7 @@ function Teste3kmPage() {
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
                 <CardTitle>Resultado</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">Aluno: <span className="font-medium text-foreground">{studentName}</span> • Tempo: <span className="font-medium text-foreground">{formatMmss(result.durationSeconds)}</span></p>
+                <p className="text-sm text-muted-foreground mt-1">{studentId ? <>Aluno: <span className="font-medium text-foreground">{studentName}</span></> : <span className="font-medium text-foreground">Teste avulso</span>} • Tempo: <span className="font-medium text-foreground">{formatMmss(result.durationSeconds)}</span></p>
               </div>
               <div className="text-right">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">FTP</p>

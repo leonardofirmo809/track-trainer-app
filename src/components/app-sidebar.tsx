@@ -75,8 +75,23 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={path === "/admin"}>
+                    <Link to="/admin"><Shield /><span>Visão geral</span></Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/admin/treinadores")}>
-                    <Link to="/admin/treinadores"><Shield /><span>Treinadores</span></Link>
+                    <Link to="/admin/treinadores"><Users /><span>Treinadores</span></Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/admin/alunos")}>
+                    <Link to="/admin/alunos"><ClipboardList /><span>Alunos</span></Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/admin/auditoria")}>
+                    <Link to="/admin/auditoria"><ScrollText /><span>Auditoria</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

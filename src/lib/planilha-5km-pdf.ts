@@ -103,6 +103,17 @@ export async function generatePlanilha5kmPdf(opts: {
   const drawText = (p: PDFPage, text: string, x: number, yy: number, f: PDFFont, size: number, color: RGB) => {
     p.drawText(text, { x, y: yy, size, font: f, color });
   };
+  const truncate = (text: string, f: PDFFont, size: number, maxW: number): string => {
+    if (f.widthOfTextAtSize(text, size) <= maxW) return text;
+    const ell = "…";
+    let lo = 0, hi = text.length;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (f.widthOfTextAtSize(text.slice(0, mid) + ell, size) <= maxW) lo = mid;
+      else hi = mid - 1;
+    }
+    return text.slice(0, lo) + ell;
+  };
   const wrap = (text: string, f: PDFFont, size: number, maxW: number): string[] => {
     const words = text.split(/\s+/);
     const lines: string[] = [];
@@ -111,7 +122,17 @@ export async function generatePlanilha5kmPdf(opts: {
       const test = cur ? cur + " " + word : word;
       if (f.widthOfTextAtSize(test, size) > maxW) {
         if (cur) lines.push(cur);
-        cur = word;
+        // word itself may exceed maxW — hard break by chars
+        if (f.widthOfTextAtSize(word, size) > maxW) {
+          let buf = "";
+          for (const ch of word) {
+            if (f.widthOfTextAtSize(buf + ch, size) > maxW) {
+              if (buf) lines.push(buf);
+              buf = ch;
+            } else buf += ch;
+          }
+          cur = buf;
+        } else cur = word;
       } else cur = test;
     }
     if (cur) lines.push(cur);

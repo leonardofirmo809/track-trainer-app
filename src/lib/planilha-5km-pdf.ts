@@ -50,7 +50,7 @@ function zoneRangeText(zone: ZoneId, zoneMap: Map<ZoneId, SavedZone>): string {
 
 function itemLines(it: Item, zoneMap: Map<ZoneId, SavedZone>): { main: string; sub: string[] } {
   if (it.kind === "single") {
-    return { main: `${it.value}${unitLabel(it.unit)} em ${it.zone}`, sub: [`→ ${zoneRangeText(it.zone, zoneMap)}`] };
+    return { main: `${it.value}${unitLabel(it.unit)} em ${it.zone}`, sub: [`> ${zoneRangeText(it.zone, zoneMap)}`] };
   }
   if (it.kind === "intervals") {
     return {
@@ -58,7 +58,7 @@ function itemLines(it: Item, zoneMap: Map<ZoneId, SavedZone>): { main: string; s
       sub: [`ON ${it.on.zone}: ${zoneRangeText(it.on.zone, zoneMap)}`, `OFF ${it.off.zone}: ${zoneRangeText(it.off.zone, zoneMap)}`],
     };
   }
-  return { main: `${it.meters}m — ${it.label} ★`, sub: it.note ? [it.note] : [] };
+  return { main: `${it.meters}m — ${it.label} *`, sub: it.note ? [it.note] : [] };
 }
 
 export async function generatePlanilha5kmPdf(opts: {
@@ -202,7 +202,7 @@ export async function generatePlanilha5kmPdf(opts: {
     page.drawRectangle({ x: margin, y: y - 22, width: A4.w - margin * 2, height: 22, color: primary });
     drawText(page, `Semana ${wi + 1}`, margin + 8, y - 16, bold, 12, white);
     if (wk.hasConsecutiveIntense) {
-      const warn = "⚠ Intensos em dias consecutivos";
+      const warn = "! Intensos em dias consecutivos";
       drawText(page, warn, A4.w - margin - 8 - font.widthOfTextAtSize(warn, 9), y - 14, font, 9, white);
     }
     y -= 28;

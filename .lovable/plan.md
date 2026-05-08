@@ -1,27 +1,20 @@
 ## Causa
 
-Em `src/lib/planilha-5km-distribute.ts` (linhas 75–87), após escolher os treinos da semana, a função move o treino de maior duração para o último dia. Isso embaralha a ordem dos códigos: quando o longão é T11, a semana sai como `T10, T12, T11`.
-
-A tela e o PDF apenas renderizam na ordem devolvida por `distributeWeek`, então o conserto é só na distribuição.
+`pdf-lib` com a fonte padrão Helvetica usa codificação WinAnsi, que não suporta `→` (0x2192), `★` nem `⚠`. Esses caracteres aparecem em `src/lib/planilha-5km-pdf.ts` e quebram o `drawText`.
 
 ## Mudanças
 
-### `src/lib/planilha-5km-distribute.ts`
+**Arquivo:** `src/lib/planilha-5km-pdf.ts`
 
-1. Remover o bloco "Treino mais longo no último dia" (linhas 75–87).
-2. Logo após definir `chosen`, ordenar por código numérico do treino:
-   ```ts
-   const codeNum = (w: Workout) => parseInt(w.code.replace(/\D/g, ""), 10) || 0;
-   chosen.sort((a, b) => codeNum(a) - codeNum(b));
-   ```
-3. Manter `sortDays`, `dropToFit`, detecção de intensos consecutivos e warnings sem alteração.
+Trocar caracteres não-WinAnsi por equivalentes ASCII:
 
-## Efeito
+1. Em `itemLines` (item `single`): `→ ${zoneRangeText(...)}` → `> ${zoneRangeText(...)}`.
+2. No item `test`: `${it.meters}m — ${it.label} ★` → `${it.meters}m — ${it.label} *`.
+3. No header de semana com aviso: `⚠ Intensos em dias consecutivos` → `! Intensos em dias consecutivos`.
 
-- Semanas sempre listadas em ordem crescente do código (`T10 → T11 → T12 …`) na tela e no PDF.
-- O longão deixa de ser empurrado automaticamente para o último dia da semana — trade-off explícito do pedido.
+`•`, `–` e `—` são mantidos (suportados em WinAnsi).
 
 ## Fora de escopo
 
-- Banco de treinos, PDF e UI permanecem inalterados.
-- Sem reordenação manual / drag-and-drop.
+- Embutir fonte TTF Unicode com `@pdf-lib/fontkit` (resolveria o problema genericamente, mas adiciona ~300KB no bundle e dependência só para 3 caracteres decorativos).
+- Mudanças na tela ou na lógica de distribuição.

@@ -7,8 +7,8 @@ import { Home, ChevronRight, Save, Settings2, AlertTriangle, Download, Clock, Ro
 import { useCoachBranding } from "@/lib/use-coach-branding";
 import { generatePlanilha5kmPdf, downloadBlob } from "@/lib/planilha-5km-pdf";
 import { getStats, formatHm, formatKm } from "@/lib/planilha-5km-volumes";
-import { computeWeekTotals } from "@/lib/planilha-5km-zone-distribution";
-import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, Legend, ResponsiveContainer, Cell } from "recharts";
+import { computeWeekTotals, computeWorkoutTotals, type WorkoutTotals } from "@/lib/planilha-5km-zone-distribution";
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -385,6 +385,10 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
 }) {
   const workouts = dist.assignments.map((a) => a.workout).filter((w): w is Workout => !!w);
   const totals = useMemo(() => computeWeekTotals(workouts, level, phase, weekIdx), [workouts, level, phase, weekIdx]);
+  const perWorkout = useMemo(
+    () => workouts.map((w) => computeWorkoutTotals(w, level, phase, weekIdx)),
+    [workouts, level, phase, weekIdx],
+  );
 
   return (
     <div className="space-y-3">
@@ -430,69 +434,134 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
         </p>
       )}
 
-      {/* Resumo semanal */}
-      <div className="grid gap-2 grid-cols-2 md:grid-cols-4 mt-2">
-        <div className="rounded-md border bg-card p-3">
-          <p className="text-[10px] uppercase text-muted-foreground">Semana {index}</p>
-          <p className="text-sm font-semibold mt-1">Resumo</p>
-        </div>
-        <div className="rounded-md border bg-card p-3">
-          <p className="text-[10px] uppercase text-muted-foreground">Total</p>
-          <p className="text-sm font-semibold mt-1">{formatHm(totals.totalMin)}</p>
-        </div>
-        <div className="rounded-md border bg-card p-3">
-          <p className="text-[10px] uppercase text-muted-foreground">Volume</p>
-          <p className="text-sm font-semibold mt-1">{formatKm(totals.totalM)}</p>
-        </div>
-        <div className="rounded-md border bg-card p-3">
-          <p className="text-[10px] uppercase text-muted-foreground">Intensidade</p>
-          <p className="text-xs mt-1">
-            <span className="font-semibold">{Math.round(totals.lightPct)}%</span> Leve
-            <span className="text-muted-foreground"> · </span>
-            <span className="font-semibold">{Math.round(totals.hardPct)}%</span> Médio/Alto
-          </p>
-        </div>
+      {/* Resumo + gráficos */}
+      <div className="grid gap-3 grid-cols-1 lg:grid-cols-[260px_1fr_1fr] mt-3">
+        <WeekTotalsCard totals={totals} index={index} />
+        <WeekVolumeChart data={perWorkout} />
+        <WeekIntensityChart data={perWorkout} />
       </div>
-
-      {/* Gráfico de distribuição de zonas */}
-      <WeekZoneChart phase={phase} totals={totals} index={index} />
     </div>
   );
 }
 
-const ZONE_COLORS: Record<"Z1" | "Z2" | "Z3" | "Z4" | "Z5", string> = {
-  Z1: "var(--color-zone-1)", Z2: "var(--color-zone-2)", Z3: "var(--color-zone-3)",
-  Z4: "var(--color-zone-4)", Z5: "var(--color-zone-5)",
-};
-const ZONE_KEYS = ["Z1", "Z2", "Z3", "Z4", "Z5"] as const;
+function WeekTotalsCard({ totals, index }: { totals: ReturnType<typeof computeWeekTotals>; index: number }) {
+  const rows = [
+    { label: "Volume", value: formatKm(totals.totalM) },
+    { label: "Duração", value: formatHm(totals.totalMin) },
+    { label: "L — Z1 e Z2", value: `${totals.lightPct.toFixed(1).replace(".", ",")}%` },
+    { label: "M/H — Z3, Z4 e Z5", value: `${totals.hardPct.toFixed(1).replace(".", ",")}%` },
+  ];
+  return (
+    <div className="rounded-md border bg-card overflow-hidden">
+      <div className="bg-warning text-warning-foreground px-3 py-2">
+        <p className="text-xs font-bold uppercase tracking-wide">Quanto que você vai treinar</p>
+        <p className="text-[10px] opacity-80">Semana {index} — Total</p>
+      </div>
+      <div className="divide-y">
+        {rows.map((r, i) => (
+          <div
+            key={r.label}
+            className={`flex items-center justify-between px-3 py-2 text-sm ${
+              i === 2 ? "bg-[color:var(--intensity-light)]/30" : i === 3 ? "bg-[color:var(--intensity-hard)]/20" : ""
+            }`}
+          >
+            <span className="font-medium text-muted-foreground">{r.label}</span>
+            <span className="font-semibold tabular-nums">{r.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-function WeekZoneChart({ phase, totals, index }: { phase: 1 | 2 | 3 | 4; totals: ReturnType<typeof computeWeekTotals>; index: number }) {
-  const data = [{
-    name: `Semana ${index}`,
-    Z1: totals.zonePercent.Z1, Z2: totals.zonePercent.Z2, Z3: totals.zonePercent.Z3,
-    Z4: totals.zonePercent.Z4, Z5: totals.zonePercent.Z5,
-  }];
+const VOLUME_COLORS = [
+  "var(--color-volume-1)", "var(--color-volume-2)",
+  "var(--color-volume-3)", "var(--color-volume-4)",
+];
+
+function WeekVolumeChart({ data }: { data: WorkoutTotals[] }) {
+  const chartData = data.map((w) => ({ code: w.code, km: +(w.totalM / 1000).toFixed(2) }));
+  const maxKm = Math.max(1, ...chartData.map((d) => d.km));
   return (
     <div className="rounded-md border bg-card p-3">
-      <p className="text-xs font-semibold mb-2">Distribuição de Intensidade — Fase {phase}</p>
-      <ResponsiveContainer width="100%" height={90}>
-        <BarChart data={data} layout="vertical" stackOffset="expand" margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
-          <XAxis type="number" hide domain={[0, 1]} />
-          <YAxis type="category" dataKey="name" hide />
+      <p className="text-xs font-bold uppercase tracking-wide text-center mb-2">Volume</p>
+      <ResponsiveContainer width="100%" height={180}>
+        <BarChart data={chartData} margin={{ top: 22, right: 8, bottom: 4, left: 8 }}>
+          <XAxis dataKey="code" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis hide domain={[0, maxKm * 1.15]} />
           <RTooltip
             cursor={{ fill: "transparent" }}
-            formatter={(value: number, name) => {
-              const pct = (value as number);
-              const min = totals.zoneMinutes[name as "Z1"];
-              return [`${pct.toFixed(0)}% — ${Math.round(min)} min`, name as string];
-            }}
+            formatter={(v: number) => [`${v.toFixed(2).replace(".", ",")} km`, "Volume"]}
           />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
-          {ZONE_KEYS.map((z) => (
-            <Bar key={z} dataKey={z} stackId="zones" name={z} isAnimationActive>
-              <Cell fill={ZONE_COLORS[z]} />
-            </Bar>
-          ))}
+          <Bar dataKey="km" radius={[4, 4, 0, 0]} isAnimationActive>
+            {chartData.map((_, i) => (
+              <Cell key={i} fill={VOLUME_COLORS[i % VOLUME_COLORS.length]} />
+            ))}
+            <LabelList
+              dataKey="km"
+              position="top"
+              formatter={(v: number) => `${v.toFixed(2).replace(".", ",")} km`}
+              style={{ fontSize: 11, fontWeight: 600, fill: "var(--color-foreground)" }}
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function WeekIntensityChart({ data }: { data: WorkoutTotals[] }) {
+  // Cada treino vira 2 categorias no eixo X: "T01·L" e "T01·M/H"
+  const chartData = data.flatMap((w) => [
+    { key: `${w.code}·L`, code: w.code, kind: "L", pct: +w.lightPct.toFixed(1) },
+    { key: `${w.code}·M/H`, code: w.code, kind: "M/H", pct: +w.hardPct.toFixed(1) },
+  ]);
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-center mb-2">Intensidade</p>
+      <ResponsiveContainer width="100%" height={180}>
+        <BarChart data={chartData} margin={{ top: 22, right: 8, bottom: 18, left: 8 }} barCategoryGap="12%">
+          <XAxis
+            dataKey="key"
+            tick={(props) => {
+              const { x, y, payload, index } = props as { x: number; y: number; payload: { value: string }; index: number };
+              const item = chartData[index];
+              const isFirst = item.kind === "L";
+              return (
+                <g transform={`translate(${x},${y})`}>
+                  <text x={0} y={4} textAnchor="middle" fontSize={10} fill="var(--color-muted-foreground)">{item.kind}</text>
+                  {isFirst && (
+                    <text x={14} y={18} textAnchor="middle" fontSize={10} fontWeight={600} fill="var(--color-foreground)">
+                      {item.code}
+                    </text>
+                  )}
+                </g>
+              );
+            }}
+            axisLine={false}
+            tickLine={false}
+            interval={0}
+          />
+          <YAxis hide domain={[0, 110]} />
+          <RTooltip
+            cursor={{ fill: "transparent" }}
+            formatter={(v: number, _n, p) => {
+              const k = (p?.payload as { kind?: string } | undefined)?.kind ?? "";
+              return [`${v.toFixed(1).replace(".", ",")}%`, k];
+            }}
+            labelFormatter={(_l, payload) => (payload?.[0]?.payload as { code?: string } | undefined)?.code ?? ""}
+          />
+          <Bar dataKey="pct" radius={[4, 4, 0, 0]} isAnimationActive>
+            {chartData.map((d, i) => (
+              <Cell key={i} fill={d.kind === "L" ? "var(--color-intensity-light)" : "var(--color-intensity-hard)"} />
+            ))}
+            <LabelList
+              dataKey="pct"
+              position="top"
+              formatter={(v: number) => `${v.toFixed(1).replace(".", ",")}%`}
+              style={{ fontSize: 10, fontWeight: 600, fill: "var(--color-foreground)" }}
+            />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

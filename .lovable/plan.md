@@ -1,56 +1,78 @@
-# Planilha 5KM — duração/volume nos cards + gráfico de zonas + resumo semanal
+# Replicar gráficos da semana no padrão da planilha
 
-Três adições ao card 4 ("Fase e treinos") da rota `/planilha-5km`. Sem alterações no PDF, banco ou backend.
+## Problema
 
-## Arquivos
+A barra horizontal empilhada de zonas Z1–Z5 atual não corresponde ao layout da planilha de referência enviada. O modelo do cliente usa **três blocos** lado a lado abaixo dos cards de treino:
 
-1. **Novo** `src/lib/planilha-5km-volumes.ts`
-   - Tabela `WORKOUT_STATS[level][phase][weekIdx][code] = { durationMin, volumeM, label? }` exatamente como fornecido (Nível 1 e 2, 4 fases × 4 semanas).
-   - Helper `getStats(level, phase, weekIdx, code)`.
-   - Helpers de formatação: `formatHm(min)` ("1h 22min" / "27 min") e `formatKm(m)` ("4,3 km").
+1. **Tabela "Quanto que você vai treinar"** (Total) — Volume, Duração, %L (Z1+Z2), %M/H (Z3+Z4+Z5).
+2. **Gráfico VOLUME** — uma barra vertical por treino da semana, rotulada com o volume em km (ex: 14,30 km, 15,70 km…).
+3. **Gráfico INTENSIDADE** — para cada treino, **duas barras verticais lado a lado**: L (azul claro) e M/H (laranja), com rótulo de % no topo (ex: 92,6% / 7,4%).
 
-2. **Novo** `src/lib/planilha-5km-zone-distribution.ts`
-   - `computeWeekZoneMinutes(week, level, phase, weekIdx)` → `{ Z1, Z2, Z3, Z4, Z5 }` em minutos.
-   - Algoritmo (por treino, percorrendo `workout.sections[].items`):
-     - `single` em `min` → soma `value` na zona.
-     - `single` em `sec` → soma `value/60` na zona.
-     - `intervals` → `reps * (on + off em min)`, somando cada um na sua zona.
-     - `single`/`test` em `m` (Longão, Teste, Simulado): distribuir o `durationMin` do `WORKOUT_STATS` proporcionalmente aos metros entre os itens em metros do mesmo treino, e atribuir cada fatia à zona do item (Teste 3km vai para Z3 conforme regra do enunciado; itens em metros sem zona explícita não existem na base atual).
-   - `computeWeekZonePercent(...)` retorna `{ Z1..Z5 }` somando 100%.
-   - `computeWeekTotals(week, level, phase, weekIdx)` → `{ totalMin, totalKm, lightPct, hardPct }` (leve = Z1+Z2; médio/alto = Z3+Z4+Z5).
+## Solução
 
-3. **Editar** `src/routes/_authenticated/planilha-5km.tsx`
-   - No componente `WeekRow`, abaixo do grid de cards de treino, renderizar:
-     - **Sub-info dentro de cada card de treino**: linha com `<Clock /> {duração}` + separador + `<Route /> {volume km}` (ícones Lucide), abaixo de `wo.type`. Dados via `getStats(level, phase, weekIdx, wo.code)`.
-     - **Resumo semanal** (`WeekSummaryCards`): 4 cards horizontais (em uma linha que se ajusta) por semana — só os da semana atual:
-       - Total: `formatHm(totalMin)`
-       - Volume: `formatKm(totalM)`
-       - Intensidade: `lightPct% Leve` / `hardPct% Médio/Alto`
-     - **Gráfico de zonas** (`WeekZoneChart`): barra horizontal 100% empilhada da semana, usando `recharts` (`BarChart` com `layout="vertical"`).
-       - 1 barra (Y = "Semana N"), 5 segmentos `Bar dataKey="Z1..Z5" stackId="zones"`.
-       - Cores via tokens semânticos definidos em `src/styles.css` (ver abaixo).
-       - `Tooltip` formatado: `Z2 — 33% — 28 min`.
-       - Legenda horizontal Z1…Z5.
-   - Como `WeekRow` precisa saber `level`, `phase` e `weekIdx`, passar essas props no `weeks.map(...)` do componente principal.
+Substituir o componente `WeekZoneChart` (barra horizontal empilhada) e o "Resumo semanal" atual por um **layout de 3 colunas** que reproduz o modelo.
 
-4. **Editar** `src/styles.css`
-   - Adicionar tokens de cor para zonas (modo claro e escuro):
-     `--zone-1` (verde claro), `--zone-2` (verde), `--zone-3` (amarelo), `--zone-4` (laranja), `--zone-5` (vermelho).
-   - Mapear para classes Tailwind via `@theme` para uso no Recharts (`fill: hsl(var(--zone-1))`).
+### Layout (abaixo dos cards de cada semana)
 
-## Comportamento e UX
+```text
+┌────────────────────┬───────────────────────┬───────────────────────┐
+│ Quanto vai treinar │       VOLUME          │      INTENSIDADE      │
+│ ────────────────── │                       │                       │
+│ Volume   65,5 km   │  ▆   ▇   █   █        │  █   █   █   █        │
+│ Duração  6h13      │  T1  T2  T3  T4       │  L M L M L M L M      │
+│ L  89,3%           │ 14,3 15,7 17,8 17,6   │ 92  7 88 11 86 13 …   │
+│ M/H 10,7%          │       (km)            │   (% por treino)      │
+└────────────────────┴───────────────────────┴───────────────────────┘
+```
 
-- A sub-info (duração/volume) aparece em todos os cards de treino, sem mudar o tamanho do card (usar texto `text-[11px]`).
-- Os 4 cards de resumo ficam logo abaixo da grid de cards de treino e acima do gráfico.
-- O gráfico tem altura fixa (~80px) e título `Distribuição de Intensidade — Fase {phase}` (apenas na primeira semana, para não repetir; ou em cada semana — ver pergunta abaixo).
-- Animação padrão do Recharts (já suave) ao montar.
+Em telas estreitas (md e abaixo), as 3 colunas empilham verticalmente.
 
-## Validação
+### 1. Card "Total" (substitui os 4 cards de resumo atuais)
 
-- Conferir contra os valores de referência do enunciado (N1 F1: S1 Z1≈57%, Z2≈33%, Z4≈10%) — tolerância ±2 pontos percentuais.
+Um único card com 4 linhas (Volume / Duração / L Z1+Z2 / M/H Z3+Z4+Z5), estilizado com cabeçalho destacado ("Quanto que você vai treinar") usando tokens semânticos do design system.
+
+### 2. Gráfico VOLUME — `WeekVolumeChart`
+
+- Recharts `BarChart` vertical (padrão), uma barra por treino da semana (T01, T02…).
+- `dataKey="km"`, `Cell` colorido por treino (paleta variando como no modelo: tons de verde→azul claro→azul escuro).
+- `LabelList` no topo de cada barra com o valor em km (ex: "14,30 km").
+- Eixo X mostra o código do treino (T01…); eixo Y oculto.
+- Sem grid pesado; tooltip com tipo de treino + km.
+
+### 3. Gráfico INTENSIDADE — `WeekIntensityChart`
+
+- Recharts `BarChart` vertical com **2 séries**: `light` (L = Z1+Z2 %) e `hard` (M/H = Z3+Z4+Z5 %).
+- Barras agrupadas (não empilhadas — `barCategoryGap` pequeno).
+- Cor L: azul claro (`--zone-2`); cor M/H: laranja (novo token `--intensity-hard`).
+- `LabelList` no topo de cada barra com a % (ex: "92,6%").
+- Eixo X: códigos dos treinos repetidos com sub-rótulo "L  M/H" abaixo (via `XAxis tickFormatter` ou customizado).
+- Domínio Y fixo 0–100%.
+
+### 4. Cálculo por treino
+
+Estender `src/lib/planilha-5km-zone-distribution.ts`:
+
+- Nova função `computeWorkoutTotals(workout, level, phase, weekIdx)` → `{ code, totalMin, totalM, lightPct, hardPct, zoneMinutes }`. Reaproveita a lógica `workoutZoneMinutes` (já existe internamente) — exportá-la.
+- `computeWeekTotals` continua igual; o componente `WeekRow` chama `computeWorkoutTotals` para cada treino para alimentar os dois gráficos.
+
+### 5. Tokens de cor
+
+Adicionar em `src/styles.css`:
+- `--volume-1` … `--volume-4` (paleta gradiente verde→azul, espelhando o modelo).
+- `--intensity-light` (azul claro, pode reutilizar `--zone-2`).
+- `--intensity-hard` (laranja).
+
+### 6. Remover
+
+- `WeekZoneChart` (barra empilhada Z1–Z5) e o array de 4 cards de resumo. Tudo é substituído pelo novo bloco de 3 colunas.
+
+## Arquivos afetados
+
+- `src/routes/_authenticated/planilha-5km.tsx` — substituir bloco "Resumo + WeekZoneChart" por `<WeekTotalsCard />`, `<WeekVolumeChart />`, `<WeekIntensityChart />` em grid de 3 colunas.
+- `src/lib/planilha-5km-zone-distribution.ts` — exportar `workoutZoneMinutes` e adicionar `computeWorkoutTotals`.
+- `src/styles.css` — adicionar tokens `--volume-*` e `--intensity-*`.
 
 ## Fora de escopo
 
-- PDF (não exportar duração/volume nem o gráfico no PDF nesta entrega).
-- Edição/persistência de duração/volume no banco.
-- Mudanças nos níveis/fases/treinos existentes em `planilha-5km-data.ts`.
+- PDF (gráficos no PDF não mudam nesta etapa).
+- Alterações nos cards de treino individuais (já têm duração + volume).

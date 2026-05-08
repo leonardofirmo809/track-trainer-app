@@ -3,9 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Home, ChevronRight, Save, Settings2, AlertTriangle, Download } from "lucide-react";
+import { Home, ChevronRight, Save, Settings2, AlertTriangle, Download, Clock, Route as RouteIcon } from "lucide-react";
 import { useCoachBranding } from "@/lib/use-coach-branding";
 import { generatePlanilha5kmPdf, downloadBlob } from "@/lib/planilha-5km-pdf";
+import { getStats, formatHm, formatKm } from "@/lib/planilha-5km-volumes";
+import { computeWeekTotals } from "@/lib/planilha-5km-zone-distribution";
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -322,7 +325,9 @@ function Planilha5kmPage() {
                     <p className="text-sm text-muted-foreground">{PHASE_LABELS[p as 1 | 2 | 3 | 4].subtitle}</p>
                   </div>
                   {weeks.map((wk, idx) => (
-                    <WeekRow key={idx} index={idx + 1} dist={wk} onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
+                    <WeekRow key={idx} index={idx + 1} dist={wk}
+                      level={level} phase={p as 1 | 2 | 3 | 4} weekIdx={idx}
+                      onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
                   ))}
                 </TabsContent>
               ))}
@@ -374,40 +379,122 @@ function Planilha5kmPage() {
   );
 }
 
-function WeekRow({ index, dist, onOpen }: { index: number; dist: DistributionResult; onOpen: (wo: Workout, day: DayCode) => void }) {
+function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
+  index: number; dist: DistributionResult; level: 1 | 2; phase: 1 | 2 | 3 | 4; weekIdx: number;
+  onOpen: (wo: Workout, day: DayCode) => void;
+}) {
+  const workouts = dist.assignments.map((a) => a.workout).filter((w): w is Workout => !!w);
+  const totals = useMemo(() => computeWeekTotals(workouts, level, phase, weekIdx), [workouts, level, phase, weekIdx]);
+
   return (
-    <div>
+    <div className="space-y-3">
       <p className="font-semibold mb-2">Semana {index}</p>
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
-        {dist.assignments.map((a) => (
-          <div key={a.day}>
-            {a.workout ? (
-              <button
-                type="button"
-                onClick={() => onOpen(a.workout!, a.day)}
-                className={`w-full text-left rounded-md border-2 p-3 hover:opacity-90 transition ${WORKOUT_TYPES[a.workout.type].color}`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold">{DAY_LABEL[a.day]}</span>
-                  <span className="text-[10px] opacity-80">{a.workout.code}</span>
+        {dist.assignments.map((a) => {
+          const stat = a.workout ? getStats(level, phase, weekIdx, a.workout.code) : null;
+          return (
+            <div key={a.day}>
+              {a.workout ? (
+                <button
+                  type="button"
+                  onClick={() => onOpen(a.workout!, a.day)}
+                  className={`w-full text-left rounded-md border-2 p-3 hover:opacity-90 transition ${WORKOUT_TYPES[a.workout.type].color}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold">{DAY_LABEL[a.day]}</span>
+                    <span className="text-[10px] opacity-80">{a.workout.code}</span>
+                  </div>
+                  <p className="text-sm font-semibold leading-tight">{a.workout.type}</p>
+                  {stat && (
+                    <div className="flex items-center gap-2 mt-1 text-[11px] opacity-90">
+                      <span className="inline-flex items-center gap-1"><Clock className="size-3" />{stat.durationMin} min</span>
+                      <span aria-hidden>·</span>
+                      <span className="inline-flex items-center gap-1"><RouteIcon className="size-3" />{formatKm(stat.volumeM)}</span>
+                    </div>
+                  )}
+                  <p className="text-[11px] opacity-80 mt-1">{a.workout.zones.join(" / ")}</p>
+                </button>
+              ) : (
+                <div className="rounded-md border-2 border-dashed border-muted-foreground/30 p-3 text-center text-xs text-muted-foreground bg-muted/30">
+                  <p className="font-bold">{DAY_LABEL[a.day]}</p>
+                  <p className="mt-2">OFF</p>
                 </div>
-                <p className="text-sm font-semibold leading-tight">{a.workout.type}</p>
-                <p className="text-[11px] opacity-80 mt-1">{a.workout.zones.join(" / ")}</p>
-              </button>
-            ) : (
-              <div className="rounded-md border-2 border-dashed border-muted-foreground/30 p-3 text-center text-xs text-muted-foreground bg-muted/30">
-                <p className="font-bold">{DAY_LABEL[a.day]}</p>
-                <p className="mt-2">OFF</p>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
       </div>
       {dist.hasConsecutiveIntense && (
         <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
           <AlertTriangle className="size-3" /> Há treinos intensos em dias consecutivos.
         </p>
       )}
+
+      {/* Resumo semanal */}
+      <div className="grid gap-2 grid-cols-2 md:grid-cols-4 mt-2">
+        <div className="rounded-md border bg-card p-3">
+          <p className="text-[10px] uppercase text-muted-foreground">Semana {index}</p>
+          <p className="text-sm font-semibold mt-1">Resumo</p>
+        </div>
+        <div className="rounded-md border bg-card p-3">
+          <p className="text-[10px] uppercase text-muted-foreground">Total</p>
+          <p className="text-sm font-semibold mt-1">{formatHm(totals.totalMin)}</p>
+        </div>
+        <div className="rounded-md border bg-card p-3">
+          <p className="text-[10px] uppercase text-muted-foreground">Volume</p>
+          <p className="text-sm font-semibold mt-1">{formatKm(totals.totalM)}</p>
+        </div>
+        <div className="rounded-md border bg-card p-3">
+          <p className="text-[10px] uppercase text-muted-foreground">Intensidade</p>
+          <p className="text-xs mt-1">
+            <span className="font-semibold">{Math.round(totals.lightPct)}%</span> Leve
+            <span className="text-muted-foreground"> · </span>
+            <span className="font-semibold">{Math.round(totals.hardPct)}%</span> Médio/Alto
+          </p>
+        </div>
+      </div>
+
+      {/* Gráfico de distribuição de zonas */}
+      <WeekZoneChart phase={phase} totals={totals} index={index} />
+    </div>
+  );
+}
+
+const ZONE_COLORS: Record<"Z1" | "Z2" | "Z3" | "Z4" | "Z5", string> = {
+  Z1: "var(--color-zone-1)", Z2: "var(--color-zone-2)", Z3: "var(--color-zone-3)",
+  Z4: "var(--color-zone-4)", Z5: "var(--color-zone-5)",
+};
+const ZONE_KEYS = ["Z1", "Z2", "Z3", "Z4", "Z5"] as const;
+
+function WeekZoneChart({ phase, totals, index }: { phase: 1 | 2 | 3 | 4; totals: ReturnType<typeof computeWeekTotals>; index: number }) {
+  const data = [{
+    name: `Semana ${index}`,
+    Z1: totals.zonePercent.Z1, Z2: totals.zonePercent.Z2, Z3: totals.zonePercent.Z3,
+    Z4: totals.zonePercent.Z4, Z5: totals.zonePercent.Z5,
+  }];
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <p className="text-xs font-semibold mb-2">Distribuição de Intensidade — Fase {phase}</p>
+      <ResponsiveContainer width="100%" height={90}>
+        <BarChart data={data} layout="vertical" stackOffset="expand" margin={{ top: 4, right: 8, bottom: 4, left: 8 }}>
+          <XAxis type="number" hide domain={[0, 1]} />
+          <YAxis type="category" dataKey="name" hide />
+          <RTooltip
+            cursor={{ fill: "transparent" }}
+            formatter={(value: number, name) => {
+              const pct = (value as number);
+              const min = totals.zoneMinutes[name as "Z1"];
+              return [`${pct.toFixed(0)}% — ${Math.round(min)} min`, name as string];
+            }}
+          />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          {ZONE_KEYS.map((z) => (
+            <Bar key={z} dataKey={z} stackId="zones" name={z} isAnimationActive>
+              <Cell fill={ZONE_COLORS[z]} />
+            </Bar>
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   );
 }

@@ -153,14 +153,18 @@ export async function generatePlanilha5kmPdf(opts: {
       drawText(page, branding.coachName, margin, A4.h - headerH / 2 - 4, bold, 14, white);
     }
     const title = "PLANILHA 5KM";
-    drawText(page, title, A4.w - margin - bold.widthOfTextAtSize(title, 16), A4.h - 30, bold, 16, white);
-    const sub = `${PHASE_LABELS[currentPhase].title} — ${PHASE_LABELS[currentPhase].subtitle}`;
+    const titleW = bold.widthOfTextAtSize(title, 16);
+    drawText(page, title, A4.w - margin - titleW, A4.h - 30, bold, 16, white);
+    const subRaw = `${PHASE_LABELS[currentPhase].title} — ${PHASE_LABELS[currentPhase].subtitle}`;
+    const subMaxW = A4.w - margin * 2 - (logo ? 0 : 120);
+    const sub = truncate(subRaw, font, 10, subMaxW);
     drawText(page, sub, A4.w - margin - font.widthOfTextAtSize(sub, 10), A4.h - 48, font, 10, white);
     // Footer
     const footerH = 28;
     page.drawRectangle({ x: 0, y: 0, width: A4.w, height: footerH, color: secondary });
-    drawText(page, `Treinador: ${branding.coachName}`, margin, 10, font, 9, white);
-    const right = `Aluno: ${studentName}  •  Pág. ${pageNum}`;
+    const leftFooter = truncate(`Treinador: ${branding.coachName}`, font, 9, (A4.w / 2) - margin - 8);
+    drawText(page, leftFooter, margin, 10, font, 9, white);
+    const right = truncate(`Aluno: ${studentName}  •  Pág. ${pageNum}`, font, 9, (A4.w / 2) - margin - 8);
     drawText(page, right, A4.w - margin - font.widthOfTextAtSize(right, 9), 10, font, 9, white);
     y = A4.h - headerH - 24;
   }

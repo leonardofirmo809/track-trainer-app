@@ -13,20 +13,14 @@ const configSchema = z.object({
   currentPhase: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
 });
 
-async function assertCanAccessStudent(
-  supabase: ReturnType<typeof supabaseAdmin.auth.admin.createUser> extends never ? never : any,
-  userId: string,
-  studentId: string,
-) {
-  const { data: student, error } = await supabase
+async function assertCanAccessStudent(userId: string, studentId: string) {
+  const { data: student, error } = await supabaseAdmin
     .from("students").select("id, coach_id").eq("id", studentId).maybeSingle();
   if (error) throw new Response(error.message, { status: 500 });
-  if (!student) {
+  if (!student) throw new Response("Aluno não encontrado", { status: 404 });
+  if (student.coach_id !== userId) {
     const { data: adminCheck } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
-    if (!adminCheck) throw new Response("Aluno não encontrado ou sem permissão", { status: 403 });
-    const { data: s2 } = await supabaseAdmin.from("students").select("id, coach_id").eq("id", studentId).maybeSingle();
-    if (!s2) throw new Response("Aluno não encontrado", { status: 404 });
-    return s2;
+    if (!adminCheck) throw new Response("Forbidden", { status: 403 });
   }
   return student;
 }

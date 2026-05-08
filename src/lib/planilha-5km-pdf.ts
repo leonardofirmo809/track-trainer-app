@@ -70,7 +70,7 @@ export async function generatePlanilha5kmPdf(opts: {
   daysPerWeek: number;
   weekDays: DayCode[];
   currentPhase: 1 | 2 | 3 | 4;
-  weeks: DistributionResult[];
+  weeks: DistributionResult<Workout>[];
   branding: CoachBranding;
 }): Promise<Blob> {
   const {

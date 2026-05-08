@@ -2,6 +2,9 @@
 import type { Workout, ZoneId, Item } from "./planilha-5km-data";
 import { getStats } from "./planilha-5km-volumes";
 
+export type StatsLookup = (level: 1 | 2, phase: 1 | 2 | 3 | 4, weekIdx: number, code: string) => { durationMin: number; volumeM: number } | null;
+const defaultLookup: StatsLookup = getStats;
+
 export type ZoneMinutes = Record<ZoneId, number>;
 
 const empty = (): ZoneMinutes => ({ Z1: 0, Z2: 0, Z3: 0, Z4: 0, Z5: 0 });
@@ -58,10 +61,11 @@ export function computeWeekZoneMinutes(
   level: 1 | 2,
   phase: 1 | 2 | 3 | 4,
   weekIdx: number,
+  lookup: StatsLookup = defaultLookup,
 ): ZoneMinutes {
   const total = empty();
   for (const wo of workouts) {
-    const stat = getStats(level, phase, weekIdx, wo.code);
+    const stat = lookup(level, phase, weekIdx, wo.code);
     const zm = workoutZoneMinutes(wo, stat?.durationMin ?? 0);
     (Object.keys(total) as ZoneId[]).forEach((z) => { total[z] += zm[z]; });
   }

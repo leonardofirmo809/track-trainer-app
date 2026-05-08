@@ -7,7 +7,7 @@ import { Home, ChevronRight, Save, Settings2, AlertTriangle, Download, Clock, Ro
 import { useCoachBranding } from "@/lib/use-coach-branding";
 import { generatePlanilha5kmPdf, downloadBlob } from "@/lib/planilha-5km-pdf";
 import { getStats, formatHm, formatKm, formatKm2, formatHms } from "@/lib/planilha-5km-volumes";
-import { computeWeekTotals, computeWorkoutTotals, computePhaseTotals, type PhaseTotals } from "@/lib/planilha-5km-zone-distribution";
+import { computeWorkoutTotals, computePhaseTotals, type PhaseTotals } from "@/lib/planilha-5km-zone-distribution";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, Cell, LabelList, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

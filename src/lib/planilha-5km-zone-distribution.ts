@@ -86,14 +86,15 @@ export function computeWeekTotals(
   level: 1 | 2,
   phase: 1 | 2 | 3 | 4,
   weekIdx: number,
+  lookup: StatsLookup = defaultLookup,
 ): WeekTotals {
   let totalMin = 0;
   let totalM = 0;
   for (const wo of workouts) {
-    const stat = getStats(level, phase, weekIdx, wo.code);
+    const stat = lookup(level, phase, weekIdx, wo.code);
     if (stat) { totalMin += stat.durationMin; totalM += stat.volumeM; }
   }
-  const zoneMinutes = computeWeekZoneMinutes(workouts, level, phase, weekIdx);
+  const zoneMinutes = computeWeekZoneMinutes(workouts, level, phase, weekIdx, lookup);
   const sum = (Object.values(zoneMinutes) as number[]).reduce((a, b) => a + b, 0);
   const zonePercent = (Object.fromEntries(
     (Object.entries(zoneMinutes) as [ZoneId, number][]).map(([k, v]) => [k, sum > 0 ? (v / sum) * 100 : 0]),
@@ -117,8 +118,9 @@ export function computeWorkoutTotals(
   level: 1 | 2,
   phase: 1 | 2 | 3 | 4,
   weekIdx: number,
+  lookup: StatsLookup = defaultLookup,
 ): WorkoutTotals {
-  const stat = getStats(level, phase, weekIdx, wo.code);
+  const stat = lookup(level, phase, weekIdx, wo.code);
   const totalMin = stat?.durationMin ?? 0;
   const totalM = stat?.volumeM ?? 0;
   const zm = workoutZoneMinutes(wo, totalMin);

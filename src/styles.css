@@ -52,6 +52,12 @@
   --color-zone-3: var(--zone-3);
   --color-zone-4: var(--zone-4);
   --color-zone-5: var(--zone-5);
+  --color-volume-1: var(--volume-1);
+  --color-volume-2: var(--volume-2);
+  --color-volume-3: var(--volume-3);
+  --color-volume-4: var(--volume-4);
+  --color-intensity-light: var(--intensity-light);
+  --color-intensity-hard: var(--intensity-hard);
 }
 
 :root {
@@ -97,6 +103,12 @@
   --zone-3: oklch(0.82 0.17 90);
   --zone-4: oklch(0.7 0.19 55);
   --zone-5: oklch(0.6 0.22 27);
+  --volume-1: oklch(0.78 0.18 145);
+  --volume-2: oklch(0.65 0.19 150);
+  --volume-3: oklch(0.72 0.14 220);
+  --volume-4: oklch(0.55 0.18 245);
+  --intensity-light: oklch(0.86 0.07 235);
+  --intensity-hard: oklch(0.7 0.18 50);
 }
 
 .dark {
@@ -136,6 +148,12 @@
   --zone-3: oklch(0.78 0.17 90);
   --zone-4: oklch(0.7 0.2 55);
   --zone-5: oklch(0.65 0.22 22);
+  --volume-1: oklch(0.72 0.18 145);
+  --volume-2: oklch(0.6 0.19 150);
+  --volume-3: oklch(0.68 0.14 220);
+  --volume-4: oklch(0.55 0.18 245);
+  --intensity-light: oklch(0.78 0.08 235);
+  --intensity-hard: oklch(0.68 0.18 50);
 }
 
 @layer base {

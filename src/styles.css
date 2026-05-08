@@ -131,6 +131,11 @@
   --sidebar-accent-foreground: oklch(0.95 0.01 240);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.65 0.2 152);
+  --zone-1: oklch(0.78 0.16 145);
+  --zone-2: oklch(0.62 0.18 150);
+  --zone-3: oklch(0.78 0.17 90);
+  --zone-4: oklch(0.7 0.2 55);
+  --zone-5: oklch(0.65 0.22 22);
 }
 
 @layer base {

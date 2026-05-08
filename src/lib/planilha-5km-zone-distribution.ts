@@ -22,7 +22,7 @@ function itemMinutesToZones(it: Item, acc: ZoneMinutes, distMinutesPerMeter: num
   }
 }
 
-function workoutZoneMinutes(wo: Workout, totalMinFallback: number): ZoneMinutes {
+export function workoutZoneMinutes(wo: Workout, totalMinFallback: number): ZoneMinutes {
   // 1) Calcula totais "tempo" e "metros" do treino para escala dos itens em metros.
   let timeMin = 0;
   let meters = 0;

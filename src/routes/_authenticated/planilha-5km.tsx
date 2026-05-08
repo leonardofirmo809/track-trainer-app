@@ -303,8 +303,11 @@ function Planilha5kmPage() {
       {/* Card 4 — Fase + treinos */}
       {applied && weeks && zones && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle>4. Fase e treinos</CardTitle>
+            <Button onClick={handleExportPdf} disabled={exporting} size="sm">
+              <Download /> {exporting ? "Gerando…" : "Exportar PDF"}
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             <Tabs value={String(phase)} onValueChange={(v) => changePhase(Number(v) as 1 | 2 | 3 | 4)}>

@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Home, ChevronRight, Save, Settings2, AlertTriangle } from "lucide-react";
+import { Home, ChevronRight, Save, Settings2, AlertTriangle, Download } from "lucide-react";
+import { useCoachBranding } from "@/lib/use-coach-branding";
+import { generatePlanilha5kmPdf, downloadBlob } from "@/lib/planilha-5km-pdf";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +51,8 @@ function Planilha5kmPage() {
   const [pendingApply, setPendingApply] = useState<null | (() => void)>(null);
   const [openWorkout, setOpenWorkout] = useState<{ wo: Workout; day: DayCode } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const branding = useCoachBranding();
 
   const students = useQuery({
     queryKey: ["students-list"],
@@ -146,6 +150,29 @@ function Planilha5kmPage() {
   function changePhase(p: 1 | 2 | 3 | 4) {
     setPhase(p);
     if (applied) void persistConfig({ phase: p });
+  }
+
+  async function handleExportPdf() {
+    if (!weeks || !zones || !dataQuery.data) return;
+    setExporting(true);
+    try {
+      const blob = await generatePlanilha5kmPdf({
+        studentName: dataQuery.data.student?.full_name ?? "Aluno",
+        studentLevel: dataQuery.data.student?.level ?? null,
+        ftpSecondsPerKm: dataQuery.data.latestTest?.pace_seconds_per_km ?? 0,
+        zones,
+        level, daysPerWeek, weekDays, currentPhase: phase,
+        weeks,
+        branding: branding.data ?? { logoUrl: null, primary: "#0EA5E9", secondary: "#0F172A", coachName: "Treinador" },
+      });
+      const safeName = (dataQuery.data.student?.full_name ?? "aluno").replace(/[^\w\-]+/g, "-");
+      downloadBlob(blob, `Planilha-5km-${safeName}-Fase${phase}.pdf`);
+      toast.success("PDF gerado com sucesso.");
+    } catch (e) {
+      toast.error(`Falha ao gerar PDF: ${(e as Error).message}`);
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -276,8 +303,11 @@ function Planilha5kmPage() {
       {/* Card 4 — Fase + treinos */}
       {applied && weeks && zones && (
         <Card>
-          <CardHeader>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle>4. Fase e treinos</CardTitle>
+            <Button onClick={handleExportPdf} disabled={exporting} size="sm">
+              <Download /> {exporting ? "Gerando…" : "Exportar PDF"}
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             <Tabs value={String(phase)} onValueChange={(v) => changePhase(Number(v) as 1 | 2 | 3 | 4)}>

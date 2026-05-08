@@ -384,6 +384,206 @@ function Planilha10kmPage() {
   );
 }
 
+function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
+  index: number; dist: DistributionResult<Workout>; level: 1 | 2; phase: 1 | 2 | 3 | 4; weekIdx: number;
+  onOpen: (wo: Workout, day: DayCode) => void;
+}) {
+  const workouts = dist.assignments.map((a) => a.workout).filter((w): w is Workout => !!w);
+  const perWorkoutMap = useMemo(() => {
+    const m = new Map<string, { lightPct: number; hardPct: number }>();
+    workouts.forEach((w) => {
+      const t = computeWorkoutTotals(w, level, phase, weekIdx, getStats10km);
+      m.set(w.code, { lightPct: t.lightPct, hardPct: t.hardPct });
+    });
+    return m;
+  }, [workouts, level, phase, weekIdx]);
+
+  return (
+    <div className="space-y-3">
+      <p className="font-semibold mb-2">Semana {index}</p>
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
+        {dist.assignments.map((a) => {
+          const stat = a.workout ? getStats10km(level, phase, weekIdx, a.workout.code) : null;
+          const pct = a.workout ? perWorkoutMap.get(a.workout.code) : null;
+          return (
+            <div key={a.day}>
+              {a.workout ? (
+                <button
+                  type="button"
+                  onClick={() => onOpen(a.workout!, a.day)}
+                  className={`w-full text-left rounded-md border-2 p-3 hover:opacity-90 transition ${WORKOUT_TYPES_10KM[a.workout.type].color}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold">{DAY_LABEL[a.day]}</span>
+                    <span className="text-[10px] opacity-80">{a.workout.code}</span>
+                  </div>
+                  <p className="text-sm font-semibold leading-tight">{a.workout.type}</p>
+                  {stat && (
+                    <div className="flex items-center gap-2 mt-1 text-[11px] opacity-90">
+                      <span className="inline-flex items-center gap-1"><Clock className="size-3" />{stat.durationMin} min</span>
+                      <span aria-hidden>·</span>
+                      <span className="inline-flex items-center gap-1"><RouteIcon className="size-3" />{formatKm(stat.volumeM)}</span>
+                    </div>
+                  )}
+                  {pct && (
+                    <p className="text-[11px] mt-1 font-semibold">
+                      <span style={{ color: "var(--color-intensity-light-fg)" }}>{pct.lightPct.toFixed(1).replace(".", ",")}% L</span>
+                      <span className="opacity-60"> | </span>
+                      <span style={{ color: "var(--color-intensity-hard-fg)" }}>{pct.hardPct.toFixed(1).replace(".", ",")}% M/H</span>
+                    </p>
+                  )}
+                  <p className="text-[11px] opacity-80 mt-1">{a.workout.zones.join(" / ")}</p>
+                </button>
+              ) : (
+                <div className="rounded-md border-2 border-dashed border-muted-foreground/30 p-3 text-center text-xs text-muted-foreground bg-muted/30">
+                  <p className="font-bold">{DAY_LABEL[a.day]}</p>
+                  <p className="mt-2">OFF</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {dist.hasConsecutiveIntense && (
+        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+          <AlertTriangle className="size-3" /> Há treinos intensos em dias consecutivos.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function PhaseChartsBlock({ weeksWorkouts, level, phase }: {
+  weeksWorkouts: Workout[][]; level: 1 | 2; phase: 1 | 2 | 3 | 4;
+}) {
+  const totals = useMemo(() => computePhaseTotals(weeksWorkouts, level, phase, getStats10km), [weeksWorkouts, level, phase]);
+  return (
+    <div className="grid gap-3 grid-cols-1 lg:grid-cols-[280px_1fr_1fr] mt-2">
+      <PhaseTotalsCard totals={totals} />
+      <PhaseVolumeChart perWeek={totals.perWeek} />
+      <PhaseIntensityChart perWeek={totals.perWeek} />
+    </div>
+  );
+}
+
+function PhaseTotalsCard({ totals }: { totals: PhaseTotals }) {
+  const rows = [
+    { label: "Total Volume", value: formatKm2(totals.totalM) },
+    { label: "Total Duração", value: formatHms(totals.totalMin) },
+    { label: "L — Z1 e Z2", value: `${totals.lightPct.toFixed(1).replace(".", ",")}%`, tone: "light" as const },
+    { label: "M/H — Z3, Z4 e Z5", value: `${totals.hardPct.toFixed(1).replace(".", ",")}%`, tone: "hard" as const },
+  ];
+  void formatHm;
+  return (
+    <div className="rounded-md border bg-card overflow-hidden">
+      <div className="bg-warning text-warning-foreground px-3 py-2">
+        <p className="text-xs font-bold uppercase tracking-wide">Quanto que você vai treinar</p>
+        <p className="text-[10px] opacity-80">Total da fase</p>
+      </div>
+      <div className="divide-y">
+        {rows.map((r) => (
+          <div
+            key={r.label}
+            className="flex items-center justify-between px-3 py-2 text-sm"
+            style={
+              r.tone === "light"
+                ? { background: "color-mix(in oklab, var(--color-intensity-light) 18%, transparent)" }
+                : r.tone === "hard"
+                ? { background: "color-mix(in oklab, var(--color-intensity-hard) 18%, transparent)" }
+                : undefined
+            }
+          >
+            <span className="font-medium text-muted-foreground">{r.label}</span>
+            <span className="font-semibold tabular-nums">{r.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const VOLUME_GREEN = [
+  "var(--color-volume-1)", "var(--color-volume-2)",
+  "var(--color-volume-3)", "var(--color-volume-4)",
+];
+
+function PhaseVolumeChart({ perWeek }: { perWeek: PhaseTotals["perWeek"] }) {
+  const data = perWeek.map((w, i) => ({ week: `S${i + 1}`, km: +(w.totalM / 1000).toFixed(2) }));
+  const maxKm = Math.max(1, ...data.map((d) => d.km));
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-center mb-2">Volume</p>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} margin={{ top: 26, right: 12, bottom: 4, left: 8 }}>
+          <XAxis dataKey="week" tick={{ fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
+          <YAxis hide domain={[0, maxKm * 1.18]} />
+          <RTooltip
+            cursor={{ fill: "transparent" }}
+            formatter={(v: number) => [`${v.toFixed(2).replace(".", ",")} km`, "Volume"]}
+          />
+          <Bar dataKey="km" radius={[6, 6, 0, 0]} isAnimationActive>
+            {data.map((_, i) => (
+              <Cell key={i} fill={VOLUME_GREEN[i % VOLUME_GREEN.length]} />
+            ))}
+            <LabelList
+              dataKey="km"
+              position="top"
+              formatter={(v: number) => `${v.toFixed(2).replace(".", ",")} km`}
+              style={{ fontSize: 11, fontWeight: 700, fill: "var(--color-foreground)" }}
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function PhaseIntensityChart({ perWeek }: { perWeek: PhaseTotals["perWeek"] }) {
+  const data = perWeek.map((w, i) => ({
+    week: `S${i + 1}`,
+    L: +w.lightPct.toFixed(1),
+    MH: +w.hardPct.toFixed(1),
+  }));
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-center mb-2">Intensidade</p>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} margin={{ top: 26, right: 12, bottom: 4, left: 8 }} barCategoryGap="20%">
+          <XAxis dataKey="week" tick={{ fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
+          <YAxis hide domain={[0, 115]} />
+          <RTooltip
+            cursor={{ fill: "transparent" }}
+            formatter={(v: number, n: string) => [`${v.toFixed(1).replace(".", ",")}%`, n === "L" ? "Leve" : "Médio/Alto"]}
+          />
+          <Legend
+            verticalAlign="bottom"
+            height={24}
+            iconType="square"
+            formatter={(v: string) => (v === "L" ? "L = Leve" : "M/H = Médio/Alto")}
+            wrapperStyle={{ fontSize: 11 }}
+          />
+          <Bar dataKey="L" fill="var(--color-intensity-light)" radius={[4, 4, 0, 0]} isAnimationActive>
+            <LabelList
+              dataKey="L"
+              position="top"
+              formatter={(v: number) => `${v.toFixed(1).replace(".", ",")}%`}
+              style={{ fontSize: 10, fontWeight: 700, fill: "var(--color-foreground)" }}
+            />
+          </Bar>
+          <Bar dataKey="MH" fill="var(--color-intensity-hard)" radius={[4, 4, 0, 0]} isAnimationActive>
+            <LabelList
+              dataKey="MH"
+              position="top"
+              formatter={(v: number) => `${v.toFixed(1).replace(".", ",")}%`}
+              style={{ fontSize: 10, fontWeight: 700, fill: "var(--color-foreground)" }}
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 const SECTION_LABEL: Record<SectionName, string> = {
   warmup: "Aquecimento", main: "Treino Principal", recovery: "Recuperação", complement: "Complemento",
 };

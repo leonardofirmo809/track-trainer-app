@@ -92,7 +92,7 @@ export async function generatePlanilha10kmPdf(opts: {
 
   const A4 = { w: 595.28, h: 841.89 };
   const margin = 32;
-  const contentBottom = 50; // above footer
+  const contentBottom = 28; // bottom margin (no footer)
   const headerH = 70;
   const logo = await tryEmbedLogo(pdf, branding.logoUrl);
 
@@ -159,13 +159,6 @@ export async function generatePlanilha10kmPdf(opts: {
     const subMaxW = A4.w - margin * 2 - (logo ? 0 : 120);
     const sub = truncate(subRaw, font, 10, subMaxW);
     drawText(page, sub, A4.w - margin - font.widthOfTextAtSize(sub, 10), A4.h - 48, font, 10, white);
-    // Footer
-    const footerH = 28;
-    page.drawRectangle({ x: 0, y: 0, width: A4.w, height: footerH, color: secondary });
-    const leftFooter = truncate(`Treinador: ${branding.coachName}`, font, 9, (A4.w / 2) - margin - 8);
-    drawText(page, leftFooter, margin, 10, font, 9, white);
-    const right = truncate(`Aluno: ${studentName}  •  Pág. ${pageNum}`, font, 9, (A4.w / 2) - margin - 8);
-    drawText(page, right, A4.w - margin - font.widthOfTextAtSize(right, 9), 10, font, 9, white);
     y = A4.h - headerH - 24;
   }
 
@@ -232,83 +225,91 @@ export async function generatePlanilha10kmPdf(opts: {
   // ===== Semanas =====
   const zoneMap = new Map(zones.map((z) => [z.id, z]));
   const contentW = A4.w - margin * 2;
-  weeks.forEach((wk, wi) => {
-    // Uma semana por página (a primeira segue na página atual)
-    if (wi > 0) newPage();
-    ensure(40);
+  // Estima altura de um treino para evitar quebrá-lo entre páginas
+  function estimateWorkoutHeight(wo: Workout): number {
+    let h = 28; // título
+    if (wo.note) h += 14;
+    for (const sct of wo.sections) {
+      h += 18; // section header
+      for (const it of sct.items) {
+        h += 13; // main line
+        const { sub } = itemLines(it, zoneMap);
+        h += sub.length * 12;
+      }
+      h += 8;
+    }
+    return h + 10;
+  }
 
-    // Faixa "Semana N" + aviso
+  weeks.forEach((wk, wi) => {
+    // Garante espaço mínimo para faixa + 1 treino na mesma página
+    ensure(54 + 80);
+
+    // Faixa "Semana N"
     page.drawRectangle({ x: margin, y: y - 22, width: contentW, height: 22, color: primary });
     drawText(page, `Semana ${wi + 1}`, margin + 8, y - 16, bold, 12, white);
-    if (wk.hasConsecutiveIntense) {
-      const warn = "! Intensos em dias consecutivos";
-      const warnW = font.widthOfTextAtSize(warn, 9);
-      const warnX = A4.w - margin - 8 - warnW;
-      // só desenha se couber sem invadir o título
-      if (warnX > margin + 8 + bold.widthOfTextAtSize(`Semana ${wi + 1}`, 12) + 16) {
-        drawText(page, warn, warnX, y - 14, font, 9, white);
-      }
-    }
-    y -= 28;
+    y -= 32;
 
     wk.assignments.forEach((a) => {
       if (!a.workout) {
         ensure(20);
         drawText(page, `${DAY_FULL[a.day]} — OFF`, margin, y, italic, 10, muted);
-        y -= 14;
+        y -= 16;
         return;
       }
       const wo: Workout = a.workout;
       const intense = WORKOUT_TYPES_10KM[wo.type].intense;
 
+      // Mantém o treino inteiro na mesma página (quando couber)
+      ensure(estimateWorkoutHeight(wo));
+
       // header treino — wrap em até 2 linhas, altura dinâmica
       const titleLine = `${DAY_FULL[a.day]} • ${wo.code} — ${wo.type}  [${wo.zones.join("/")}]`;
       const titleMaxW = contentW - 12;
       const titleLines = wrap(titleLine, bold, 10, titleMaxW).slice(0, 2);
-      const titleBoxH = Math.max(18, titleLines.length * 13 + 6);
-      ensure(titleBoxH + 6);
+      const titleBoxH = Math.max(20, titleLines.length * 14 + 8);
       page.drawRectangle({ x: margin, y: y - titleBoxH, width: contentW, height: titleBoxH, color: lightBg, borderColor: intense ? rgb(0.85, 0.4, 0.2) : rgb(0.85, 0.86, 0.88), borderWidth: 0.8 });
-      let ty = y - 13;
+      let ty = y - 14;
       for (const ln of titleLines) {
         drawText(page, ln, margin + 6, ty, bold, 10, ink);
-        ty -= 13;
+        ty -= 14;
       }
-      y -= titleBoxH + 4;
+      y -= titleBoxH + 6;
 
       if (wo.note) {
         for (const ln of wrap(`"${wo.note}"`, italic, 9, contentW - 16)) {
-          ensure(12);
+          ensure(13);
           drawText(page, ln, margin + 8, y, italic, 9, muted);
-          y -= 11;
+          y -= 12;
         }
-        y -= 2;
+        y -= 4;
       }
 
       wo.sections.forEach((sct) => {
-        ensure(16);
+        ensure(18);
         drawText(page, SECTION_LABEL[sct.name].toUpperCase(), margin + 8, y, bold, 8, muted);
-        y -= 11;
+        y -= 13;
         sct.items.forEach((it) => {
           const { main, sub } = itemLines(it, zoneMap);
           const mainWrapped = wrap(`• ${main}`, font, 10, contentW - 14);
           for (const ln of mainWrapped) {
-            ensure(12);
+            ensure(13);
             drawText(page, ln, margin + 14, y, font, 10, ink);
-            y -= 12;
+            y -= 13;
           }
           sub.forEach((s2) => {
             for (const ln of wrap(s2, font, 8.5, contentW - 26)) {
-              ensure(10);
+              ensure(12);
               drawText(page, ln, margin + 26, y, font, 8.5, muted);
-              y -= 10;
+              y -= 12;
             }
           });
         });
-        y -= 4;
+        y -= 8;
       });
-      y -= 6;
+      y -= 10;
     });
-    y -= 6;
+    y -= 10;
   });
 
   const bytes = await pdf.save();

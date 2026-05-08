@@ -290,10 +290,7 @@ export async function generatePlanilha5kmPdf(opts: {
         y -= 11;
         sct.items.forEach((it) => {
           const { main, sub } = itemLines(it, zoneMap);
-          const mainLines = wrap(`• ${main}`, font, 10, contentW - 14 - margin + margin);
-          // maxW for main starting at margin+14: contentW - 14
           const mainWrapped = wrap(`• ${main}`, font, 10, contentW - 14);
-          void mainLines;
           for (const ln of mainWrapped) {
             ensure(12);
             drawText(page, ln, margin + 14, y, font, 10, ink);

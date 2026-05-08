@@ -58,6 +58,8 @@
   --color-volume-4: var(--volume-4);
   --color-intensity-light: var(--intensity-light);
   --color-intensity-hard: var(--intensity-hard);
+  --color-intensity-light-fg: var(--intensity-light-fg);
+  --color-intensity-hard-fg: var(--intensity-hard-fg);
 }
 
 :root {

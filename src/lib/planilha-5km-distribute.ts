@@ -1,23 +1,28 @@
 import {
   DAY_ORDER, defaultDaysFor, WORKOUT_TYPES,
-  type DayCode, type Workout,
+  type DayCode,
 } from "./planilha-5km-data";
 
-export type Assignment = { day: DayCode; workout: Workout | null };
-export type DistributionResult = {
-  assignments: Assignment[];
+export type WorkoutLike = { code: string; type: string };
+
+export type Assignment<T extends WorkoutLike = WorkoutLike> = { day: DayCode; workout: T | null };
+export type DistributionResult<T extends WorkoutLike = WorkoutLike> = {
+  assignments: Assignment<T>[];
   hasConsecutiveIntense: boolean;
   warnings: string[];
 };
 
+export type TypesMap = Record<string, { color: string; intense: boolean }>;
+
 const KEEP_PRIORITY: Record<string, number> = {
   // Maior número = manter primeiro.
-  "Longão": 100, "Base aeróbia": 95, "Simulado 5km": 90, "Teste 3km": 88,
-  "Corrida Rápida": 80, "Subidas": 78, "Intervalado Longo": 76, "Intervalado Curto": 74,
+  "Longão": 100, "Base aeróbia": 95, "Simulado 5km": 90, "Simulado 10km": 90, "Teste 3km": 88,
+  "Corrida Rápida Longa": 82,
+  "Corrida Rápida": 80, "Subidas": 78, "Intervalado Longo": 76, "Intervalado Moderado": 76, "Intervalado Curto": 74,
   "Tempo Run": 60, "Progressivo": 55,
   "Regenerativo": 10,
 };
-function keepScore(wo: Workout): number {
+function keepScore(wo: WorkoutLike): number {
   return KEEP_PRIORITY[wo.type] ?? 50;
 }
 
@@ -25,15 +30,13 @@ function sortDays(days: DayCode[]): DayCode[] {
   return [...days].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
 }
 
-function dropToFit(workouts: Workout[], target: number): Workout[] {
+function dropToFit<T extends WorkoutLike>(workouts: T[], target: number): T[] {
   const list = [...workouts];
-  // 1) remover Regenerativos primeiro
   while (list.length > target) {
     const i = list.findIndex((w) => w.type === "Regenerativo");
     if (i === -1) break;
     list.splice(i, 1);
   }
-  // 2) remover duplicados do mesmo tipo (menor prioridade primeiro)
   while (list.length > target) {
     const counts = new Map<string, number>();
     list.forEach((w) => counts.set(w.type, (counts.get(w.type) ?? 0) + 1));
@@ -44,7 +47,6 @@ function dropToFit(workouts: Workout[], target: number): Workout[] {
     if (!dup) break;
     list.splice(dup.idx, 1);
   }
-  // 3) último recurso: remover por menor prioridade
   while (list.length > target) {
     const min = list
       .map((w, idx) => ({ idx, score: keepScore(w) }))
@@ -54,15 +56,16 @@ function dropToFit(workouts: Workout[], target: number): Workout[] {
   return list;
 }
 
-export function distributeWeek(
-  workouts: Workout[],
+export function distributeWeek<T extends WorkoutLike>(
+  workouts: T[],
   selectedDays: DayCode[],
   level: 1 | 2,
-): DistributionResult {
+  typesMap: TypesMap = WORKOUT_TYPES as unknown as TypesMap,
+): DistributionResult<T> {
   const days = sortDays(selectedDays.length ? selectedDays : defaultDaysFor(level));
   const warnings: string[] = [];
 
-  let chosen: Workout[];
+  let chosen: T[];
   if (days.length === workouts.length) {
     chosen = [...workouts];
   } else if (days.length < workouts.length) {
@@ -72,18 +75,16 @@ export function distributeWeek(
     chosen = [...workouts];
   }
 
-  // Ordenar treinos pelo número do código (T01, T02, ..., T10, T11)
-  const codeNum = (wo: Workout) => parseInt(wo.code.replace(/\D/g, ""), 10) || 0;
+  const codeNum = (wo: T) => parseInt(wo.code.replace(/\D/g, ""), 10) || 0;
   chosen.sort((a, b) => codeNum(a) - codeNum(b));
 
-  const assignments: Assignment[] = days.map((d, i) => ({ day: d, workout: chosen[i] ?? null }));
+  const assignments: Assignment<T>[] = days.map((d, i) => ({ day: d, workout: chosen[i] ?? null }));
 
-  // Detecta intensos consecutivos
   let hasConsecutiveIntense = false;
   for (let i = 0; i < assignments.length - 1; i++) {
     const a = assignments[i].workout;
     const b = assignments[i + 1].workout;
-    if (a && b && WORKOUT_TYPES[a.type].intense && WORKOUT_TYPES[b.type].intense) {
+    if (a && b && typesMap[a.type]?.intense && typesMap[b.type]?.intense) {
       hasConsecutiveIntense = true;
       break;
     }

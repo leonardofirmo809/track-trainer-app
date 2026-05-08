@@ -380,7 +380,7 @@ function Planilha5kmPage() {
 }
 
 function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
-  index: number; dist: DistributionResult; level: 1 | 2; phase: 1 | 2 | 3 | 4; weekIdx: number;
+  index: number; dist: DistributionResult<Workout>; level: 1 | 2; phase: 1 | 2 | 3 | 4; weekIdx: number;
   onOpen: (wo: Workout, day: DayCode) => void;
 }) {
   const workouts = dist.assignments.map((a) => a.workout).filter((w): w is Workout => !!w);

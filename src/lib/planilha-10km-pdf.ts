@@ -2,9 +2,9 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type RGB }
 import { formatMmss } from "@/lib/teste-3km";
 import type { CoachBranding } from "@/lib/use-coach-branding";
 import {
-  DAY_LABEL, DAY_FULL, PHASE_LABELS, WORKOUT_TYPES,
-  type DayCode, type Workout, type Item, type SectionName, type ZoneId,
-} from "@/lib/planilha-5km-data";
+  DAY_LABEL, DAY_FULL, PHASE_LABELS_10KM, WORKOUT_TYPES_10KM,
+  type DayCode, type Workout10km as Workout, type Item, type SectionName, type ZoneId,
+} from "@/lib/planilha-10km-data";
 import type { DistributionResult } from "@/lib/planilha-5km-distribute";
 
 export type SavedZone = {
@@ -61,7 +61,7 @@ function itemLines(it: Item, zoneMap: Map<ZoneId, SavedZone>): { main: string; s
   return { main: `${it.meters}m — ${it.label} *`, sub: it.note ? [it.note] : [] };
 }
 
-export async function generatePlanilha5kmPdf(opts: {
+export async function generatePlanilha10kmPdf(opts: {
   studentName: string;
   studentLevel: string | null;
   ftpSecondsPerKm: number;
@@ -152,10 +152,10 @@ export async function generatePlanilha5kmPdf(opts: {
     } else {
       drawText(page, branding.coachName, margin, A4.h - headerH / 2 - 4, bold, 14, white);
     }
-    const title = "PLANILHA 5KM";
+    const title = "PLANILHA 10KM";
     const titleW = bold.widthOfTextAtSize(title, 16);
     drawText(page, title, A4.w - margin - titleW, A4.h - 30, bold, 16, white);
-    const subRaw = `${PHASE_LABELS[currentPhase].title} — ${PHASE_LABELS[currentPhase].subtitle}`;
+    const subRaw = `${PHASE_LABELS_10KM[currentPhase].title} — ${PHASE_LABELS_10KM[currentPhase].subtitle}`;
     const subMaxW = A4.w - margin * 2 - (logo ? 0 : 120);
     const sub = truncate(subRaw, font, 10, subMaxW);
     drawText(page, sub, A4.w - margin - font.widthOfTextAtSize(sub, 10), A4.h - 48, font, 10, white);
@@ -259,7 +259,7 @@ export async function generatePlanilha5kmPdf(opts: {
         return;
       }
       const wo: Workout = a.workout;
-      const intense = WORKOUT_TYPES[wo.type].intense;
+      const intense = WORKOUT_TYPES_10KM[wo.type].intense;
 
       // header treino — wrap em até 2 linhas, altura dinâmica
       const titleLine = `${DAY_FULL[a.day]} • ${wo.code} — ${wo.type}  [${wo.zones.join("/")}]`;

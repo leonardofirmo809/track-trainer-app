@@ -137,6 +137,7 @@ export function computeWorkoutTotals(
     zoneMinutes: zm,
     lightPct: pct.Z1 + pct.Z2,
     hardPct: pct.Z3 + pct.Z4 + pct.Z5,
+  };
 }
 
 export type PhaseWeekTotals = {

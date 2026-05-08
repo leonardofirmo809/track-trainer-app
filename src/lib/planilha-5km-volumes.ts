@@ -78,3 +78,16 @@ export function formatHm(totalMin: number): string {
 export function formatKm(meters: number): string {
   return `${(meters / 1000).toFixed(1).replace(".", ",")} km`;
 }
+
+export function formatKm2(meters: number): string {
+  return `${(meters / 1000).toFixed(2).replace(".", ",")} km`;
+}
+
+export function formatHms(totalMin: number): string {
+  const totalSec = Math.round(totalMin * 60);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}

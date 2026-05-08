@@ -1,7 +1,7 @@
 // Tabela de duração e volume por treino — Planilha 10KM.
-import { formatHm, formatKm } from "./planilha-5km-volumes";
+import { formatHm, formatKm, formatKm2, formatHms } from "./planilha-5km-volumes";
 
-export { formatHm, formatKm };
+export { formatHm, formatKm, formatKm2, formatHms };
 export type WorkoutStat = { durationMin: number; volumeM: number; label?: string };
 
 type ByCode = Record<string, WorkoutStat>;

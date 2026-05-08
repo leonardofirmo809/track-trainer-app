@@ -6,9 +6,9 @@ import { toast } from "sonner";
 import { Home, ChevronRight, Save, Settings2, AlertTriangle, Download, Clock, Route as RouteIcon } from "lucide-react";
 import { useCoachBranding } from "@/lib/use-coach-branding";
 import { generatePlanilha5kmPdf, downloadBlob } from "@/lib/planilha-5km-pdf";
-import { getStats, formatHm, formatKm } from "@/lib/planilha-5km-volumes";
-import { computeWeekTotals, computeWorkoutTotals, type WorkoutTotals } from "@/lib/planilha-5km-zone-distribution";
-import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
+import { getStats, formatHm, formatKm, formatKm2, formatHms } from "@/lib/planilha-5km-volumes";
+import { computeWorkoutTotals, computePhaseTotals, type PhaseTotals } from "@/lib/planilha-5km-zone-distribution";
+import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, Cell, LabelList, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -329,6 +329,11 @@ function Planilha5kmPage() {
                       level={level} phase={p as 1 | 2 | 3 | 4} weekIdx={idx}
                       onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
                   ))}
+                  <PhaseChartsBlock
+                    weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
+                    level={level}
+                    phase={p as 1 | 2 | 3 | 4}
+                  />
                 </TabsContent>
               ))}
             </Tabs>
@@ -384,11 +389,14 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
   onOpen: (wo: Workout, day: DayCode) => void;
 }) {
   const workouts = dist.assignments.map((a) => a.workout).filter((w): w is Workout => !!w);
-  const totals = useMemo(() => computeWeekTotals(workouts, level, phase, weekIdx), [workouts, level, phase, weekIdx]);
-  const perWorkout = useMemo(
-    () => workouts.map((w) => computeWorkoutTotals(w, level, phase, weekIdx)),
-    [workouts, level, phase, weekIdx],
-  );
+  const perWorkoutMap = useMemo(() => {
+    const m = new Map<string, { lightPct: number; hardPct: number }>();
+    workouts.forEach((w) => {
+      const t = computeWorkoutTotals(w, level, phase, weekIdx);
+      m.set(w.code, { lightPct: t.lightPct, hardPct: t.hardPct });
+    });
+    return m;
+  }, [workouts, level, phase, weekIdx]);
 
   return (
     <div className="space-y-3">
@@ -396,6 +404,7 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
         {dist.assignments.map((a) => {
           const stat = a.workout ? getStats(level, phase, weekIdx, a.workout.code) : null;
+          const pct = a.workout ? perWorkoutMap.get(a.workout.code) : null;
           return (
             <div key={a.day}>
               {a.workout ? (
@@ -416,6 +425,13 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
                       <span className="inline-flex items-center gap-1"><RouteIcon className="size-3" />{formatKm(stat.volumeM)}</span>
                     </div>
                   )}
+                  {pct && (
+                    <p className="text-[11px] mt-1 font-semibold">
+                      <span style={{ color: "var(--color-intensity-light-fg)" }}>{pct.lightPct.toFixed(1).replace(".", ",")}% L</span>
+                      <span className="opacity-60"> | </span>
+                      <span style={{ color: "var(--color-intensity-hard-fg)" }}>{pct.hardPct.toFixed(1).replace(".", ",")}% M/H</span>
+                    </p>
+                  )}
                   <p className="text-[11px] opacity-80 mt-1">{a.workout.zones.join(" / ")}</p>
                 </button>
               ) : (
@@ -433,37 +449,49 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
           <AlertTriangle className="size-3" /> Há treinos intensos em dias consecutivos.
         </p>
       )}
-
-      {/* Resumo + gráficos */}
-      <div className="grid gap-3 grid-cols-1 lg:grid-cols-[260px_1fr_1fr] mt-3">
-        <WeekTotalsCard totals={totals} index={index} />
-        <WeekVolumeChart data={perWorkout} />
-        <WeekIntensityChart data={perWorkout} />
-      </div>
     </div>
   );
 }
 
-function WeekTotalsCard({ totals, index }: { totals: ReturnType<typeof computeWeekTotals>; index: number }) {
+function PhaseChartsBlock({ weeksWorkouts, level, phase }: {
+  weeksWorkouts: Workout[][]; level: 1 | 2; phase: 1 | 2 | 3 | 4;
+}) {
+  const totals = useMemo(() => computePhaseTotals(weeksWorkouts, level, phase), [weeksWorkouts, level, phase]);
+  return (
+    <div className="grid gap-3 grid-cols-1 lg:grid-cols-[280px_1fr_1fr] mt-2">
+      <PhaseTotalsCard totals={totals} />
+      <PhaseVolumeChart perWeek={totals.perWeek} />
+      <PhaseIntensityChart perWeek={totals.perWeek} />
+    </div>
+  );
+}
+
+function PhaseTotalsCard({ totals }: { totals: PhaseTotals }) {
   const rows = [
-    { label: "Volume", value: formatKm(totals.totalM) },
-    { label: "Duração", value: formatHm(totals.totalMin) },
-    { label: "L — Z1 e Z2", value: `${totals.lightPct.toFixed(1).replace(".", ",")}%` },
-    { label: "M/H — Z3, Z4 e Z5", value: `${totals.hardPct.toFixed(1).replace(".", ",")}%` },
+    { label: "Total Volume", value: formatKm2(totals.totalM) },
+    { label: "Total Duração", value: formatHms(totals.totalMin) },
+    { label: "L — Z1 e Z2", value: `${totals.lightPct.toFixed(1).replace(".", ",")}%`, tone: "light" as const },
+    { label: "M/H — Z3, Z4 e Z5", value: `${totals.hardPct.toFixed(1).replace(".", ",")}%`, tone: "hard" as const },
   ];
+  void formatHm;
   return (
     <div className="rounded-md border bg-card overflow-hidden">
       <div className="bg-warning text-warning-foreground px-3 py-2">
         <p className="text-xs font-bold uppercase tracking-wide">Quanto que você vai treinar</p>
-        <p className="text-[10px] opacity-80">Semana {index} — Total</p>
+        <p className="text-[10px] opacity-80">Total da fase</p>
       </div>
       <div className="divide-y">
-        {rows.map((r, i) => (
+        {rows.map((r) => (
           <div
             key={r.label}
-            className={`flex items-center justify-between px-3 py-2 text-sm ${
-              i === 2 ? "bg-[color:var(--intensity-light)]/30" : i === 3 ? "bg-[color:var(--intensity-hard)]/20" : ""
-            }`}
+            className="flex items-center justify-between px-3 py-2 text-sm"
+            style={
+              r.tone === "light"
+                ? { background: "color-mix(in oklab, var(--color-intensity-light) 18%, transparent)" }
+                : r.tone === "hard"
+                ? { background: "color-mix(in oklab, var(--color-intensity-hard) 18%, transparent)" }
+                : undefined
+            }
           >
             <span className="font-medium text-muted-foreground">{r.label}</span>
             <span className="font-semibold tabular-nums">{r.value}</span>
@@ -474,34 +502,34 @@ function WeekTotalsCard({ totals, index }: { totals: ReturnType<typeof computeWe
   );
 }
 
-const VOLUME_COLORS = [
+const VOLUME_GREEN = [
   "var(--color-volume-1)", "var(--color-volume-2)",
   "var(--color-volume-3)", "var(--color-volume-4)",
 ];
 
-function WeekVolumeChart({ data }: { data: WorkoutTotals[] }) {
-  const chartData = data.map((w) => ({ code: w.code, km: +(w.totalM / 1000).toFixed(2) }));
-  const maxKm = Math.max(1, ...chartData.map((d) => d.km));
+function PhaseVolumeChart({ perWeek }: { perWeek: PhaseTotals["perWeek"] }) {
+  const data = perWeek.map((w, i) => ({ week: `S${i + 1}`, km: +(w.totalM / 1000).toFixed(2) }));
+  const maxKm = Math.max(1, ...data.map((d) => d.km));
   return (
     <div className="rounded-md border bg-card p-3">
       <p className="text-xs font-bold uppercase tracking-wide text-center mb-2">Volume</p>
-      <ResponsiveContainer width="100%" height={180}>
-        <BarChart data={chartData} margin={{ top: 22, right: 8, bottom: 4, left: 8 }}>
-          <XAxis dataKey="code" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-          <YAxis hide domain={[0, maxKm * 1.15]} />
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} margin={{ top: 26, right: 12, bottom: 4, left: 8 }}>
+          <XAxis dataKey="week" tick={{ fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
+          <YAxis hide domain={[0, maxKm * 1.18]} />
           <RTooltip
             cursor={{ fill: "transparent" }}
             formatter={(v: number) => [`${v.toFixed(2).replace(".", ",")} km`, "Volume"]}
           />
-          <Bar dataKey="km" radius={[4, 4, 0, 0]} isAnimationActive>
-            {chartData.map((_, i) => (
-              <Cell key={i} fill={VOLUME_COLORS[i % VOLUME_COLORS.length]} />
+          <Bar dataKey="km" radius={[6, 6, 0, 0]} isAnimationActive>
+            {data.map((_, i) => (
+              <Cell key={i} fill={VOLUME_GREEN[i % VOLUME_GREEN.length]} />
             ))}
             <LabelList
               dataKey="km"
               position="top"
               formatter={(v: number) => `${v.toFixed(2).replace(".", ",")} km`}
-              style={{ fontSize: 11, fontWeight: 600, fill: "var(--color-foreground)" }}
+              style={{ fontSize: 11, fontWeight: 700, fill: "var(--color-foreground)" }}
             />
           </Bar>
         </BarChart>
@@ -510,56 +538,44 @@ function WeekVolumeChart({ data }: { data: WorkoutTotals[] }) {
   );
 }
 
-function WeekIntensityChart({ data }: { data: WorkoutTotals[] }) {
-  // Cada treino vira 2 categorias no eixo X: "T01·L" e "T01·M/H"
-  const chartData = data.flatMap((w) => [
-    { key: `${w.code}·L`, code: w.code, kind: "L", pct: +w.lightPct.toFixed(1) },
-    { key: `${w.code}·M/H`, code: w.code, kind: "M/H", pct: +w.hardPct.toFixed(1) },
-  ]);
+function PhaseIntensityChart({ perWeek }: { perWeek: PhaseTotals["perWeek"] }) {
+  const data = perWeek.map((w, i) => ({
+    week: `S${i + 1}`,
+    L: +w.lightPct.toFixed(1),
+    MH: +w.hardPct.toFixed(1),
+  }));
   return (
     <div className="rounded-md border bg-card p-3">
       <p className="text-xs font-bold uppercase tracking-wide text-center mb-2">Intensidade</p>
-      <ResponsiveContainer width="100%" height={180}>
-        <BarChart data={chartData} margin={{ top: 22, right: 8, bottom: 18, left: 8 }} barCategoryGap="12%">
-          <XAxis
-            dataKey="key"
-            tick={(props) => {
-              const { x, y, payload, index } = props as { x: number; y: number; payload: { value: string }; index: number };
-              const item = chartData[index];
-              const isFirst = item.kind === "L";
-              return (
-                <g transform={`translate(${x},${y})`}>
-                  <text x={0} y={4} textAnchor="middle" fontSize={10} fill="var(--color-muted-foreground)">{item.kind}</text>
-                  {isFirst && (
-                    <text x={14} y={18} textAnchor="middle" fontSize={10} fontWeight={600} fill="var(--color-foreground)">
-                      {item.code}
-                    </text>
-                  )}
-                </g>
-              );
-            }}
-            axisLine={false}
-            tickLine={false}
-            interval={0}
-          />
-          <YAxis hide domain={[0, 110]} />
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} margin={{ top: 26, right: 12, bottom: 4, left: 8 }} barCategoryGap="20%">
+          <XAxis dataKey="week" tick={{ fontSize: 12, fontWeight: 600 }} axisLine={false} tickLine={false} />
+          <YAxis hide domain={[0, 115]} />
           <RTooltip
             cursor={{ fill: "transparent" }}
-            formatter={(v: number, _n, p) => {
-              const k = (p?.payload as { kind?: string } | undefined)?.kind ?? "";
-              return [`${v.toFixed(1).replace(".", ",")}%`, k];
-            }}
-            labelFormatter={(_l, payload) => (payload?.[0]?.payload as { code?: string } | undefined)?.code ?? ""}
+            formatter={(v: number, n: string) => [`${v.toFixed(1).replace(".", ",")}%`, n === "L" ? "Leve" : "Médio/Alto"]}
           />
-          <Bar dataKey="pct" radius={[4, 4, 0, 0]} isAnimationActive>
-            {chartData.map((d, i) => (
-              <Cell key={i} fill={d.kind === "L" ? "var(--color-intensity-light)" : "var(--color-intensity-hard)"} />
-            ))}
+          <Legend
+            verticalAlign="bottom"
+            height={24}
+            iconType="square"
+            formatter={(v: string) => (v === "L" ? "L = Leve" : "M/H = Médio/Alto")}
+            wrapperStyle={{ fontSize: 11 }}
+          />
+          <Bar dataKey="L" fill="var(--color-intensity-light)" radius={[4, 4, 0, 0]} isAnimationActive>
             <LabelList
-              dataKey="pct"
+              dataKey="L"
               position="top"
               formatter={(v: number) => `${v.toFixed(1).replace(".", ",")}%`}
-              style={{ fontSize: 10, fontWeight: 600, fill: "var(--color-foreground)" }}
+              style={{ fontSize: 10, fontWeight: 700, fill: "var(--color-foreground)" }}
+            />
+          </Bar>
+          <Bar dataKey="MH" fill="var(--color-intensity-hard)" radius={[4, 4, 0, 0]} isAnimationActive>
+            <LabelList
+              dataKey="MH"
+              position="top"
+              formatter={(v: number) => `${v.toFixed(1).replace(".", ",")}%`}
+              style={{ fontSize: 10, fontWeight: 700, fill: "var(--color-foreground)" }}
             />
           </Bar>
         </BarChart>

@@ -139,3 +139,43 @@ export function computeWorkoutTotals(
     hardPct: pct.Z3 + pct.Z4 + pct.Z5,
   };
 }
+
+export type PhaseWeekTotals = {
+  weekIdx: number;
+  totalMin: number;
+  totalM: number;
+  lightPct: number;
+  hardPct: number;
+};
+
+export type PhaseTotals = {
+  totalMin: number;
+  totalM: number;
+  zoneMinutes: ZoneMinutes;
+  lightPct: number;
+  hardPct: number;
+  perWeek: PhaseWeekTotals[];
+};
+
+export function computePhaseTotals(
+  weeksWorkouts: Workout[][],
+  level: 1 | 2,
+  phase: 1 | 2 | 3 | 4,
+  lookup: StatsLookup = defaultLookup,
+): PhaseTotals {
+  const acc = empty();
+  let totalMin = 0;
+  let totalM = 0;
+  const perWeek: PhaseWeekTotals[] = [];
+  weeksWorkouts.forEach((wos, idx) => {
+    const wt = computeWeekTotals(wos, level, phase, idx, lookup);
+    totalMin += wt.totalMin;
+    totalM += wt.totalM;
+    (Object.keys(acc) as ZoneId[]).forEach((z) => { acc[z] += wt.zoneMinutes[z]; });
+    perWeek.push({ weekIdx: idx, totalMin: wt.totalMin, totalM: wt.totalM, lightPct: wt.lightPct, hardPct: wt.hardPct });
+  });
+  const sum = (Object.values(acc) as number[]).reduce((a, b) => a + b, 0);
+  const lightPct = sum > 0 ? ((acc.Z1 + acc.Z2) / sum) * 100 : 0;
+  const hardPct = sum > 0 ? ((acc.Z3 + acc.Z4 + acc.Z5) / sum) * 100 : 0;
+  return { totalMin, totalM, zoneMinutes: acc, lightPct, hardPct, perWeek };
+}

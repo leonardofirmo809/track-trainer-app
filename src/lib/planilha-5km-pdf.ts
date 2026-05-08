@@ -50,7 +50,7 @@ function zoneRangeText(zone: ZoneId, zoneMap: Map<ZoneId, SavedZone>): string {
 
 function itemLines(it: Item, zoneMap: Map<ZoneId, SavedZone>): { main: string; sub: string[] } {
   if (it.kind === "single") {
-    return { main: `${it.value}${unitLabel(it.unit)} em ${it.zone}`, sub: [`→ ${zoneRangeText(it.zone, zoneMap)}`] };
+    return { main: `${it.value}${unitLabel(it.unit)} em ${it.zone}`, sub: [`> ${zoneRangeText(it.zone, zoneMap)}`] };
   }
   if (it.kind === "intervals") {
     return {

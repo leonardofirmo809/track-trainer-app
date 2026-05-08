@@ -1,5 +1,5 @@
 import {
-  DAY_ORDER, defaultDaysFor, workoutDurationMinutes, WORKOUT_TYPES,
+  DAY_ORDER, defaultDaysFor, WORKOUT_TYPES,
   type DayCode, type Workout,
 } from "./planilha-5km-data";
 

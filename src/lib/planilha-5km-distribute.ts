@@ -10,10 +10,13 @@ export type DistributionResult = {
   warnings: string[];
 };
 
+export type TypesMap = Record<string, { color: string; intense: boolean }>;
+
 const KEEP_PRIORITY: Record<string, number> = {
   // Maior número = manter primeiro.
-  "Longão": 100, "Base aeróbia": 95, "Simulado 5km": 90, "Teste 3km": 88,
-  "Corrida Rápida": 80, "Subidas": 78, "Intervalado Longo": 76, "Intervalado Curto": 74,
+  "Longão": 100, "Base aeróbia": 95, "Simulado 5km": 90, "Simulado 10km": 90, "Teste 3km": 88,
+  "Corrida Rápida Longa": 82,
+  "Corrida Rápida": 80, "Subidas": 78, "Intervalado Longo": 76, "Intervalado Moderado": 76, "Intervalado Curto": 74,
   "Tempo Run": 60, "Progressivo": 55,
   "Regenerativo": 10,
 };
@@ -58,6 +61,7 @@ export function distributeWeek(
   workouts: Workout[],
   selectedDays: DayCode[],
   level: 1 | 2,
+  typesMap: TypesMap = WORKOUT_TYPES as unknown as TypesMap,
 ): DistributionResult {
   const days = sortDays(selectedDays.length ? selectedDays : defaultDaysFor(level));
   const warnings: string[] = [];
@@ -83,7 +87,7 @@ export function distributeWeek(
   for (let i = 0; i < assignments.length - 1; i++) {
     const a = assignments[i].workout;
     const b = assignments[i + 1].workout;
-    if (a && b && WORKOUT_TYPES[a.type].intense && WORKOUT_TYPES[b.type].intense) {
+    if (a && b && typesMap[a.type]?.intense && typesMap[b.type]?.intense) {
       hasConsecutiveIntense = true;
       break;
     }

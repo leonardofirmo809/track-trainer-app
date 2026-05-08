@@ -202,7 +202,7 @@ export async function generatePlanilha5kmPdf(opts: {
     page.drawRectangle({ x: margin, y: y - 22, width: A4.w - margin * 2, height: 22, color: primary });
     drawText(page, `Semana ${wi + 1}`, margin + 8, y - 16, bold, 12, white);
     if (wk.hasConsecutiveIntense) {
-      const warn = "⚠ Intensos em dias consecutivos";
+      const warn = "! Intensos em dias consecutivos";
       drawText(page, warn, A4.w - margin - 8 - font.widthOfTextAtSize(warn, 9), y - 14, font, 9, white);
     }
     y -= 28;

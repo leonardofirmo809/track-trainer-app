@@ -1,48 +1,56 @@
-# Ajustes de diagramação no PDF da Planilha 5KM
+# Planilha 5KM — duração/volume nos cards + gráfico de zonas + resumo semanal
 
-Arquivo único alterado: `src/lib/planilha-5km-pdf.ts` (geração via `pdf-lib`).
+Três adições ao card 4 ("Fase e treinos") da rota `/planilha-5km`. Sem alterações no PDF, banco ou backend.
 
-## Problemas identificados e correções
+## Arquivos
 
-### 1. Card FTP sobrepõe nome/info do aluno
-Hoje o card é desenhado com `cardY = y - cardH + 12`, ou seja, sobe 12pt acima da linha do nome — invadindo o cabeçalho quando o nome é longo ou quando há a linha "Cadastro:".
+1. **Novo** `src/lib/planilha-5km-volumes.ts`
+   - Tabela `WORKOUT_STATS[level][phase][weekIdx][code] = { durationMin, volumeM, label? }` exatamente como fornecido (Nível 1 e 2, 4 fases × 4 semanas).
+   - Helper `getStats(level, phase, weekIdx, code)`.
+   - Helpers de formatação: `formatHm(min)` ("1h 22min" / "27 min") e `formatKm(m)` ("4,3 km").
 
-**Correção**:
-- Reservar um bloco de cabeçalho do aluno com largura limitada (até `cardX - 12`) para que o nome não passe por baixo do card.
-- Posicionar o card ao lado do nome, alinhando o topo com o nome (`cardY = y - cardH`), sem o offset de +12.
-- Avançar `y` para `min(yAposTextoAluno, cardY) - 18` para garantir que o conteúdo seguinte (Zonas) comece abaixo de ambos.
-- Se o nome exceder a largura disponível, truncar com reticências em vez de transbordar sobre o card.
+2. **Novo** `src/lib/planilha-5km-zone-distribution.ts`
+   - `computeWeekZoneMinutes(week, level, phase, weekIdx)` → `{ Z1, Z2, Z3, Z4, Z5 }` em minutos.
+   - Algoritmo (por treino, percorrendo `workout.sections[].items`):
+     - `single` em `min` → soma `value` na zona.
+     - `single` em `sec` → soma `value/60` na zona.
+     - `intervals` → `reps * (on + off em min)`, somando cada um na sua zona.
+     - `single`/`test` em `m` (Longão, Teste, Simulado): distribuir o `durationMin` do `WORKOUT_STATS` proporcionalmente aos metros entre os itens em metros do mesmo treino, e atribuir cada fatia à zona do item (Teste 3km vai para Z3 conforme regra do enunciado; itens em metros sem zona explícita não existem na base atual).
+   - `computeWeekZonePercent(...)` retorna `{ Z1..Z5 }` somando 100%.
+   - `computeWeekTotals(week, level, phase, weekIdx)` → `{ totalMin, totalKm, lightPct, hardPct }` (leve = Z1+Z2; médio/alto = Z3+Z4+Z5).
 
-### 2. Texto cortado / extrapolando margens
-Causas no código atual:
-- O título do treino (`titleLine`) é desenhado sem wrap nem truncamento; em treinos com `type` longo + várias zonas, estoura para fora da caixa de 18pt.
-- Itens `single`/`intervals` (`• ${main}`) também não passam por `wrap` — só os `sub` são quebrados.
-- Largura disponível para `sub` usa `A4.w - margin*2 - 30` mas o texto começa em `margin + 26`, então a margem direita correta seria `A4.w - margin - (margin + 26) = A4.w - margin*2 - 26`. Diferença pequena, mas alinhar.
+3. **Editar** `src/routes/_authenticated/planilha-5km.tsx`
+   - No componente `WeekRow`, abaixo do grid de cards de treino, renderizar:
+     - **Sub-info dentro de cada card de treino**: linha com `<Clock /> {duração}` + separador + `<Route /> {volume km}` (ícones Lucide), abaixo de `wo.type`. Dados via `getStats(level, phase, weekIdx, wo.code)`.
+     - **Resumo semanal** (`WeekSummaryCards`): 4 cards horizontais (em uma linha que se ajusta) por semana — só os da semana atual:
+       - Total: `formatHm(totalMin)`
+       - Volume: `formatKm(totalM)`
+       - Intensidade: `lightPct% Leve` / `hardPct% Médio/Alto`
+     - **Gráfico de zonas** (`WeekZoneChart`): barra horizontal 100% empilhada da semana, usando `recharts` (`BarChart` com `layout="vertical"`).
+       - 1 barra (Y = "Semana N"), 5 segmentos `Bar dataKey="Z1..Z5" stackId="zones"`.
+       - Cores via tokens semânticos definidos em `src/styles.css` (ver abaixo).
+       - `Tooltip` formatado: `Z2 — 33% — 28 min`.
+       - Legenda horizontal Z1…Z5.
+   - Como `WeekRow` precisa saber `level`, `phase` e `weekIdx`, passar essas props no `weeks.map(...)` do componente principal.
 
-**Correção**:
-- Calcular a largura útil de cada nível e aplicar `wrap()` em: título do treino, linha principal de cada item, e textos das zonas.
-- Ajustar a altura do retângulo do título do treino para acomodar 1–2 linhas (calcular pela quantidade de linhas após wrap).
-- Em todos os `drawText` longos, garantir que `ensure(spaceCalculado)` reflita o número real de linhas após wrap.
-- Padronizar o cálculo `maxW = A4.w - margin - x` para cada indentação.
+4. **Editar** `src/styles.css`
+   - Adicionar tokens de cor para zonas (modo claro e escuro):
+     `--zone-1` (verde claro), `--zone-2` (verde), `--zone-3` (amarelo), `--zone-4` (laranja), `--zone-5` (vermelho).
+   - Mapear para classes Tailwind via `@theme` para uso no Recharts (`fill: hsl(var(--zone-1))`).
 
-### 3. Uma semana por página
-**Correção**:
-- No loop `weeks.forEach`, antes de desenhar cada semana **a partir da segunda**, chamar `newPage()` para forçar quebra. A primeira semana continua na página atual (logo após a tabela de Zonas).
-- Remover os `ensure(40)` específicos do header de semana (não mais necessários após `newPage`).
-- Manter `ensure()` dentro da semana para tratar o caso raro em que uma única semana ultrapassar uma página (continua em uma página seguinte sem quebrar a regra "uma semana por página" no caso comum).
+## Comportamento e UX
 
-### 4. Pequenos ajustes de robustez
-- Garantir que o `titleLine` da semana ("Semana N") não conflite com o aviso de intensos consecutivos: truncar/encurtar se necessário.
-- Header da página: se o subtítulo da fase for muito longo, truncar para não invadir a área do título "PLANILHA 5KM".
+- A sub-info (duração/volume) aparece em todos os cards de treino, sem mudar o tamanho do card (usar texto `text-[11px]`).
+- Os 4 cards de resumo ficam logo abaixo da grid de cards de treino e acima do gráfico.
+- O gráfico tem altura fixa (~80px) e título `Distribuição de Intensidade — Fase {phase}` (apenas na primeira semana, para não repetir; ou em cada semana — ver pergunta abaixo).
+- Animação padrão do Recharts (já suave) ao montar.
+
+## Validação
+
+- Conferir contra os valores de referência do enunciado (N1 F1: S1 Z1≈57%, Z2≈33%, Z4≈10%) — tolerância ±2 pontos percentuais.
 
 ## Fora de escopo
-- Trocar a fonte por uma TTF Unicode (mantém Helvetica/WinAnsi).
-- Mudar layout das zonas em colunas (continua com a tabela atual).
-- Mudanças visuais na UI da página `/planilha-5km`.
 
-## Resumo das mudanças
-Apenas `src/lib/planilha-5km-pdf.ts`:
-1. Reposicionar o card FTP para não sobrepor o nome/info do aluno.
-2. Aplicar `wrap()` + altura dinâmica em título do treino, linha principal dos itens e textos longos.
-3. Forçar `newPage()` no início de cada semana, exceto a primeira.
-4. Padronizar cálculos de `maxW` por nível de indentação.
+- PDF (não exportar duração/volume nem o gráfico no PDF nesta entrega).
+- Edição/persistência de duração/volume no banco.
+- Mudanças nos níveis/fases/treinos existentes em `planilha-5km-data.ts`.

@@ -1,9 +1,11 @@
 // Cálculo de distribuição de tempo por zona em uma semana de treinos.
-import type { Workout, ZoneId, Item } from "./planilha-5km-data";
+import type { ZoneId, Item, Section } from "./planilha-5km-data";
 import { getStats } from "./planilha-5km-volumes";
 
 export type StatsLookup = (level: 1 | 2, phase: 1 | 2 | 3 | 4, weekIdx: number, code: string) => { durationMin: number; volumeM: number } | null;
 const defaultLookup: StatsLookup = getStats;
+
+type Workout = { code: string; sections: Section[] };
 
 export type ZoneMinutes = Record<ZoneId, number>;
 

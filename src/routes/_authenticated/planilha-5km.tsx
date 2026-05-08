@@ -325,7 +325,9 @@ function Planilha5kmPage() {
                     <p className="text-sm text-muted-foreground">{PHASE_LABELS[p as 1 | 2 | 3 | 4].subtitle}</p>
                   </div>
                   {weeks.map((wk, idx) => (
-                    <WeekRow key={idx} index={idx + 1} dist={wk} onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
+                    <WeekRow key={idx} index={idx + 1} dist={wk}
+                      level={level} phase={p as 1 | 2 | 3 | 4} weekIdx={idx}
+                      onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
                   ))}
                 </TabsContent>
               ))}

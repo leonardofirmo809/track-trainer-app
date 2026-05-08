@@ -152,6 +152,29 @@ function Planilha5kmPage() {
     if (applied) void persistConfig({ phase: p });
   }
 
+  async function handleExportPdf() {
+    if (!weeks || !zones || !dataQuery.data) return;
+    setExporting(true);
+    try {
+      const blob = await generatePlanilha5kmPdf({
+        studentName: dataQuery.data.student?.full_name ?? "Aluno",
+        studentLevel: dataQuery.data.student?.level ?? null,
+        ftpSecondsPerKm: dataQuery.data.latestTest?.pace_seconds_per_km ?? 0,
+        zones,
+        level, daysPerWeek, weekDays, currentPhase: phase,
+        weeks,
+        branding: branding.data ?? { logoUrl: null, primary: "#0EA5E9", secondary: "#0F172A", coachName: "Treinador" },
+      });
+      const safeName = (dataQuery.data.student?.full_name ?? "aluno").replace(/[^\w\-]+/g, "-");
+      downloadBlob(blob, `Planilha-5km-${safeName}-Fase${phase}.pdf`);
+      toast.success("PDF gerado com sucesso.");
+    } catch (e) {
+      toast.error(`Falha ao gerar PDF: ${(e as Error).message}`);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="max-w-6xl space-y-6">
       <div>

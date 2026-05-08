@@ -58,7 +58,7 @@ function itemLines(it: Item, zoneMap: Map<ZoneId, SavedZone>): { main: string; s
       sub: [`ON ${it.on.zone}: ${zoneRangeText(it.on.zone, zoneMap)}`, `OFF ${it.off.zone}: ${zoneRangeText(it.off.zone, zoneMap)}`],
     };
   }
-  return { main: `${it.meters}m — ${it.label} ★`, sub: it.note ? [it.note] : [] };
+  return { main: `${it.meters}m — ${it.label} *`, sub: it.note ? [it.note] : [] };
 }
 
 export async function generatePlanilha5kmPdf(opts: {

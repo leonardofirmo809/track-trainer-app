@@ -329,6 +329,11 @@ function Planilha10kmPage() {
                       level={level} phase={p as 1 | 2 | 3 | 4} weekIdx={idx}
                       onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
                   ))}
+                  <PhaseChartsBlock
+                    weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
+                    level={level}
+                    phase={p as 1 | 2 | 3 | 4}
+                  />
                 </TabsContent>
               ))}
             </Tabs>

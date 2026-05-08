@@ -98,3 +98,36 @@ export function computeWeekTotals(
   const hardPct = zonePercent.Z3 + zonePercent.Z4 + zonePercent.Z5;
   return { totalMin, totalM, zoneMinutes, zonePercent, lightPct, hardPct };
 }
+
+export type WorkoutTotals = {
+  code: string;
+  totalMin: number;
+  totalM: number;
+  zoneMinutes: ZoneMinutes;
+  lightPct: number;
+  hardPct: number;
+};
+
+export function computeWorkoutTotals(
+  wo: Workout,
+  level: 1 | 2,
+  phase: 1 | 2 | 3 | 4,
+  weekIdx: number,
+): WorkoutTotals {
+  const stat = getStats(level, phase, weekIdx, wo.code);
+  const totalMin = stat?.durationMin ?? 0;
+  const totalM = stat?.volumeM ?? 0;
+  const zm = workoutZoneMinutes(wo, totalMin);
+  const sum = (Object.values(zm) as number[]).reduce((a, b) => a + b, 0);
+  const pct = (Object.fromEntries(
+    (Object.entries(zm) as [ZoneId, number][]).map(([k, v]) => [k, sum > 0 ? (v / sum) * 100 : 0]),
+  ) as Record<ZoneId, number>);
+  return {
+    code: wo.code,
+    totalMin,
+    totalM,
+    zoneMinutes: zm,
+    lightPct: pct.Z1 + pct.Z2,
+    hardPct: pct.Z3 + pct.Z4 + pct.Z5,
+  };
+}

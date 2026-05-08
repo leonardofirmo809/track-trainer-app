@@ -176,23 +176,32 @@ export async function generatePlanilha5kmPdf(opts: {
   newPage();
 
   // ===== Bloco aluno =====
-  drawText(page, studentName, margin, y, bold, 18, ink);
-  const today = new Date().toLocaleDateString("pt-BR");
-  drawText(page, `Gerado em ${today}  •  Nível ${level} (${level === 1 ? "3x" : "4x"}/sem)  •  ${daysPerWeek} dia(s): ${weekDays.map((d) => DAY_LABEL[d]).join(", ")}`,
-    margin, y - 16, font, 10, muted);
-  if (studentLevel) drawText(page, `Cadastro: ${studentLevel}`, margin, y - 30, font, 9, muted);
-
-  // FTP card
   const ftpStr = formatMmss(ftpSecondsPerKm);
   const cardW = 170, cardH = 56;
   const cardX = A4.w - margin - cardW;
-  const cardY = y - cardH + 12;
+  const studentMaxW = cardX - margin - 12;
+  const today = new Date().toLocaleDateString("pt-BR");
+  const infoLine = `Gerado em ${today}  •  Nível ${level} (${level === 1 ? "3x" : "4x"}/sem)  •  ${daysPerWeek} dia(s): ${weekDays.map((d) => DAY_LABEL[d]).join(", ")}`;
+
+  drawText(page, truncate(studentName, bold, 18, studentMaxW), margin, y, bold, 18, ink);
+  let yText = y - 16;
+  for (const ln of wrap(infoLine, font, 10, studentMaxW)) {
+    drawText(page, ln, margin, yText, font, 10, muted);
+    yText -= 12;
+  }
+  if (studentLevel) {
+    drawText(page, truncate(`Cadastro: ${studentLevel}`, font, 9, studentMaxW), margin, yText, font, 9, muted);
+    yText -= 12;
+  }
+
+  // FTP card — alinhado ao topo do nome, sem invadir
+  const cardY = y - cardH + 4;
   page.drawRectangle({ x: cardX, y: cardY, width: cardW, height: cardH, color: lightBg, borderColor: primary, borderWidth: 1.5 });
   drawText(page, "FTP", cardX + 12, cardY + cardH - 18, bold, 9, muted);
   drawText(page, ftpStr, cardX + 12, cardY + 18, bold, 22, primary);
   drawText(page, "min/km", cardX + 12 + bold.widthOfTextAtSize(ftpStr, 22) + 6, cardY + 22, font, 10, muted);
 
-  y = cardY - 18;
+  y = Math.min(yText, cardY) - 14;
 
   // ===== Zonas =====
   ensure(120);
@@ -210,7 +219,7 @@ export async function generatePlanilha5kmPdf(opts: {
     const fill = idx % 2 === 0 ? lightBg : rgb(1, 1, 1);
     page.drawRectangle({ x: margin, y: y - zoneRowH, width: A4.w - margin * 2, height: zoneRowH, color: fill, borderColor: rgb(0.88, 0.9, 0.92), borderWidth: 0.5 });
     drawText(page, z.id, colsX[0], y - 13, bold, 10, ink);
-    drawText(page, z.level, colsX[1], y - 13, font, 9, ink);
+    drawText(page, truncate(z.level, font, 9, colsX[2] - colsX[1] - 6), colsX[1], y - 13, font, 9, ink);
     const fast = z.paceFastSec == null ? "Máx" : formatMmss(z.paceFastSec);
     const slow = z.paceSlowSec == null ? "Máx" : formatMmss(z.paceSlowSec);
     drawText(page, `${fast} – ${slow}`, colsX[2], y - 13, font, 10, ink);
@@ -222,13 +231,23 @@ export async function generatePlanilha5kmPdf(opts: {
 
   // ===== Semanas =====
   const zoneMap = new Map(zones.map((z) => [z.id, z]));
+  const contentW = A4.w - margin * 2;
   weeks.forEach((wk, wi) => {
+    // Uma semana por página (a primeira segue na página atual)
+    if (wi > 0) newPage();
     ensure(40);
-    page.drawRectangle({ x: margin, y: y - 22, width: A4.w - margin * 2, height: 22, color: primary });
+
+    // Faixa "Semana N" + aviso
+    page.drawRectangle({ x: margin, y: y - 22, width: contentW, height: 22, color: primary });
     drawText(page, `Semana ${wi + 1}`, margin + 8, y - 16, bold, 12, white);
     if (wk.hasConsecutiveIntense) {
       const warn = "! Intensos em dias consecutivos";
-      drawText(page, warn, A4.w - margin - 8 - font.widthOfTextAtSize(warn, 9), y - 14, font, 9, white);
+      const warnW = font.widthOfTextAtSize(warn, 9);
+      const warnX = A4.w - margin - 8 - warnW;
+      // só desenha se couber sem invadir o título
+      if (warnX > margin + 8 + bold.widthOfTextAtSize(`Semana ${wi + 1}`, 12) + 16) {
+        drawText(page, warn, warnX, y - 14, font, 9, white);
+      }
     }
     y -= 28;
 
@@ -241,16 +260,23 @@ export async function generatePlanilha5kmPdf(opts: {
       }
       const wo: Workout = a.workout;
       const intense = WORKOUT_TYPES[wo.type].intense;
-      // header treino
-      ensure(40);
+
+      // header treino — wrap em até 2 linhas, altura dinâmica
       const titleLine = `${DAY_FULL[a.day]} • ${wo.code} — ${wo.type}  [${wo.zones.join("/")}]`;
-      page.drawRectangle({ x: margin, y: y - 18, width: A4.w - margin * 2, height: 18, color: lightBg, borderColor: intense ? rgb(0.85, 0.4, 0.2) : rgb(0.85, 0.86, 0.88), borderWidth: 0.8 });
-      drawText(page, titleLine, margin + 6, y - 13, bold, 10, ink);
-      y -= 22;
+      const titleMaxW = contentW - 12;
+      const titleLines = wrap(titleLine, bold, 10, titleMaxW).slice(0, 2);
+      const titleBoxH = Math.max(18, titleLines.length * 13 + 6);
+      ensure(titleBoxH + 6);
+      page.drawRectangle({ x: margin, y: y - titleBoxH, width: contentW, height: titleBoxH, color: lightBg, borderColor: intense ? rgb(0.85, 0.4, 0.2) : rgb(0.85, 0.86, 0.88), borderWidth: 0.8 });
+      let ty = y - 13;
+      for (const ln of titleLines) {
+        drawText(page, ln, margin + 6, ty, bold, 10, ink);
+        ty -= 13;
+      }
+      y -= titleBoxH + 4;
 
       if (wo.note) {
-        ensure(14);
-        for (const ln of wrap(`"${wo.note}"`, italic, 9, A4.w - margin * 2 - 12)) {
+        for (const ln of wrap(`"${wo.note}"`, italic, 9, contentW - 16)) {
           ensure(12);
           drawText(page, ln, margin + 8, y, italic, 9, muted);
           y -= 11;
@@ -264,11 +290,17 @@ export async function generatePlanilha5kmPdf(opts: {
         y -= 11;
         sct.items.forEach((it) => {
           const { main, sub } = itemLines(it, zoneMap);
-          ensure(12 + sub.length * 10);
-          drawText(page, `• ${main}`, margin + 14, y, font, 10, ink);
-          y -= 12;
+          const mainLines = wrap(`• ${main}`, font, 10, contentW - 14 - margin + margin);
+          // maxW for main starting at margin+14: contentW - 14
+          const mainWrapped = wrap(`• ${main}`, font, 10, contentW - 14);
+          void mainLines;
+          for (const ln of mainWrapped) {
+            ensure(12);
+            drawText(page, ln, margin + 14, y, font, 10, ink);
+            y -= 12;
+          }
           sub.forEach((s2) => {
-            for (const ln of wrap(s2, font, 8.5, A4.w - margin * 2 - 30)) {
+            for (const ln of wrap(s2, font, 8.5, contentW - 26)) {
               ensure(10);
               drawText(page, ln, margin + 26, y, font, 8.5, muted);
               y -= 10;

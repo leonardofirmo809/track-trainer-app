@@ -116,7 +116,7 @@ function Planilha10kmPage() {
   const weeks = useMemo(() => {
     if (!applied || validation) return null;
     const phaseWeeks = WORKOUTS_10KM[level][phase];
-    return phaseWeeks.map((wos) => distributeWeek(wos, weekDays, level));
+    return phaseWeeks.map((wos) => distributeWeek(wos, weekDays, level, WORKOUT_TYPES_10KM));
   }, [applied, level, phase, weekDays, validation]);
 
   async function persistConfig(opts: { phase?: 1 | 2 | 3 | 4 } = {}) {
@@ -142,7 +142,7 @@ function Planilha10kmPage() {
     };
     // checa intensos consecutivos em qualquer semana da fase atual
     const phaseWeeks = WORKOUTS_10KM[level][phase];
-    const anyConsecutive = phaseWeeks.some((wos) => distributeWeek(wos, weekDays, level).hasConsecutiveIntense);
+    const anyConsecutive = phaseWeeks.some((wos) => distributeWeek(wos, weekDays, level, WORKOUT_TYPES_10KM).hasConsecutiveIntense);
     if (anyConsecutive) {
       setPendingApply(() => apply);
     } else {
@@ -384,9 +384,9 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
   onOpen: (wo: Workout, day: DayCode) => void;
 }) {
   const workouts = dist.assignments.map((a) => a.workout).filter((w): w is Workout => !!w);
-  const totals = useMemo(() => computeWeekTotals(workouts, level, phase, weekIdx), [workouts, level, phase, weekIdx]);
+  const totals = useMemo(() => computeWeekTotals(workouts, level, phase, weekIdx, getStats10km), [workouts, level, phase, weekIdx]);
   const perWorkout = useMemo(
-    () => workouts.map((w) => computeWorkoutTotals(w, level, phase, weekIdx)),
+    () => workouts.map((w) => computeWorkoutTotals(w, level, phase, weekIdx, getStats10km)),
     [workouts, level, phase, weekIdx],
   );
 

@@ -154,12 +154,14 @@
   --zone-3: oklch(0.78 0.17 90);
   --zone-4: oklch(0.7 0.2 55);
   --zone-5: oklch(0.65 0.22 22);
-  --volume-1: oklch(0.72 0.18 145);
-  --volume-2: oklch(0.6 0.19 150);
-  --volume-3: oklch(0.68 0.14 220);
-  --volume-4: oklch(0.55 0.18 245);
-  --intensity-light: oklch(0.78 0.08 235);
-  --intensity-hard: oklch(0.68 0.18 50);
+  --volume-1: oklch(0.82 0.12 145);
+  --volume-2: oklch(0.70 0.17 145);
+  --volume-3: oklch(0.58 0.18 145);
+  --volume-4: oklch(0.45 0.16 145);
+  --intensity-light: oklch(0.65 0.18 145);
+  --intensity-hard: oklch(0.65 0.20 45);
+  --intensity-light-fg: oklch(0.78 0.16 145);
+  --intensity-hard-fg: oklch(0.72 0.20 45);
 }
 
 @layer base {

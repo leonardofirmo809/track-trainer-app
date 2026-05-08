@@ -72,19 +72,9 @@ export function distributeWeek(
     chosen = [...workouts];
   }
 
-  // Treino mais longo no último dia
-  if (chosen.length > 1) {
-    let longestIdx = 0;
-    let longestVal = workoutDurationMinutes(chosen[0]);
-    for (let i = 1; i < chosen.length; i++) {
-      const v = workoutDurationMinutes(chosen[i]);
-      if (v > longestVal) { longestVal = v; longestIdx = i; }
-    }
-    if (longestIdx !== chosen.length - 1) {
-      const [longest] = chosen.splice(longestIdx, 1);
-      chosen.push(longest);
-    }
-  }
+  // Ordenar treinos pelo número do código (T01, T02, ..., T10, T11)
+  const codeNum = (wo: Workout) => parseInt(wo.code.replace(/\D/g, ""), 10) || 0;
+  chosen.sort((a, b) => codeNum(a) - codeNum(b));
 
   const assignments: Assignment[] = days.map((d, i) => ({ day: d, workout: chosen[i] ?? null }));
 

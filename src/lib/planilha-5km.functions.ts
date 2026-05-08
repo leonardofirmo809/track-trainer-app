@@ -30,7 +30,7 @@ export const getPlanilha5kmData = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ studentId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const student = await assertCanAccessStudent(supabase, userId, data.studentId);
+    const student = await assertCanAccessStudent(userId, data.studentId);
 
     // Último teste 3km do aluno (via admin para contornar RLS quando admin atua sobre coach diferente)
     const { data: tests } = await supabaseAdmin
@@ -58,7 +58,7 @@ export const savePlanilha5kmConfig = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => configSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const student = await assertCanAccessStudent(supabase, userId, data.studentId);
+    const student = await assertCanAccessStudent(userId, data.studentId);
 
     const payload = {
       level: data.level,

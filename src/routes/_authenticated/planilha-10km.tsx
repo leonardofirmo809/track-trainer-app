@@ -77,14 +77,15 @@ function Planilha10kmPage() {
     return meta?.zones ?? null;
   }, [dataQuery.data]);
 
-  // Pré-carrega config salva
+  // Pré-carrega config salva (sempre força dias travados pelo nível)
   useEffect(() => {
     const plan = dataQuery.data?.plan;
     if (plan?.payload) {
       const p = plan.payload as { level: 1 | 2; daysPerWeek: number; weekDays: DayCode[]; currentPhase: 1 | 2 | 3 | 4 };
+      const lockedDays = p.level === 1 ? 3 : 4;
       setLevel(p.level);
-      setDaysPerWeek(p.daysPerWeek);
-      setWeekDays(p.weekDays);
+      setDaysPerWeek(lockedDays);
+      setWeekDays(defaultDaysFor10km(p.level));
       setPhase(p.currentPhase);
       setApplied(true);
     } else if (dataQuery.data) {
@@ -97,18 +98,9 @@ function Planilha10kmPage() {
     }
   }, [dataQuery.data]);
 
-  function toggleDay(d: DayCode, checked: boolean) {
-    setWeekDays((prev) => {
-      const set = new Set(prev);
-      if (checked) set.add(d); else set.delete(d);
-      return DAY_ORDER.filter((x) => set.has(x));
-    });
-  }
-
-  const validation = useMemo(() => {
-    if (weekDays.length !== daysPerWeek) {
-      return `Marque exatamente ${daysPerWeek} dia(s) (${weekDays.length} marcado(s)).`;
-    }
+  const validation = useMemo<string | null>(() => {
+    // Configuração travada pelo nível — salvaguarda silenciosa.
+    if (weekDays.length !== daysPerWeek) return "Configuração inválida para o nível selecionado.";
     return null;
   }, [weekDays, daysPerWeek]);
 

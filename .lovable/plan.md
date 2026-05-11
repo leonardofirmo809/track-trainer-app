@@ -1,49 +1,37 @@
 ## Objetivo
 
-Corrigir 4 problemas no PDF gerado pelas planilhas (5km e 10km):
+Impedir que o usuário configure um número de dias incompatível com o nível, evitando o caso "4 dias no Nível 1 → 1 dia OFF". O número de dias por semana e os dias da semana ficam travados de acordo com o nível selecionado.
 
-1. Frase **"! Intensos em dias consecutivos"** aparecendo no cabeçalho da semana — remover.
-2. Rodapé colorido com nome do treinador e "Aluno • Pág. N" — remover por completo.
-3. Espaçamentos apertados causando **sobreposição** entre seções/itens — aumentar respiros.
-4. **Nível 2 (4x/semana)**: o conteúdo da semana estoura a página e/ou se sobrepõe ao rodapé — corrigir paginação e altura útil.
-
-Os 4 ajustes se aplicam aos dois arquivos:
-- `src/lib/planilha-5km-pdf.ts`
-- `src/lib/planilha-10km-pdf.ts`
+Regras:
+- Nível 1 → 3 dias por semana, fixos em **TER, QUI, SAB**.
+- Nível 2 → 4 dias por semana, fixos em **TER, QUI, SEX, SAB**.
 
 ## Mudanças
 
-### 1. Remover aviso "Intensos em dias consecutivos"
-Em `weeks.forEach((wk, wi) => { ... })`, deletar o bloco `if (wk.hasConsecutiveIntense) { ... drawText(... "! Intensos em dias consecutivos" ...) }`. A faixa "Semana N" continua com o título e nada mais.
+Aplicar nos dois arquivos de tela (mesma lógica em ambos):
+- `src/routes/_authenticated/planilha-5km.tsx`
+- `src/routes/_authenticated/planilha-10km.tsx`
 
-### 2. Remover rodapé
-Dentro de `newPage()`:
-- Remover o `page.drawRectangle` que pinta `footerH = 28` em `secondary`.
-- Remover os dois `drawText` ("Treinador: ..." e "Aluno: ... • Pág. N").
-- Atualizar `contentBottom` de `50` para `28` (margem inferior limpa, sem rodapé visual).
-- A constante `footerH` deixa de ser usada.
+### 1. Card "3. Configuração da semana"
+- Remover o `Input` numérico de "Dias de treino por semana". Substituir por um texto fixo: "Dias de treino por semana: **3** (Nível 1)" / "**4** (Nível 2)".
+- Manter os checkboxes de dias da semana visíveis, mas **desabilitados** (`disabled`), apenas para mostrar quais dias estão prescritos. Os valores seguem `defaultDaysFor(level)`.
+- Remover a função `toggleDay` (ou deixá-la inerte). Os checkboxes não respondem a clique.
 
-### 3. Melhorar espaçamento / evitar sobreposição
-Pequenos ajustes de leading e gaps no laço de treinos:
-- Após a faixa "Semana N": `y -= 32` (era 28).
-- Entre cards de treino: `y -= 10` ao final de cada workout (era 6).
-- Entre seções dentro de um treino: `y -= 8` (era 4).
-- Linha do item principal: `y -= 13` (era 12); altura usada em `ensure` idem.
-- Sub-linhas (zonas): `y -= 12` (era 10); `ensure(12)` idem.
-- Cabeçalho de seção (AQUECIMENTO/etc.): `y -= 13` (era 11) e `ensure(18)`.
-- Card título do treino: `titleBoxH = Math.max(20, titleLines.length * 14 + 8)`; gap após o card `y -= titleBoxH + 6` (era +4).
-- Nota (italic): `y -= 12` por linha (era 11) e gap final `y -= 4` (era 2).
-- OFF: `y -= 16` (era 14).
+### 2. Sincronização ao trocar de nível
+- Ao trocar `level` na aba (Nível 1 / Nível 2), sempre forçar:
+  - `daysPerWeek = level === 1 ? 3 : 4`
+  - `weekDays = defaultDaysFor(level)` (já é o comportamento atual; manter).
+- No `useEffect` que carrega a config salva, se vier do banco com `daysPerWeek`/`weekDays` divergentes do nível, sobrescrever para os valores travados antes de marcar `applied = true`. Isso corrige planos antigos salvos com 4 dias no Nível 1.
 
-### 4. Corrigir layout do Nível 2 (4x/semana)
-O problema raiz é "uma semana por página" assumindo 3 treinos. Com 4 treinos a semana estoura. Mudanças:
-- Remover a regra `if (wi > 0) newPage();` que força quebra por semana.
-- A função `ensure(space)` já cria nova página sob demanda — ela passa a governar a quebra natural.
-- Antes de desenhar a faixa "Semana N", calcular um bloco mínimo (`minWeekHeader = 22 + 32 = 54`) e chamar `ensure(minWeekHeader + 80)` para evitar que a faixa fique órfã no rodapé da página anterior.
-- Antes de cada treino, calcular uma estimativa rápida de altura (título + nota + soma de seções e itens) e chamar `ensure(estHeight)` — assim, um treino inteiro nunca fica partido entre páginas.
-- Ajustar `contentBottom = 28` (vide item 2) libera ~22pt extra por página, suficiente para acomodar 4 cards na maioria dos casos sem quebrar.
+### 3. Validação
+- A validação `weekDays.length !== daysPerWeek` deixa de ser necessária na prática (sempre baterá), mas mantemos como salvaguarda silenciosa.
+- Remover a mensagem "Marque exatamente N dia(s)…" da tela, já que o usuário não tem mais como errar.
 
-### Fora de escopo
-- Layout das telas em si (5km/10km na UI) — sem mudança.
-- `planilha-21km` / `planilha-42km` (não têm PDF dedicado).
-- Conteúdo (zonas, dados de treino, helpers de volume) — apenas leitura.
+### 4. Server function (sem mudança de schema)
+- `savePlanilha5kmConfig` / equivalente 10km continuam aceitando `daysPerWeek` e `weekDays`. A tela sempre envia os valores travados — não precisa alterar o validador no servidor.
+
+## Fora de escopo
+
+- Estrutura dos dados de treino (`WORKOUTS`, zonas, volumes).
+- Layout do PDF e dos gráficos da fase.
+- Telas `planilha-21km` / `planilha-42km`.

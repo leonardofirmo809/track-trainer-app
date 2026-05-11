@@ -264,26 +264,24 @@ function Planilha5kmPage() {
               </Tabs>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Label htmlFor="dpw" className="shrink-0">Dias de treino por semana</Label>
-              <Input id="dpw" type="number" min={1} max={7} value={daysPerWeek}
-                onChange={(e) => setDaysPerWeek(Math.max(1, Math.min(7, Number(e.target.value) || 1)))}
-                className="w-20" />
+            <div className="flex items-center gap-3 text-sm">
+              <Label className="shrink-0">Dias de treino por semana</Label>
+              <span className="font-semibold">{daysPerWeek}</span>
+              <span className="text-muted-foreground">(definido pelo Nível {level})</span>
             </div>
 
             <div>
               <Label>Dias da semana</Label>
+              <p className="text-xs text-muted-foreground mt-1">Dias prescritos pelo programa — não editáveis.</p>
               <div className="flex gap-3 mt-2 flex-wrap">
                 {DAY_ORDER.map((d) => (
-                  <label key={d} className="flex items-center gap-2 text-sm">
-                    <Checkbox checked={weekDays.includes(d)} onCheckedChange={(v) => toggleDay(d, v === true)} />
+                  <label key={d} className="flex items-center gap-2 text-sm opacity-80">
+                    <Checkbox checked={weekDays.includes(d)} disabled />
                     {DAY_LABEL[d]}
                   </label>
                 ))}
               </div>
             </div>
-
-            {validation && <p className="text-sm text-destructive">{validation}</p>}
 
             <div className="flex gap-2">
               <Button onClick={handleApply} disabled={!!validation || saving}>

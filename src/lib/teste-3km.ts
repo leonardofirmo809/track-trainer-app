@@ -93,3 +93,85 @@ export function calcularTeste3km(durationSeconds: number): Teste3kmResult {
 
 export const TEST_MIN_SECONDS = 10 * 60;
 export const TEST_MAX_SECONDS = 40 * 60;
+
+// ============= Outras avaliações =============
+// Todas convertem para o mesmo Teste3kmResult (FTP em seg/km + zonas).
+// Usam a mesma estrutura de cálculo de zonas para reaproveitar tudo.
+
+function buildResultFromFtpSec(ftpSecondsPerKm: number, durationSeconds: number): Teste3kmResult {
+  const ftpMin = ftpSecondsPerKm / 60;
+  const baseSpeed = 60 / ftpMin;
+  const paceSecAtPct = (pct: number) => (60 / ((baseSpeed * pct) / 100)) * 60;
+
+  const zones: Zone[] = ZONE_DEFS.map((z) => {
+    const velFrom = (baseSpeed * z.from) / 100;
+    const velTo = z.to == null ? null : (baseSpeed * z.to) / 100;
+    const paceSlowSec = paceSecAtPct(z.from);
+    const paceFastSec = z.to == null ? null : paceSecAtPct(z.to);
+    return {
+      id: z.id, level: z.level, pseMin: z.pseMin, pseMax: z.pseMax, phrase: z.phrase,
+      pctFrom: z.from, pctTo: z.to,
+      paceSlowSec, paceFastSec, velFrom, velTo, color: z.color,
+    };
+  });
+
+  return { durationSeconds, ftpSecondsPerKm, baseSpeedKmh: baseSpeed, zones };
+}
+
+// Prova 5km — FTP = (s/5) * 1.0566
+export function calcularProva5km(durationSeconds: number): Teste3kmResult {
+  const ftp = (durationSeconds / 5) * 1.0566;
+  return buildResultFromFtpSec(ftp, durationSeconds);
+}
+
+// Prova 10km — FTP = (s/10) * 1.0566
+export function calcularProva10km(durationSeconds: number): Teste3kmResult {
+  const ftp = (durationSeconds / 10) * 1.0566;
+  return buildResultFromFtpSec(ftp, durationSeconds);
+}
+
+// Cooper 12min — FTP_secPerKm = (720 / metros * 1000) * 1.0566
+export function calcularCooper12min(meters: number): Teste3kmResult {
+  if (meters <= 0) throw new Error("Distância deve ser maior que zero.");
+  const ftp = (720 / meters * 1000) * 1.0566;
+  // Para Cooper, "durationSeconds" representa os 720s do teste — útil só pro registro.
+  return buildResultFromFtpSec(ftp, 720);
+}
+
+// Parse hh:mm:ss -> seconds
+export function parseHmmss(input: string): number {
+  const trimmed = input.trim();
+  const m3 = /^(\d{1,2}):(\d{1,2}):(\d{2})$/.exec(trimmed);
+  if (m3) {
+    const [, h, mm, ss] = m3;
+    if (Number(mm) >= 60 || Number(ss) >= 60) throw new Error("Minutos/segundos devem ser entre 00 e 59.");
+    return Number(h) * 3600 + Number(mm) * 60 + Number(ss);
+  }
+  // aceita também mm:ss
+  const m2 = /^(\d{1,3}):(\d{2})$/.exec(trimmed);
+  if (m2) {
+    const [, mm, ss] = m2;
+    if (Number(ss) >= 60) throw new Error("Segundos devem ser entre 00 e 59.");
+    return Number(mm) * 60 + Number(ss);
+  }
+  throw new Error("Formato inválido. Use hh:mm:ss ou mm:ss.");
+}
+
+export function formatHmmss(totalSec: number): string {
+  if (!isFinite(totalSec) || totalSec < 0) return "—";
+  const s = Math.round(totalSec);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  return `${h}:${m.toString().padStart(2, "0")}:${r.toString().padStart(2, "0")}`;
+}
+
+// Limites por tipo de avaliação (para validação na UI)
+export const EVAL_LIMITS = {
+  "3km":   { minSec: 10 * 60,  maxSec: 40 * 60 },
+  "5km":   { minSec: 14 * 60,  maxSec: 60 * 60 },
+  "10km":  { minSec: 30 * 60,  maxSec: 120 * 60 },
+  "cooper":{ minM:  1000,      maxM:  5000 },
+} as const;
+export type EvalKind = "3km" | "5km" | "10km" | "cooper";
+

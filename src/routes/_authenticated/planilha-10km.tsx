@@ -19,10 +19,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   WORKOUTS_10KM, WORKOUT_TYPES_10KM, PHASE_LABELS_10KM, DAY_ORDER, DAY_LABEL, DAY_FULL,
   type DayCode, type Workout10km as Workout, type Item, type SectionName, type ZoneId,
 } from "@/lib/planilha-10km-data";

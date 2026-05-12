@@ -116,7 +116,7 @@ function Planilha10kmPage() {
     setSaving(true);
     try {
       await saveFn({ data: {
-        studentId, level, daysPerWeek, weekDays, currentPhase: opts.phase ?? phase,
+        studentId, level, weekDays, currentPhase: opts.phase ?? phase,
       }});
       qc.invalidateQueries({ queryKey: ["planilha-10km", studentId] });
     } catch (e) {
@@ -156,7 +156,7 @@ function Planilha10kmPage() {
         studentLevel: dataQuery.data.student?.level ?? null,
         ftpSecondsPerKm: dataQuery.data.latestTest?.pace_seconds_per_km ?? 0,
         zones,
-        level, daysPerWeek, weekDays, currentPhase: phase,
+        level, daysPerWeek: weekDays.length, weekDays, currentPhase: phase,
         weeks,
         branding: branding.data ?? { logoUrl: null, primary: "#0EA5E9", secondary: "#0F172A", coachName: "Treinador" },
       });

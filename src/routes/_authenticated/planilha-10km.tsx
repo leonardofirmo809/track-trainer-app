@@ -401,26 +401,29 @@ function Planilha10kmPage() {
   );
 }
 
-function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
+type StatsLookup = (level: 1 | 2, phase: 1 | 2 | 3 | 4, weekIdx: number, code: string) => { durationMin: number; volumeM: number } | null;
+
+function WeekRow({ index, dist, level, phase, weekIdx, statsLookup, onOpen }: {
   index: number; dist: DistributionResult<Workout>; level: 1 | 2; phase: 1 | 2 | 3 | 4; weekIdx: number;
+  statsLookup: StatsLookup;
   onOpen: (wo: Workout, day: DayCode) => void;
 }) {
   const workouts = dist.assignments.map((a) => a.workout).filter((w): w is Workout => !!w);
   const perWorkoutMap = useMemo(() => {
     const m = new Map<string, { lightPct: number; hardPct: number }>();
     workouts.forEach((w) => {
-      const t = computeWorkoutTotals(w, level, phase, weekIdx, getStats10km);
+      const t = computeWorkoutTotals(w, level, phase, weekIdx, statsLookup);
       m.set(w.code, { lightPct: t.lightPct, hardPct: t.hardPct });
     });
     return m;
-  }, [workouts, level, phase, weekIdx]);
+  }, [workouts, level, phase, weekIdx, statsLookup]);
 
   return (
     <div className="space-y-3">
       <p className="font-semibold mb-2">Semana {index}</p>
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
         {dist.assignments.map((a) => {
-          const stat = a.workout ? getStats10km(level, phase, weekIdx, a.workout.code) : null;
+          const stat = a.workout ? statsLookup(level, phase, weekIdx, a.workout.code) : null;
           const pct = a.workout ? perWorkoutMap.get(a.workout.code) : null;
           return (
             <div key={a.day}>
@@ -437,7 +440,7 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
                   <p className="text-sm font-semibold leading-tight">{a.workout.type}</p>
                   {stat && (
                     <div className="flex items-center gap-2 mt-1 text-[11px] opacity-90">
-                      <span className="inline-flex items-center gap-1"><Clock className="size-3" />{stat.durationMin} min</span>
+                      <span className="inline-flex items-center gap-1"><Clock className="size-3" />{Math.round(stat.durationMin)} min</span>
                       <span aria-hidden>·</span>
                       <span className="inline-flex items-center gap-1"><RouteIcon className="size-3" />{formatKm(stat.volumeM)}</span>
                     </div>
@@ -470,10 +473,10 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
   );
 }
 
-function PhaseChartsBlock({ weeksWorkouts, level, phase }: {
-  weeksWorkouts: Workout[][]; level: 1 | 2; phase: 1 | 2 | 3 | 4;
+function PhaseChartsBlock({ weeksWorkouts, level, phase, statsLookup }: {
+  weeksWorkouts: Workout[][]; level: 1 | 2; phase: 1 | 2 | 3 | 4; statsLookup: StatsLookup;
 }) {
-  const totals = useMemo(() => computePhaseTotals(weeksWorkouts, level, phase, getStats10km), [weeksWorkouts, level, phase]);
+  const totals = useMemo(() => computePhaseTotals(weeksWorkouts, level, phase, statsLookup), [weeksWorkouts, level, phase, statsLookup]);
   return (
     <div className="grid gap-3 grid-cols-1 lg:grid-cols-[280px_1fr_1fr] mt-2">
       <PhaseTotalsCard totals={totals} />

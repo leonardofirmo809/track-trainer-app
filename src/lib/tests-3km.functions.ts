@@ -69,6 +69,8 @@ export const saveTeste3km = createServerFn({ method: "POST" })
         metadata: {
           ftp_seconds_per_km: data.ftpSecondsPerKm,
           base_speed_kmh: data.baseSpeedKmh,
+          source: data.source ?? "3km",
+          input_meters: data.inputMeters ?? null,
           zones: data.zones,
         },
       })

@@ -6,13 +6,12 @@ import { toast } from "sonner";
 import { Home, ChevronRight, Save, Settings2, AlertTriangle, Download, Clock, Route as RouteIcon } from "lucide-react";
 import { useCoachBranding } from "@/lib/use-coach-branding";
 import { generatePlanilha10kmPdf, downloadBlob } from "@/lib/planilha-10km-pdf";
-import { getStats10km, formatHm, formatKm, formatKm2, formatHms } from "@/lib/planilha-10km-volumes";
+import { makeStatsLookup10km, formatHm, formatKm, formatKm2, formatHms } from "@/lib/planilha-10km-stats";
 import { computeWorkoutTotals, computePhaseTotals, type PhaseTotals } from "@/lib/planilha-5km-zone-distribution";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, Cell, LabelList, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,9 +24,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   WORKOUTS_10KM, WORKOUT_TYPES_10KM, PHASE_LABELS_10KM, DAY_ORDER, DAY_LABEL, DAY_FULL,
-  defaultDaysFor10km, type DayCode, type Workout10km as Workout, type Item, type SectionName, type ZoneId,
+  type DayCode, type Workout10km as Workout, type Item, type SectionName, type ZoneId,
 } from "@/lib/planilha-10km-data";
 import { distributeWeek, type DistributionResult } from "@/lib/planilha-5km-distribute";
+import { validateWeekDays10km, allowedDayCounts10km } from "@/lib/planilha-10km-distribute";
 import { getPlanilha10kmData, savePlanilha10kmConfig } from "@/lib/planilha-10km.functions";
 import { formatMmss } from "@/lib/teste-3km";
 

@@ -368,23 +368,7 @@ function Planilha10kmPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmação intensos consecutivos */}
-      <AlertDialog open={!!pendingApply} onOpenChange={(o) => !o && setPendingApply(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Treinos intensos em dias consecutivos</AlertDialogTitle>
-            <AlertDialogDescription>
-              Atenção: treinos intensos em dias seguidos podem aumentar risco de lesão. Deseja continuar?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { const fn = pendingApply; setPendingApply(null); fn?.(); }}>
-              Continuar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
 
       {applied && (
         <div className="flex justify-end">

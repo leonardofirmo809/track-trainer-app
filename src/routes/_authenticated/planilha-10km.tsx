@@ -254,34 +254,47 @@ function Planilha10kmPage() {
               <Tabs value={String(level)} onValueChange={(v) => {
                 const lv = Number(v) as 1 | 2;
                 setLevel(lv);
-                setDaysPerWeek(lv === 1 ? 3 : 4);
-                setWeekDays(defaultDaysFor10km(lv));
+                setWeekDays([]);
+                setApplied(false);
+                if (lv === 1) setPhase(1);
               }}>
                 <TabsList>
                   <TabsTrigger value="1">Nível 1 (3x/sem)</TabsTrigger>
-                  <TabsTrigger value="2">Nível 2 (4x/sem)</TabsTrigger>
+                  <TabsTrigger value="2">Nível 2 (4 ou 5x/sem)</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
 
-            <div className="flex items-center gap-3 text-sm">
-              <Label className="shrink-0">Dias de treino por semana</Label>
-              <span className="font-semibold">{daysPerWeek}</span>
-              <span className="text-muted-foreground">(definido pelo Nível {level})</span>
-            </div>
-
             <div>
               <Label>Dias da semana</Label>
-              <p className="text-xs text-muted-foreground mt-1">Dias prescritos pelo programa — não editáveis.</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {level === 1 ? "Selecione exatamente 3 dias." : "Selecione 4 ou 5 dias."}
+              </p>
               <div className="flex gap-3 mt-2 flex-wrap">
-                {DAY_ORDER.map((d) => (
-                  <label key={d} className="flex items-center gap-2 text-sm opacity-80">
-                    <Checkbox checked={weekDays.includes(d)} disabled />
-                    {DAY_LABEL[d]}
-                  </label>
-                ))}
+                {DAY_ORDER.map((d) => {
+                  const checked = weekDays.includes(d);
+                  return (
+                    <label key={d} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(v) => {
+                          setWeekDays((prev) => v ? [...prev, d] : prev.filter((x) => x !== d));
+                          setApplied(false);
+                        }}
+                      />
+                      {DAY_LABEL[d]}
+                    </label>
+                  );
+                })}
               </div>
+              <p className="text-xs mt-2 text-muted-foreground">Selecionados: <span className="font-semibold">{weekDays.length}</span></p>
             </div>
+
+            {validation && (
+              <p className="text-xs text-amber-600 flex items-center gap-1">
+                <AlertTriangle className="size-3" /> {validation}
+              </p>
+            )}
 
             <div className="flex gap-2">
               <Button onClick={handleApply} disabled={!!validation || saving}>
@@ -297,36 +310,50 @@ function Planilha10kmPage() {
       {applied && weeks && zones && (
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle>4. Fase e treinos</CardTitle>
+            <CardTitle>4. {level === 1 ? "Treinos (4 semanas)" : "Fase e treinos"}</CardTitle>
             <Button onClick={handleExportPdf} disabled={exporting} size="sm">
               <Download /> {exporting ? "Gerando…" : "Exportar PDF"}
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Tabs value={String(phase)} onValueChange={(v) => changePhase(Number(v) as 1 | 2 | 3 | 4)}>
-              <TabsList>
-                {[1, 2, 3, 4].map((p) => (
-                  <TabsTrigger key={p} value={String(p)}>Fase {p}</TabsTrigger>
+            {level === 1 ? (
+              <div className="space-y-6">
+                <p className="text-sm text-muted-foreground">{PHASE_LABELS_10KM[1].subtitle} — ciclo único de 4 semanas</p>
+                {weeks.map((wk, idx) => (
+                  <WeekRow key={idx} index={idx + 1} dist={wk}
+                    level={level} phase={1} weekIdx={idx} statsLookup={statsLookup}
+                    onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
                 ))}
-              </TabsList>
-              {[1, 2, 3, 4].map((p) => (
-                <TabsContent key={p} value={String(p)} className="space-y-6">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{PHASE_LABELS_10KM[p as 1 | 2 | 3 | 4].subtitle}</p>
-                  </div>
-                  {weeks.map((wk, idx) => (
-                    <WeekRow key={idx} index={idx + 1} dist={wk}
-                      level={level} phase={p as 1 | 2 | 3 | 4} weekIdx={idx}
-                      onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
+                <PhaseChartsBlock
+                  weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
+                  level={level} phase={1} statsLookup={statsLookup}
+                />
+              </div>
+            ) : (
+              <Tabs value={String(phase)} onValueChange={(v) => changePhase(Number(v) as 1 | 2 | 3 | 4)}>
+                <TabsList>
+                  {[1, 2, 3, 4].map((p) => (
+                    <TabsTrigger key={p} value={String(p)}>Plano {p}</TabsTrigger>
                   ))}
-                  <PhaseChartsBlock
-                    weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
-                    level={level}
-                    phase={p as 1 | 2 | 3 | 4}
-                  />
-                </TabsContent>
-              ))}
-            </Tabs>
+                </TabsList>
+                {[1, 2, 3, 4].map((p) => (
+                  <TabsContent key={p} value={String(p)} className="space-y-6">
+                    <div>
+                      <p className="text-sm text-muted-foreground">{PHASE_LABELS_10KM[p as 1 | 2 | 3 | 4].subtitle}</p>
+                    </div>
+                    {weeks.map((wk, idx) => (
+                      <WeekRow key={idx} index={idx + 1} dist={wk}
+                        level={level} phase={p as 1 | 2 | 3 | 4} weekIdx={idx} statsLookup={statsLookup}
+                        onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
+                    ))}
+                    <PhaseChartsBlock
+                      weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
+                      level={level} phase={p as 1 | 2 | 3 | 4} statsLookup={statsLookup}
+                    />
+                  </TabsContent>
+                ))}
+              </Tabs>
+            )}
           </CardContent>
         </Card>
       )}

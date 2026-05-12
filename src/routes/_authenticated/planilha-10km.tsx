@@ -47,8 +47,7 @@ function Planilha10kmPage() {
 
   const [studentId, setStudentId] = useState<string>("");
   const [level, setLevel] = useState<1 | 2>(1);
-  const [daysPerWeek, setDaysPerWeek] = useState<number>(3);
-  const [weekDays, setWeekDays] = useState<DayCode[]>(["TER", "QUI", "SAB"]);
+  const [weekDays, setWeekDays] = useState<DayCode[]>([]);
   const [phase, setPhase] = useState<1 | 2 | 3 | 4>(1);
   const [applied, setApplied] = useState(false);
   const [pendingApply, setPendingApply] = useState<null | (() => void)>(null);
@@ -77,32 +76,33 @@ function Planilha10kmPage() {
     return meta?.zones ?? null;
   }, [dataQuery.data]);
 
-  // Pré-carrega config salva (sempre força dias travados pelo nível)
+  const ftpSec = dataQuery.data?.latestTest?.pace_seconds_per_km ?? 0;
+  const statsLookup = useMemo(() => makeStatsLookup10km(ftpSec), [ftpSec]);
+
+  // Pré-carrega config salva (com migração de payload antigo)
   useEffect(() => {
     const plan = dataQuery.data?.plan;
     if (plan?.payload) {
-      const p = plan.payload as { level: 1 | 2; daysPerWeek: number; weekDays: DayCode[]; currentPhase: 1 | 2 | 3 | 4 };
-      const lockedDays = p.level === 1 ? 3 : 4;
-      setLevel(p.level);
-      setDaysPerWeek(lockedDays);
-      setWeekDays(defaultDaysFor10km(p.level));
-      setPhase(p.currentPhase);
-      setApplied(true);
+      const p = plan.payload as { level: 1 | 2; weekDays: DayCode[]; currentPhase: 1 | 2 | 3 | 4 };
+      const lv: 1 | 2 = p.level === 1 || p.level === 2 ? p.level : 1;
+      const allowed = allowedDayCounts10km(lv);
+      const validDays = Array.isArray(p.weekDays) && allowed.includes(p.weekDays.length) ? p.weekDays : [];
+      const ph: 1 | 2 | 3 | 4 = lv === 1 ? 1 : ((p.currentPhase ?? 1) as 1 | 2 | 3 | 4);
+      setLevel(lv);
+      setWeekDays(validDays);
+      setPhase(ph);
+      setApplied(validDays.length > 0);
     } else if (dataQuery.data) {
       const studentLevel = dataQuery.data.student?.level;
       const suggested: 1 | 2 = studentLevel === "iniciante" ? 1 : 2;
       setLevel(suggested);
-      setDaysPerWeek(suggested === 1 ? 3 : 4);
-      setWeekDays(defaultDaysFor10km(suggested));
+      setWeekDays([]);
+      setPhase(1);
       setApplied(false);
     }
   }, [dataQuery.data]);
 
-  const validation = useMemo<string | null>(() => {
-    // Configuração travada pelo nível — salvaguarda silenciosa.
-    if (weekDays.length !== daysPerWeek) return "Configuração inválida para o nível selecionado.";
-    return null;
-  }, [weekDays, daysPerWeek]);
+  const validation = useMemo<string | null>(() => validateWeekDays10km(level, weekDays), [level, weekDays]);
 
   // Distribuição da fase atual
   const weeks = useMemo(() => {

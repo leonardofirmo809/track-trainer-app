@@ -255,3 +255,7 @@ export function slotCountFor10km(level: 1 | 2): number {
 export function allowedDayCounts(level: 1 | 2): number[] {
   return level === 1 ? [3] : [4, 5];
 }
+// Compat: dias padrão (TER/QUI/SAB para N1; TER/QUI/SEX/SAB para N2).
+export function defaultDaysFor10km(level: 1 | 2): DayCode[] {
+  return level === 1 ? ["TER", "QUI", "SAB"] : ["TER", "QUI", "SEX", "SAB"];
+}

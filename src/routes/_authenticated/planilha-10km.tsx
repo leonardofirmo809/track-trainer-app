@@ -6,13 +6,12 @@ import { toast } from "sonner";
 import { Home, ChevronRight, Save, Settings2, AlertTriangle, Download, Clock, Route as RouteIcon } from "lucide-react";
 import { useCoachBranding } from "@/lib/use-coach-branding";
 import { generatePlanilha10kmPdf, downloadBlob } from "@/lib/planilha-10km-pdf";
-import { getStats10km, formatHm, formatKm, formatKm2, formatHms } from "@/lib/planilha-10km-volumes";
+import { makeStatsLookup10km, formatHm, formatKm, formatKm2, formatHms } from "@/lib/planilha-10km-stats";
 import { computeWorkoutTotals, computePhaseTotals, type PhaseTotals } from "@/lib/planilha-5km-zone-distribution";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, Cell, LabelList, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,9 +24,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   WORKOUTS_10KM, WORKOUT_TYPES_10KM, PHASE_LABELS_10KM, DAY_ORDER, DAY_LABEL, DAY_FULL,
-  defaultDaysFor10km, type DayCode, type Workout10km as Workout, type Item, type SectionName, type ZoneId,
+  type DayCode, type Workout10km as Workout, type Item, type SectionName, type ZoneId,
 } from "@/lib/planilha-10km-data";
 import { distributeWeek, type DistributionResult } from "@/lib/planilha-5km-distribute";
+import { validateWeekDays10km, allowedDayCounts10km } from "@/lib/planilha-10km-distribute";
 import { getPlanilha10kmData, savePlanilha10kmConfig } from "@/lib/planilha-10km.functions";
 import { formatMmss } from "@/lib/teste-3km";
 
@@ -47,8 +47,7 @@ function Planilha10kmPage() {
 
   const [studentId, setStudentId] = useState<string>("");
   const [level, setLevel] = useState<1 | 2>(1);
-  const [daysPerWeek, setDaysPerWeek] = useState<number>(3);
-  const [weekDays, setWeekDays] = useState<DayCode[]>(["TER", "QUI", "SAB"]);
+  const [weekDays, setWeekDays] = useState<DayCode[]>([]);
   const [phase, setPhase] = useState<1 | 2 | 3 | 4>(1);
   const [applied, setApplied] = useState(false);
   const [pendingApply, setPendingApply] = useState<null | (() => void)>(null);
@@ -77,32 +76,33 @@ function Planilha10kmPage() {
     return meta?.zones ?? null;
   }, [dataQuery.data]);
 
-  // Pré-carrega config salva (sempre força dias travados pelo nível)
+  const ftpSec = dataQuery.data?.latestTest?.pace_seconds_per_km ?? 0;
+  const statsLookup = useMemo(() => makeStatsLookup10km(ftpSec), [ftpSec]);
+
+  // Pré-carrega config salva (com migração de payload antigo)
   useEffect(() => {
     const plan = dataQuery.data?.plan;
     if (plan?.payload) {
-      const p = plan.payload as { level: 1 | 2; daysPerWeek: number; weekDays: DayCode[]; currentPhase: 1 | 2 | 3 | 4 };
-      const lockedDays = p.level === 1 ? 3 : 4;
-      setLevel(p.level);
-      setDaysPerWeek(lockedDays);
-      setWeekDays(defaultDaysFor10km(p.level));
-      setPhase(p.currentPhase);
-      setApplied(true);
+      const p = plan.payload as { level: 1 | 2; weekDays: DayCode[]; currentPhase: 1 | 2 | 3 | 4 };
+      const lv: 1 | 2 = p.level === 1 || p.level === 2 ? p.level : 1;
+      const allowed = allowedDayCounts10km(lv);
+      const validDays = Array.isArray(p.weekDays) && allowed.includes(p.weekDays.length) ? p.weekDays : [];
+      const ph: 1 | 2 | 3 | 4 = lv === 1 ? 1 : ((p.currentPhase ?? 1) as 1 | 2 | 3 | 4);
+      setLevel(lv);
+      setWeekDays(validDays);
+      setPhase(ph);
+      setApplied(validDays.length > 0);
     } else if (dataQuery.data) {
       const studentLevel = dataQuery.data.student?.level;
       const suggested: 1 | 2 = studentLevel === "iniciante" ? 1 : 2;
       setLevel(suggested);
-      setDaysPerWeek(suggested === 1 ? 3 : 4);
-      setWeekDays(defaultDaysFor10km(suggested));
+      setWeekDays([]);
+      setPhase(1);
       setApplied(false);
     }
   }, [dataQuery.data]);
 
-  const validation = useMemo<string | null>(() => {
-    // Configuração travada pelo nível — salvaguarda silenciosa.
-    if (weekDays.length !== daysPerWeek) return "Configuração inválida para o nível selecionado.";
-    return null;
-  }, [weekDays, daysPerWeek]);
+  const validation = useMemo<string | null>(() => validateWeekDays10km(level, weekDays), [level, weekDays]);
 
   // Distribuição da fase atual
   const weeks = useMemo(() => {
@@ -116,7 +116,7 @@ function Planilha10kmPage() {
     setSaving(true);
     try {
       await saveFn({ data: {
-        studentId, level, daysPerWeek, weekDays, currentPhase: opts.phase ?? phase,
+        studentId, level, weekDays, currentPhase: opts.phase ?? phase,
       }});
       qc.invalidateQueries({ queryKey: ["planilha-10km", studentId] });
     } catch (e) {
@@ -156,7 +156,7 @@ function Planilha10kmPage() {
         studentLevel: dataQuery.data.student?.level ?? null,
         ftpSecondsPerKm: dataQuery.data.latestTest?.pace_seconds_per_km ?? 0,
         zones,
-        level, daysPerWeek, weekDays, currentPhase: phase,
+        level, daysPerWeek: weekDays.length, weekDays, currentPhase: phase,
         weeks,
         branding: branding.data ?? { logoUrl: null, primary: "#0EA5E9", secondary: "#0F172A", coachName: "Treinador" },
       });
@@ -254,34 +254,47 @@ function Planilha10kmPage() {
               <Tabs value={String(level)} onValueChange={(v) => {
                 const lv = Number(v) as 1 | 2;
                 setLevel(lv);
-                setDaysPerWeek(lv === 1 ? 3 : 4);
-                setWeekDays(defaultDaysFor10km(lv));
+                setWeekDays([]);
+                setApplied(false);
+                if (lv === 1) setPhase(1);
               }}>
                 <TabsList>
                   <TabsTrigger value="1">Nível 1 (3x/sem)</TabsTrigger>
-                  <TabsTrigger value="2">Nível 2 (4x/sem)</TabsTrigger>
+                  <TabsTrigger value="2">Nível 2 (4 ou 5x/sem)</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
 
-            <div className="flex items-center gap-3 text-sm">
-              <Label className="shrink-0">Dias de treino por semana</Label>
-              <span className="font-semibold">{daysPerWeek}</span>
-              <span className="text-muted-foreground">(definido pelo Nível {level})</span>
-            </div>
-
             <div>
               <Label>Dias da semana</Label>
-              <p className="text-xs text-muted-foreground mt-1">Dias prescritos pelo programa — não editáveis.</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {level === 1 ? "Selecione exatamente 3 dias." : "Selecione 4 ou 5 dias."}
+              </p>
               <div className="flex gap-3 mt-2 flex-wrap">
-                {DAY_ORDER.map((d) => (
-                  <label key={d} className="flex items-center gap-2 text-sm opacity-80">
-                    <Checkbox checked={weekDays.includes(d)} disabled />
-                    {DAY_LABEL[d]}
-                  </label>
-                ))}
+                {DAY_ORDER.map((d) => {
+                  const checked = weekDays.includes(d);
+                  return (
+                    <label key={d} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(v) => {
+                          setWeekDays((prev) => v ? [...prev, d] : prev.filter((x) => x !== d));
+                          setApplied(false);
+                        }}
+                      />
+                      {DAY_LABEL[d]}
+                    </label>
+                  );
+                })}
               </div>
+              <p className="text-xs mt-2 text-muted-foreground">Selecionados: <span className="font-semibold">{weekDays.length}</span></p>
             </div>
+
+            {validation && (
+              <p className="text-xs text-amber-600 flex items-center gap-1">
+                <AlertTriangle className="size-3" /> {validation}
+              </p>
+            )}
 
             <div className="flex gap-2">
               <Button onClick={handleApply} disabled={!!validation || saving}>
@@ -297,36 +310,50 @@ function Planilha10kmPage() {
       {applied && weeks && zones && (
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle>4. Fase e treinos</CardTitle>
+            <CardTitle>4. {level === 1 ? "Treinos (4 semanas)" : "Fase e treinos"}</CardTitle>
             <Button onClick={handleExportPdf} disabled={exporting} size="sm">
               <Download /> {exporting ? "Gerando…" : "Exportar PDF"}
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Tabs value={String(phase)} onValueChange={(v) => changePhase(Number(v) as 1 | 2 | 3 | 4)}>
-              <TabsList>
-                {[1, 2, 3, 4].map((p) => (
-                  <TabsTrigger key={p} value={String(p)}>Fase {p}</TabsTrigger>
+            {level === 1 ? (
+              <div className="space-y-6">
+                <p className="text-sm text-muted-foreground">{PHASE_LABELS_10KM[1].subtitle} — ciclo único de 4 semanas</p>
+                {weeks.map((wk, idx) => (
+                  <WeekRow key={idx} index={idx + 1} dist={wk}
+                    level={level} phase={1} weekIdx={idx} statsLookup={statsLookup}
+                    onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
                 ))}
-              </TabsList>
-              {[1, 2, 3, 4].map((p) => (
-                <TabsContent key={p} value={String(p)} className="space-y-6">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{PHASE_LABELS_10KM[p as 1 | 2 | 3 | 4].subtitle}</p>
-                  </div>
-                  {weeks.map((wk, idx) => (
-                    <WeekRow key={idx} index={idx + 1} dist={wk}
-                      level={level} phase={p as 1 | 2 | 3 | 4} weekIdx={idx}
-                      onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
+                <PhaseChartsBlock
+                  weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
+                  level={level} phase={1} statsLookup={statsLookup}
+                />
+              </div>
+            ) : (
+              <Tabs value={String(phase)} onValueChange={(v) => changePhase(Number(v) as 1 | 2 | 3 | 4)}>
+                <TabsList>
+                  {[1, 2, 3, 4].map((p) => (
+                    <TabsTrigger key={p} value={String(p)}>Plano {p}</TabsTrigger>
                   ))}
-                  <PhaseChartsBlock
-                    weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
-                    level={level}
-                    phase={p as 1 | 2 | 3 | 4}
-                  />
-                </TabsContent>
-              ))}
-            </Tabs>
+                </TabsList>
+                {[1, 2, 3, 4].map((p) => (
+                  <TabsContent key={p} value={String(p)} className="space-y-6">
+                    <div>
+                      <p className="text-sm text-muted-foreground">{PHASE_LABELS_10KM[p as 1 | 2 | 3 | 4].subtitle}</p>
+                    </div>
+                    {weeks.map((wk, idx) => (
+                      <WeekRow key={idx} index={idx + 1} dist={wk}
+                        level={level} phase={p as 1 | 2 | 3 | 4} weekIdx={idx} statsLookup={statsLookup}
+                        onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
+                    ))}
+                    <PhaseChartsBlock
+                      weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
+                      level={level} phase={p as 1 | 2 | 3 | 4} statsLookup={statsLookup}
+                    />
+                  </TabsContent>
+                ))}
+              </Tabs>
+            )}
           </CardContent>
         </Card>
       )}
@@ -374,26 +401,29 @@ function Planilha10kmPage() {
   );
 }
 
-function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
+type StatsLookup = (level: 1 | 2, phase: 1 | 2 | 3 | 4, weekIdx: number, code: string) => { durationMin: number; volumeM: number } | null;
+
+function WeekRow({ index, dist, level, phase, weekIdx, statsLookup, onOpen }: {
   index: number; dist: DistributionResult<Workout>; level: 1 | 2; phase: 1 | 2 | 3 | 4; weekIdx: number;
+  statsLookup: StatsLookup;
   onOpen: (wo: Workout, day: DayCode) => void;
 }) {
   const workouts = dist.assignments.map((a) => a.workout).filter((w): w is Workout => !!w);
   const perWorkoutMap = useMemo(() => {
     const m = new Map<string, { lightPct: number; hardPct: number }>();
     workouts.forEach((w) => {
-      const t = computeWorkoutTotals(w, level, phase, weekIdx, getStats10km);
+      const t = computeWorkoutTotals(w, level, phase, weekIdx, statsLookup);
       m.set(w.code, { lightPct: t.lightPct, hardPct: t.hardPct });
     });
     return m;
-  }, [workouts, level, phase, weekIdx]);
+  }, [workouts, level, phase, weekIdx, statsLookup]);
 
   return (
     <div className="space-y-3">
       <p className="font-semibold mb-2">Semana {index}</p>
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
         {dist.assignments.map((a) => {
-          const stat = a.workout ? getStats10km(level, phase, weekIdx, a.workout.code) : null;
+          const stat = a.workout ? statsLookup(level, phase, weekIdx, a.workout.code) : null;
           const pct = a.workout ? perWorkoutMap.get(a.workout.code) : null;
           return (
             <div key={a.day}>
@@ -410,7 +440,7 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
                   <p className="text-sm font-semibold leading-tight">{a.workout.type}</p>
                   {stat && (
                     <div className="flex items-center gap-2 mt-1 text-[11px] opacity-90">
-                      <span className="inline-flex items-center gap-1"><Clock className="size-3" />{stat.durationMin} min</span>
+                      <span className="inline-flex items-center gap-1"><Clock className="size-3" />{Math.round(stat.durationMin)} min</span>
                       <span aria-hidden>·</span>
                       <span className="inline-flex items-center gap-1"><RouteIcon className="size-3" />{formatKm(stat.volumeM)}</span>
                     </div>
@@ -443,10 +473,10 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
   );
 }
 
-function PhaseChartsBlock({ weeksWorkouts, level, phase }: {
-  weeksWorkouts: Workout[][]; level: 1 | 2; phase: 1 | 2 | 3 | 4;
+function PhaseChartsBlock({ weeksWorkouts, level, phase, statsLookup }: {
+  weeksWorkouts: Workout[][]; level: 1 | 2; phase: 1 | 2 | 3 | 4; statsLookup: StatsLookup;
 }) {
-  const totals = useMemo(() => computePhaseTotals(weeksWorkouts, level, phase, getStats10km), [weeksWorkouts, level, phase]);
+  const totals = useMemo(() => computePhaseTotals(weeksWorkouts, level, phase, statsLookup), [weeksWorkouts, level, phase, statsLookup]);
   return (
     <div className="grid gap-3 grid-cols-1 lg:grid-cols-[280px_1fr_1fr] mt-2">
       <PhaseTotalsCard totals={totals} />

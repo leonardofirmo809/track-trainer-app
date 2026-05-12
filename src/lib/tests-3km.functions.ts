@@ -20,9 +20,11 @@ const zoneSchema = z.object({
 const schema = z.object({
   studentId: z.string().uuid(),
   testDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  durationSeconds: z.number().int().min(600).max(2400),
+  durationSeconds: z.number().int().min(60).max(7200),
   ftpSecondsPerKm: z.number().positive(),
   baseSpeedKmh: z.number().positive(),
+  source: z.enum(["3km", "5km", "10km", "cooper"]).optional().default("3km"),
+  inputMeters: z.number().positive().nullable().optional(),
   zones: z.array(zoneSchema).length(5),
   notes: z.string().max(1000).optional().nullable(),
 });

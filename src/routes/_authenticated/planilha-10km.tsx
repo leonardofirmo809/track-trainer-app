@@ -46,7 +46,7 @@ function Planilha10kmPage() {
   const [weekDays, setWeekDays] = useState<DayCode[]>([]);
   const [phase, setPhase] = useState<1 | 2 | 3 | 4>(1);
   const [applied, setApplied] = useState(false);
-  const [pendingApply, setPendingApply] = useState<null | (() => void)>(null);
+  
   const [openWorkout, setOpenWorkout] = useState<{ wo: Workout; day: DayCode } | null>(null);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);

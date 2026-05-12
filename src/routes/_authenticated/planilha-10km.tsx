@@ -128,14 +128,7 @@ function Planilha10kmPage() {
       await persistConfig();
       toast.success("Configuração aplicada e salva.");
     };
-    // checa intensos consecutivos em qualquer semana da fase atual
-    const phaseWeeks = WORKOUTS_10KM[level][phase];
-    const anyConsecutive = phaseWeeks.some((wos) => distributeWeek(wos, weekDays, level, WORKOUT_TYPES_10KM).hasConsecutiveIntense);
-    if (anyConsecutive) {
-      setPendingApply(() => apply);
-    } else {
-      void apply();
-    }
+    void apply();
   }
 
   function changePhase(p: 1 | 2 | 3 | 4) {

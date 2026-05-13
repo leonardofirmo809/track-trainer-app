@@ -1,61 +1,28 @@
-## Planilha 21km — implementação completa
+## Status atual
 
-Espelhar a arquitetura já consolidada do módulo 10km, trocando a estrutura de planos, semanas e tipos de treino pela spec da meia maratona.
+A Planilha 21km já foi implementada na rodada anterior. Todos os arquivos do plano original existem:
 
-### Estrutura geral
-- **Nível 1 e Nível 2**: ambos com **5 planilhas × 4 semanas × 4 slots** (sempre 4 dias/semana). Diferente do 10km, aqui N1 também tem 4 slots e múltiplas planilhas.
-- Professor seleciona **exatamente 4 dias** (qualquer combinação Seg–Dom) e qual das 5 planilhas usar.
-- Distribuição por slot:
-  1. Slot 1 → 1º dia marcado (qualidade moderada)
-  2. Slot 2 → 2º dia (qualidade alta)
-  3. Slot 3 → 3º dia (regenerativo, entre os intensos)
-  4. Slot 4 → último dia (longão / progressivo longo / corrida rápida longa)
+- `src/lib/planilha-21km-data.ts` (5 planilhas × 4 semanas × 4 slots, N1 e N2, com Teste 3km nas Sem 4 das Planilhas 2 e 4 e Simulado 21km no Slot 4 da Plan 5 Sem 4)
+- `src/lib/planilha-21km-distribute.ts` (validação fixa de 4 dias)
+- `src/lib/planilha-21km-stats.ts` (volume/duração via FTP)
+- `src/lib/planilha-21km.functions.ts` (`getPlanilha21kmData`, `savePlanilha21kmConfig`, `plan_type='21km'`)
+- `src/lib/planilha-21km-pdf.ts` (PDF com cabeçalho de marca, zonas, semanas, lembretes do Passo 18)
+- `src/routes/_authenticated/planilha-21km.tsx` (UI com 5 abas, seleção de aluno, validação de 4 dias, gráficos e modal de detalhe)
 
-### Arquivos novos
+O enum `plan_type` no banco já contém `'21km'`, então não é necessária migration.
 
-**`src/lib/planilha-21km-data.ts`**  
-Banco de treinos com builders reutilizando os tipos de `planilha-5km-data` (`Section`, `Item`, `ZoneId`, etc.). Tipos extras necessários:
-- `WorkoutType21km`: une os tipos do 10km + `"Progressivo Longo"`, `"Simulado 21km"`.
-- Builders novos:
-  - `progressivoLongo(code, slot, z1m, z2m, z3m)` — distância em metros (1000m Z1 + Xm Z2 + Ym Z3, sem recovery).
-  - `simulado21km(code, slot, z1m, z2m, z3m)` — 1000m Z1 → 17000m Z2 → 4095m Z3 (Plano 5 / Sem 4).
-  - `subidasMin`, `intervaladoCurto` (Z5 longo), `tempoRunLong` (variações com 10min Z1 nos avançados), `corridaRapidaLonga` (com aquecimentos 800/1600 ou 1600/1600 e recovery 800 ou 1600).
-- Reutilizar `progressivo`, `corridaRapida`, `subidasSec`, `tempoRun`, `intervaladoLongo`, `intervaladoModerado`, `regenerativo`, `baseAerobia`, `longaoDist` (com aquecimento parametrizável: 1000 ou 2000m), `longaoTempo`, `teste3km`.
-- `WORKOUTS_21KM[level][planoIdx]` → 5 planos por nível, cada um com 4 semanas × 4 workouts. Conteúdo exato dos Passos 5–14 da spec (preservando os números de minutos/metros/séries indicados).
-- `PHASE_LABELS_21KM` para 1..5: Preparação Geral / Específica / Avançado / Específico c/ Teste / Polimento·Prova.
-- Teste 3km no Slot 1, Sem 4 das Planilhas 2 e 4 (N1 e N2). Plano 5 Sem 4 → Slot 4 = Simulado 21km.
+## O que falta
 
-**`src/lib/planilha-21km-distribute.ts`**  
-- `slotCountFor21km(level) = 4` para ambos níveis.
-- `allowedDayCounts21km(level) = [4]` para ambos.
-- `validateWeekDays21km(level, days)` exige exatamente 4 dias, sem duplicatas.
+Apenas verificação manual no preview, sem novas mudanças de código:
 
-**`src/lib/planilha-21km-stats.ts`**  
-Cópia do `planilha-10km-stats.ts` adaptada (exporta `makeStatsLookup21km` que recebe FTP em seg/km e calcula duração/volume por workout — mesma lógica de pace médio por zona).
+1. Abrir `/planilha-21km` com um aluno que tenha Teste 3km cadastrado.
+2. Trocar entre Nível 1 e Nível 2 e confirmar que ambos exigem 4 dias.
+3. Marcar 4 dias, aplicar e navegar pelas 5 abas de planilha.
+4. Confirmar que aparece "Teste 3km" no Slot 1 da Sem 4 (Planilhas 2 e 4) e "Simulado 21km" no Slot 4 da Plan 5 Sem 4.
+5. Salvar a configuração e exportar o PDF.
 
-**`src/lib/planilha-21km.functions.ts`**  
-Server functions `getPlanilha21kmData` e `savePlanilha21kmConfig`, espelhando 10km. `plan_type = '21km'`, payload `{ level, weekDays, currentPhase: 1..5 }`.
+Se a verificação encontrar algum bug específico (texto, número, layout), corrijo pontualmente em uma rodada seguinte.
 
-**`src/lib/planilha-21km-pdf.ts`**  
-Gerador de PDF mirror do 10km (mesma estrutura de cabeçalho com branding, tabela semanal, paces por zona, lembretes fixos do Passo 18). Renderiza 4 semanas do plano selecionado + total do plano.
+## Pergunta
 
-**`src/routes/_authenticated/planilha-21km.tsx`**  
-Substituir o placeholder atual. Mesma estrutura de cards do 10km (aluno → dados → configuração → fase + treinos → modal detalhe). Diferenças:
-- Tabs de planilha vão de 1 a 5 (não 1 a 4) para ambos os níveis.
-- Sem branch "N1 sem fases" — N1 também usa o seletor de planilhas.
-- Validação: sempre 4 dias.
-- Lembretes fixos do Passo 18 incluídos no PDF e no rodapé do card de treinos.
-
-### Cálculos & polarização
-- FTP e zonas: já calculados via tela `Avaliação` (Teste 3km / Prova 5km / Prova 10km / Cooper 12min). Esta planilha apenas consome `tests.metadata.zones` e `pace_seconds_per_km` do último teste.
-- Volume por bloco em tempo: `min / paceMédioZona`. Por distância: `m / 1000`.
-- Resumo semanal e total: reaproveitar `computeWorkoutTotals` / `computePhaseTotals` de `planilha-5km-zone-distribution` (já genéricos).
-
-### Não muda
-- Schema do DB (já existe `training_plans` com `plan_type` enum cobrindo `21km`; verificar e, se faltar, criar migration adicionando `'21km'` ao enum).
-- Avisos de "treinos intensos consecutivos": **não implementar** (decisão recente para o 10km também removeu).
-- Tela de Avaliação, branding, navegação.
-
-### Verificação no final
-- Selecionar aluno com teste cadastrado → trocar nível → marcar 4 dias → aplicar → ver 5 abas de planilha → trocar de plano → exportar PDF.
-- Confirmar que treino "Teste 3km" aparece no Slot 1 da Sem 4 nas Planilhas 2 e 4, e Simulado 21km no Slot 4 da Plan 5 Sem 4.
+Quer que eu prossiga abrindo o preview e fazendo essa validação, ou já pode testar você mesmo? Se preferir, posso pular direto para qualquer ajuste fino que você já tenha em mente.

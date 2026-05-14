@@ -262,7 +262,7 @@ const N2_P2: PhaseWeeks21km = [
   [ progressivo("T01",1,57,12),        intervaladoLongo("T02",2,4,3,2),    regenerativo("T03",3,40), longaoDist("T04",4,13) ],
   [ tempoRun("T05",1,18),              subidasSec("T06",2,10,30,90),       regenerativo("T07",3,40), longaoDist("T08",4,14) ],
   [ tempoRun("T09",1,20,{wuZ1:10}),    intervaladoLongo("T10",2,6,3,2),    regenerativo("T11",3,40), corridaRapidaLonga("T12",4,8,{wuZ1m:800,recZ1m:800}) ],
-  [ teste3km("T13",1),                 intervaladoCurto("T14",2,8,90,150,{wuZ1:10,recZ1:10}), regenerativo("T15",3,40), corridaRapidaLonga("T16",4,10,{wuZ1m:1600,recZ1m:800}) ],
+  [ teste3km("T13",1),                 intervaladoCurto("T14",2,8,90,150,{wuZ1:10,recZ1:10}), regenerativo("T15",3,40), corridaRapidaLonga("T16",4,10,{recZ1m:800}) ],
 ];
 
 // Planilha 3 — Específico Avançado (Passo 12)

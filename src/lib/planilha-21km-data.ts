@@ -223,9 +223,9 @@ const N1_P2: PhaseWeeks21km = [
 // Planilha 3 — Passo 7
 const N1_P3: PhaseWeeks21km = [
   [ progressivo("T01",1,57,12), subidasSec("T02",2,10,30,90),  regenerativo("T03",3,40), longaoDist("T04",4,12,{wuZ1m:1000}) ],
-  [ progressivo("T05",1,50,15), intervaladoLongo("T06",2,5,3,2), regenerativo("T07",3,40), corridaRapidaLonga("T08",4,7,{wuZ1m:1600,recZ1m:800}) ],
+  [ progressivo("T05",1,50,15), intervaladoLongo("T06",2,5,3,2), regenerativo("T07",3,40), corridaRapidaLonga("T08",4,7,{recZ1m:800}) ],
   [ tempoRun("T09",1,18),       intervaladoCurto("T10",2,8,60,120), regenerativo("T11",3,40), longaoDist("T12",4,9,{wuZ1m:2000}) ],
-  [ corridaRapida("T13",1,8,2,2), subidasSec("T14",2,10,30,90), regenerativo("T15",3,40), corridaRapidaLonga("T16",4,8,{wuZ1m:1600,recZ1m:800}) ],
+  [ corridaRapida("T13",1,8,2,2), subidasSec("T14",2,10,30,90), regenerativo("T15",3,40), corridaRapidaLonga("T16",4,8,{recZ1m:800}) ],
 ];
 
 // Planilha 4 — Específico (Passo 8) — Sem 4 Slot 1 = Teste 3km

@@ -223,17 +223,17 @@ const N1_P2: PhaseWeeks21km = [
 // Planilha 3 — Passo 7
 const N1_P3: PhaseWeeks21km = [
   [ progressivo("T01",1,57,12), subidasSec("T02",2,10,30,90),  regenerativo("T03",3,40), longaoDist("T04",4,12,{wuZ1m:1000}) ],
-  [ progressivo("T05",1,50,15), intervaladoLongo("T06",2,5,3,2), regenerativo("T07",3,40), corridaRapidaLonga("T08",4,7,{wuZ1m:1600,recZ1m:800}) ],
+  [ progressivo("T05",1,50,15), intervaladoLongo("T06",2,5,3,2), regenerativo("T07",3,40), corridaRapidaLonga("T08",4,7,{recZ1m:800}) ],
   [ tempoRun("T09",1,18),       intervaladoCurto("T10",2,8,60,120), regenerativo("T11",3,40), longaoDist("T12",4,9,{wuZ1m:2000}) ],
-  [ corridaRapida("T13",1,8,2,2), subidasSec("T14",2,10,30,90), regenerativo("T15",3,40), corridaRapidaLonga("T16",4,8,{wuZ1m:1600,recZ1m:800}) ],
+  [ corridaRapida("T13",1,8,2,2), subidasSec("T14",2,10,30,90), regenerativo("T15",3,40), corridaRapidaLonga("T16",4,8,{recZ1m:800}) ],
 ];
 
 // Planilha 4 — Específico (Passo 8) — Sem 4 Slot 1 = Teste 3km
 const N1_P4: PhaseWeeks21km = [
   [ tempoRun("T01",1,20),                intervaladoLongo("T02",2,4,5,3),   regenerativo("T03",3,50), progressivoLongo("T04",4,1000,6000,5000) ],
-  [ intervaladoModerado("T05",1,4,5,3),  baseAerobia("T06",2,60),           regenerativo("T07",3,50), corridaRapidaLonga("T08",4,8,{wuZ1m:1600,recZ1m:800}) ],
+  [ intervaladoModerado("T05",1,4,5,3),  baseAerobia("T06",2,60),           regenerativo("T07",3,50), corridaRapidaLonga("T08",4,8,{recZ1m:800}) ],
   [ tempoRun("T09",1,20),                subidasMin("T10",2,8,1,2),         regenerativo("T11",3,50), progressivoLongo("T12",4,1000,10000,4000) ],
-  [ teste3km("T13",1),                   intervaladoLongo("T14",2,6,3,2),   regenerativo("T15",3,40), corridaRapidaLonga("T16",4,8,{wuZ1m:1600,recZ1m:800}) ],
+  [ teste3km("T13",1),                   intervaladoLongo("T14",2,6,3,2),   regenerativo("T15",3,40), corridaRapidaLonga("T16",4,8,{recZ1m:800}) ],
 ];
 
 // Planilha 5 — Polimento / Prova (Passo 9)
@@ -262,7 +262,7 @@ const N2_P2: PhaseWeeks21km = [
   [ progressivo("T01",1,57,12),        intervaladoLongo("T02",2,4,3,2),    regenerativo("T03",3,40), longaoDist("T04",4,13) ],
   [ tempoRun("T05",1,18),              subidasSec("T06",2,10,30,90),       regenerativo("T07",3,40), longaoDist("T08",4,14) ],
   [ tempoRun("T09",1,20,{wuZ1:10}),    intervaladoLongo("T10",2,6,3,2),    regenerativo("T11",3,40), corridaRapidaLonga("T12",4,8,{wuZ1m:800,recZ1m:800}) ],
-  [ teste3km("T13",1),                 intervaladoCurto("T14",2,8,90,150,{wuZ1:10,recZ1:10}), regenerativo("T15",3,40), corridaRapidaLonga("T16",4,10,{wuZ1m:1600,recZ1m:800}) ],
+  [ teste3km("T13",1),                 intervaladoCurto("T14",2,8,90,150,{wuZ1:10,recZ1:10}), regenerativo("T15",3,40), corridaRapidaLonga("T16",4,10,{recZ1m:800}) ],
 ];
 
 // Planilha 3 — Específico Avançado (Passo 12)

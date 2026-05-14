@@ -1,28 +1,31 @@
-## Status atual
+## Bug: Aquecimento de "Corrida Rápida Longa" (21km)
 
-A Planilha 21km já foi implementada na rodada anterior. Todos os arquivos do plano original existem:
+### Causa
+Em `src/lib/planilha-21km-data.ts`, várias chamadas a `corridaRapidaLonga(...)` passam `wuZ1m: 1600` quando deveriam usar o padrão `800` (Z1) + 1600 (Z2). O default do builder já está correto (800/1600); o problema são overrides indevidos.
 
-- `src/lib/planilha-21km-data.ts` (5 planilhas × 4 semanas × 4 slots, N1 e N2, com Teste 3km nas Sem 4 das Planilhas 2 e 4 e Simulado 21km no Slot 4 da Plan 5 Sem 4)
-- `src/lib/planilha-21km-distribute.ts` (validação fixa de 4 dias)
-- `src/lib/planilha-21km-stats.ts` (volume/duração via FTP)
-- `src/lib/planilha-21km.functions.ts` (`getPlanilha21kmData`, `savePlanilha21kmConfig`, `plan_type='21km'`)
-- `src/lib/planilha-21km-pdf.ts` (PDF com cabeçalho de marca, zonas, semanas, lembretes do Passo 18)
-- `src/routes/_authenticated/planilha-21km.tsx` (UI com 5 abas, seleção de aluno, validação de 4 dias, gráficos e modal de detalhe)
+### Regra
+- Padrão correto: **800m Z1 + 1600m Z2**
+- Exceção (manter 1600m Z1): apenas **Nível 2, Planilhas 3 e 4** (carga mais alta)
 
-O enum `plan_type` no banco já contém `'21km'`, então não é necessária migration.
+### Alterações em `src/lib/planilha-21km-data.ts`
+Remover `wuZ1m:1600` (deixar default 800) nas seguintes linhas:
 
-## O que falta
+- **N1_P3** (Nível 1, Planilha 3)
+  - T08 (Sem 2, Slot 4): `corridaRapidaLonga("T08",4,7,{wuZ1m:1600,recZ1m:800})` → `{recZ1m:800}`
+  - T16 (Sem 4, Slot 4): `corridaRapidaLonga("T16",4,8,{wuZ1m:1600,recZ1m:800})` → `{recZ1m:800}`
+- **N1_P4** (Nível 1, Planilha 4)
+  - T08: `{wuZ1m:1600,recZ1m:800}` → `{recZ1m:800}`
+  - T16: `{wuZ1m:1600,recZ1m:800}` → `{recZ1m:800}`
+- **N1_P5** — não tem CR Longa
+- **N2_P2** (Nível 2, Planilha 2)
+  - T16 (Sem 4, Slot 4): `corridaRapidaLonga("T16",4,10,{wuZ1m:1600,recZ1m:800})` → `{recZ1m:800}`
 
-Apenas verificação manual no preview, sem novas mudanças de código:
+Manter inalterado (1600 Z1 é correto):
+- N2_P3 T08, T16
+- N2_P4 T04, T12
 
-1. Abrir `/planilha-21km` com um aluno que tenha Teste 3km cadastrado.
-2. Trocar entre Nível 1 e Nível 2 e confirmar que ambos exigem 4 dias.
-3. Marcar 4 dias, aplicar e navegar pelas 5 abas de planilha.
-4. Confirmar que aparece "Teste 3km" no Slot 1 da Sem 4 (Planilhas 2 e 4) e "Simulado 21km" no Slot 4 da Plan 5 Sem 4.
-5. Salvar a configuração e exportar o PDF.
+Já corretos (800 Z1 explícito ou default):
+- N2_P2 T12, N2_P5 T12
 
-Se a verificação encontrar algum bug específico (texto, número, layout), corrijo pontualmente em uma rodada seguinte.
-
-## Pergunta
-
-Quer que eu prossiga abrindo o preview e fazendo essa validação, ou já pode testar você mesmo? Se preferir, posso pular direto para qualquer ajuste fino que você já tenha em mente.
+### Verificação
+Após edição, conferir no preview `/planilha-21km` que os treinos de "Corrida Rápida Longa" das planilhas 1, 2 (parcial), 3 e 4 do Nível 1 e Planilha 2 do Nível 2 mostrem aquecimento "800m Z1 + 1600m Z2".

@@ -256,7 +256,7 @@ function Planilha42kmPage() {
 
             <div>
               <Label>Dias da semana</Label>
-              <p className="text-xs text-muted-foreground mt-1">Selecione exatamente 4 dias.</p>
+              <p className="text-xs text-muted-foreground mt-1">Sugestão: 4 dias. Você pode escolher quantos quiser.</p>
               <div className="flex gap-3 mt-2 flex-wrap">
                 {DAY_ORDER.map((d) => {
                   const checked = weekDays.includes(d);
@@ -383,7 +383,8 @@ function Planilha42kmPage() {
           initialPhase={phase}
           phaseLabels={PHASE_LABELS_42KM}
           getRawPhaseWeeks={(p) => WORKOUTS_42KM[level][p as 1|2|3|4|5] as never}
-          distributeWeek={(wos) => distributeWeek(wos as never, weekDays, level, WORKOUT_TYPES_42KM) as never}
+          distributeWeek={(wos, opts) => distributeWeek(wos as never, weekDays, level, WORKOUT_TYPES_42KM, opts) as never}
+          selectedDays={weekDays}
           workoutTypes={WORKOUT_TYPES_42KM}
           workoutTypesList={Object.keys(WORKOUT_TYPES_42KM)}
         />

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PrescricaoEditorSheet } from "@/components/prescricao/PrescricaoEditorSheet";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -49,6 +50,7 @@ function Planilha10kmPage() {
   
   const [openWorkout, setOpenWorkout] = useState<{ wo: Workout; day: DayCode } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const branding = useCoachBranding();
 
@@ -302,10 +304,8 @@ function Planilha10kmPage() {
             <CardTitle>4. {level === 1 ? "Treinos (4 semanas)" : "Fase e treinos"}</CardTitle>
             <div className="flex gap-2">
               {dataQuery.data?.plan?.id ? (
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/alunos/$studentId/prescricao/$planId" params={{ studentId, planId: dataQuery.data.plan.id }}>
-                    <Settings2 /> Personalizar planilha
-                  </Link>
+                <Button variant="outline" size="sm" onClick={() => setEditorOpen(true)}>
+                  <Settings2 /> Personalizar planilha
                 </Button>
               ) : (
                 <Button variant="outline" size="sm" disabled title="Salve a planilha primeiro">
@@ -382,6 +382,16 @@ function Planilha10kmPage() {
             <Save /> {saving ? "Salvando…" : "Salvar configuração"}
           </Button>
         </div>
+      )}
+
+      {dataQuery.data?.plan?.id && (
+        <PrescricaoEditorSheet
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          studentId={studentId}
+          planId={dataQuery.data.plan.id}
+          onSaved={() => dataQuery.refetch()}
+        />
       )}
     </div>
   );

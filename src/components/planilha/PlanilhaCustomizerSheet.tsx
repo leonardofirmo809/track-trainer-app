@@ -332,7 +332,7 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
                               <div className="mt-1">
                                 <Select
                                   value={a.day}
-                                  onValueChange={(v) => changeWorkoutDay(p, idx, origin, v as DayCode)}
+                                  onValueChange={(v) => changeWorkoutDay(p, idx, origin, v === "__none" ? null : (v as DayCode))}
                                 >
                                   <SelectTrigger className="h-7 text-[11px] w-full">
                                     <SelectValue />

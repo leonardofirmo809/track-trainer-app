@@ -15,12 +15,13 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Copy, KeyRound, Plus, RefreshCw, ShieldOff, Trash2, UserPlus, Users } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/treinadores")({ component: AdminUsersPage });
 
-const COACH_LIMIT = 4;
+const LIMIT_TOOLTIP = "Limite de licenças atingido. Entre em contato para ampliar seu plano.";
 
 interface Invite {
   id: string;

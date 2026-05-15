@@ -1,84 +1,45 @@
-# Personalização rápida da planilha gerada
-
-Hoje, para customizar uma planilha já gerada, o treinador precisa: sair de `/planilha-5km` → ir em **Alunos** → abrir o aluno → clicar **Personalizar** na linha da planilha. Muitos cliques e troca de contexto.
+# Personalizar planilha sem sair da tela
 
 ## Objetivo
+Clicar em **Personalizar planilha** dentro de `/planilha-5km` (e nas demais 10/21/42 km) abre um **drawer lateral grande** sobre a própria planilha, contendo o editor completo de prescrição. Sem navegação, sem cabeçalho do aluno.
 
-Logo após gerar/salvar uma planilha (5/10/21/42 km), permitir personalizar em 1–2 cliques sem sair da tela, e tornar a ação mais usada — **trocar uma sessão pela biblioteca** — imediata.
+## O que muda
 
-## O que será entregue
+### 1. Extrair editor para componente reutilizável
+Criar `src/components/prescricao/PrescricaoEditor.tsx` com todo o conteúdo funcional da rota atual `alunos.$studentId.prescricao.$planId.tsx` (grid de semanas, DnD, `WeekSummaryRow`, `DayCell`, `SessionDayCard`, `SessionLibrarySheet`, `SessionEditorSheet`, hidratação via `getPlanCustomization`, salvar via `savePlanCustomization`, undo, atalho Ctrl+Z).
 
-### 1. Atalho "Personalizar planilha" no topo de cada planilha
+Props: `{ studentId: string; planId: string; onClose?: () => void }`.
 
-Nas telas `planilha-5km.tsx`, `planilha-10km.tsx`, `planilha-21km.tsx`, `planilha-42km.tsx`, adicionar botão no header (junto a Salvar/Exportar PDF):
+O cabeçalho "Voltar para o aluno" + nome do aluno fica **fora** do componente (ou condicional). Dentro do drawer mostramos só: título "Personalizar prescrição", botões Desfazer / Biblioteca / Salvar.
 
-- Habilitado quando há `studentId` selecionado e a planilha já foi salva (existe `planId`).
-- Navega direto para `/alunos/$studentId/prescricao/$planId`.
-- Desabilitado com tooltip "Salve a planilha primeiro" enquanto não houver `planId`.
+### 2. Novo wrapper drawer
+Criar `src/components/prescricao/PrescricaoEditorSheet.tsx`:
+- `<Sheet>` do shadcn com `side="right"` e classe `sm:max-w-[1200px] w-full` (quase tela cheia, deixa um respiro à esquerda para sentir que está sobreposto).
+- Renderiza `<PrescricaoEditor />` dentro.
+- Props: `{ open, onOpenChange, studentId, planId }`.
 
-### 2. Edição inline na grade da prescrição
+### 3. Trocar o botão nas 4 planilhas
+Em `planilha-5km.tsx`, `planilha-10km.tsx`, `planilha-21km.tsx`, `planilha-42km.tsx`:
+- Remover o `<Link to="/alunos/$studentId/prescricao/$planId">`.
+- Adicionar `const [editorOpen, setEditorOpen] = useState(false)`.
+- Botão vira `<Button onClick={() => setEditorOpen(true)}>`.
+- Renderizar `<PrescricaoEditorSheet open={editorOpen} onOpenChange={setEditorOpen} studentId={studentId} planId={dataQuery.data.plan.id} />` no final.
+- Ao fechar o drawer (após Salvar), invalidar a query da planilha para refletir mudanças.
 
-Na rota `/alunos/$studentId/prescricao/$planId`, tornar cada **card de sessão** mais direto:
-
-- **Clique simples no card** → abre `QuickSwapPopover` (item 3) ancorado no card.
-- **Ícone de lápis** (já existe) → continua abrindo o Sheet completo de edição.
-- **Hover** revela 2 ações compactas: **Trocar** (popover) e **Remover** (zera o slot — usa `removeSession` já existente no store).
-
-Elimina a necessidade de abrir o Sheet só para trocar uma sessão.
-
-### 3. `QuickSwapPopover` — troca rápida pela biblioteca (ação principal)
-
-Novo componente `src/components/prescricao/QuickSwapPopover.tsx` usando `Popover` + `Command` (cmdk) do shadcn:
-
-- Input de busca no topo (filtra `sessionLibrary` + `customSessions` por código, nome e tags).
-- Chips de filtro: **Todas / LOW / MOD / HIGH** (mesma classificação já usada).
-- Lista rolável (até ~10 itens visíveis) com: código, nome, badge de intensidade, duração/distância de referência.
-- Selecionar preset → chama `updateSession(weekIndex, day, { ...preset, id: newSessionId(), isCustom: true })`, fecha o popover, toast discreto: "Sessão trocada • Desfazer".
-- Atalhos nativos do `cmdk`: `↑`/`↓` navegam, `Enter` confirma, `Esc` fecha.
-
-Reusa a fonte de verdade já existente (`sessionLibrary` + `customSessions` do `training-store`); não duplica lista.
-
-### 4. Salvamento manual preservado
-
-Mantém o botão **Salvar alterações** atual (sem auto-save). Cada troca pelo popover já entra no histórico de **Desfazer** porque usa `updateSession` do store.
-
-### Fora de escopo
-
-- Drag-and-drop entre dias (já existe via `@dnd-kit`, sem mudança).
-- Edição inline de HH:MM:SS / km no próprio card.
-- Duplicar semana, marcar dia como descanso em 1 clique.
-- Auto-save.
-- Versionamento histórico no banco.
-- Regenerar PDF a partir do plano customizado.
+### 4. Manter rota antiga funcional
+A rota `/alunos/$studentId/prescricao/$planId` continua existindo (deep-link, fluxo antigo a partir do perfil do aluno). Ela passa a renderizar o mesmo `<PrescricaoEditor />` + o cabeçalho "Voltar para o aluno" + nome do aluno por fora. Sem duplicação de código.
 
 ## Detalhes técnicos
+- O `useTrainingStore` é zustand global; já está preparado para `loadPrescription(planId, studentId, weeks)` e `markClean()`. Funciona igual dentro do drawer.
+- O `SessionLibrarySheet` e `SessionEditorSheet` são Sheets aninhados sobre o drawer — o shadcn Sheet suporta empilhamento (cada um tem seu próprio overlay).
+- Atalho Ctrl+Z fica ativo só enquanto o drawer está aberto (registrar listener no `useEffect` do `PrescricaoEditor`, condicionado a estar montado — já é o comportamento natural).
+- Após `Salvar`, mostrar toast e manter o drawer aberto; o usuário fecha quando quiser. Ao fechar, refazer `dataQuery.refetch()` na planilha pai.
 
-**Arquivos a editar:**
-
-- `src/routes/_authenticated/planilha-5km.tsx`, `planilha-10km.tsx`, `planilha-21km.tsx`, `planilha-42km.tsx` — adicionar botão **Personalizar planilha** no header. Usa o `planId` retornado por `savePlanilha*Config` / exposto em `dataQuery.data` (verificar campo `savedPlan.id` ou similar; se não estiver exposto, expor no retorno da server fn).
-- `src/routes/_authenticated/alunos.$studentId.prescricao.$planId.tsx` — substituir clique simples do card pelo `QuickSwapPopover`; adicionar botões hover **Trocar** / **Remover**; manter ícone de lápis para o Sheet completo. Também aplicar o fix dos hooks já listado em `.lovable/plan.md` (mover `useSensors` para antes do early-return e estabilizar deps do `useEffect` de hidratação).
-
-**Arquivos novos:**
-
-- `src/components/prescricao/QuickSwapPopover.tsx` — props: `open`, `onOpenChange`, `anchor` (ou children como trigger), `currentSessionId`, `onPick(preset)`. Usa `Popover` + `Command`/`CommandInput`/`CommandList`/`CommandItem` já disponíveis.
-
-**Store (`src/lib/training-store.ts`):**
-
-- Sem mudanças estruturais. `updateSession` + `removeSession` + `undo` já cobrem o fluxo. Apenas garantir que os presets selecionados sejam clonados com `newSessionId()` e `isCustom: true` antes de chamar `updateSession` (lógica fica no popover, não no store).
-
-**Persistência:**
-
-- Sem mudanças. **Salvar alterações** continua chamando `savePlanCustomization` (Zod + RLS) gravando em `training_plans.payload.customization`.
-
-**Acessibilidade:**
-
-- `Popover` com foco inicial no input de busca (cmdk já faz isso).
-- `aria-label` no card descrevendo a sessão atual ("Trocar sessão de TER, semana 2: Longão Z2").
-
-## Validação
-
-1. Em `/planilha-5km`, gerar e salvar planilha → botão **Personalizar planilha** habilita e leva direto à prescrição.
-2. Na prescrição, clicar num card → popover abre com biblioteca filtrada; escolher preset → card atualiza, toast aparece, `Ctrl+Z` reverte.
-3. Hover no card → botão **Remover** zera o dia; **Salvar** persiste; reload re-hidrata do banco.
-4. Clicar no lápis → Sheet completo abre como hoje (regressão zero).
-5. Repetir nas planilhas 10/21/42 km.
+## Arquivos
+- novo: `src/components/prescricao/PrescricaoEditor.tsx`
+- novo: `src/components/prescricao/PrescricaoEditorSheet.tsx`
+- editar: `src/routes/_authenticated/alunos.$studentId.prescricao.$planId.tsx` (passa a usar o componente)
+- editar: `src/routes/_authenticated/planilha-5km.tsx`
+- editar: `src/routes/_authenticated/planilha-10km.tsx`
+- editar: `src/routes/_authenticated/planilha-21km.tsx`
+- editar: `src/routes/_authenticated/planilha-42km.tsx`

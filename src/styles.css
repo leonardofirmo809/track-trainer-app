@@ -60,6 +60,15 @@
   --color-intensity-hard: var(--intensity-hard);
   --color-intensity-light-fg: var(--intensity-light-fg);
   --color-intensity-hard-fg: var(--intensity-hard-fg);
+  --color-intensity-low-bg: var(--intensity-low-bg);
+  --color-intensity-low-fg: var(--intensity-low-fg);
+  --color-intensity-low-border: var(--intensity-low-border);
+  --color-intensity-mod-bg: var(--intensity-mod-bg);
+  --color-intensity-mod-fg: var(--intensity-mod-fg);
+  --color-intensity-mod-border: var(--intensity-mod-border);
+  --color-intensity-high-bg: var(--intensity-high-bg);
+  --color-intensity-high-fg: var(--intensity-high-fg);
+  --color-intensity-high-border: var(--intensity-high-border);
 }
 
 :root {
@@ -115,6 +124,15 @@
   --intensity-hard: oklch(0.68 0.20 45);
   --intensity-light-fg: oklch(0.45 0.18 145);
   --intensity-hard-fg: oklch(0.55 0.22 40);
+  --intensity-low-bg: oklch(0.94 0.06 165);
+  --intensity-low-fg: oklch(0.32 0.09 165);
+  --intensity-low-border: oklch(0.55 0.13 165);
+  --intensity-mod-bg: oklch(0.93 0.06 75);
+  --intensity-mod-fg: oklch(0.38 0.10 60);
+  --intensity-mod-border: oklch(0.60 0.13 60);
+  --intensity-high-bg: oklch(0.93 0.05 30);
+  --intensity-high-fg: oklch(0.40 0.13 30);
+  --intensity-high-border: oklch(0.62 0.18 30);
 }
 
 .dark {
@@ -162,6 +180,15 @@
   --intensity-hard: oklch(0.65 0.20 45);
   --intensity-light-fg: oklch(0.78 0.16 145);
   --intensity-hard-fg: oklch(0.72 0.20 45);
+  --intensity-low-bg: oklch(0.30 0.07 165);
+  --intensity-low-fg: oklch(0.85 0.13 165);
+  --intensity-low-border: oklch(0.55 0.15 165);
+  --intensity-mod-bg: oklch(0.32 0.08 60);
+  --intensity-mod-fg: oklch(0.85 0.13 70);
+  --intensity-mod-border: oklch(0.60 0.15 60);
+  --intensity-high-bg: oklch(0.30 0.10 30);
+  --intensity-high-fg: oklch(0.85 0.13 30);
+  --intensity-high-border: oklch(0.65 0.18 30);
 }
 
 @layer base {

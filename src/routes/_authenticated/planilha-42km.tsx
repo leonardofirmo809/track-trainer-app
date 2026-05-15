@@ -256,7 +256,7 @@ function Planilha42kmPage() {
 
             <div>
               <Label>Dias da semana</Label>
-              <p className="text-xs text-muted-foreground mt-1">Selecione exatamente 4 dias.</p>
+              <p className="text-xs text-muted-foreground mt-1">Sugestão: 4 dias. Você pode escolher quantos quiser.</p>
               <div className="flex gap-3 mt-2 flex-wrap">
                 {DAY_ORDER.map((d) => {
                   const checked = weekDays.includes(d);

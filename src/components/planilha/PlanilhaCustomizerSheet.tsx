@@ -249,12 +249,52 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
                 <div key={idx} className="space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold">Semana {idx + 1}</p>
-                    {wk.overflow > 0 && (
-                      <Badge variant="destructive" className="text-[10px]">
-                        {wk.overflow} treino(s) não couberam nos dias da semana
+                    {wk.dist.unassigned.length > 0 && (
+                      <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700 dark:text-amber-300">
+                        {wk.dist.unassigned.length} treino(s) sem dia atribuído
                       </Badge>
                     )}
                   </div>
+
+                  {/* Bandeja de treinos sem dia */}
+                  {wk.dist.unassigned.length > 0 && (
+                    <div className="rounded-md border border-amber-300 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-2">
+                      <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
+                        Treinos sem dia — atribua um dia abaixo:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {wk.dist.unassigned.map((u) => {
+                          const origin = wk.originByCode.get(u.code);
+                          if (!origin) return null;
+                          return (
+                            <div
+                              key={u.code}
+                              className={`rounded-md border-2 p-2 text-xs flex items-center gap-2 ${workoutTypes[u.type]?.color ?? ""}`}
+                            >
+                              <div className="min-w-0">
+                                <p className="font-semibold leading-tight">{u.type}</p>
+                                <p className="text-[10px] opacity-80">{u.code}</p>
+                              </div>
+                              <Select
+                                value=""
+                                onValueChange={(v) => changeWorkoutDay(p, idx, origin, v as DayCode)}
+                              >
+                                <SelectTrigger className="h-7 text-xs w-[110px]">
+                                  <SelectValue placeholder="Dia…" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {selectedDays.map((d) => (
+                                    <SelectItem key={d} value={d}>{DAY_LABEL[d]}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
                     {wk.dist.assignments.map((a) => {
                       const origin = a.workout ? wk.originByCode.get(a.workout.code) : null;
@@ -268,7 +308,6 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
                                 type="button"
                                 onClick={() => {
                                   if (origin.kind === "original") {
-                                    // recupera o original a partir do raw
                                     const raw = getRawPhaseWeeks(p)[idx]
                                       .find((w) => w.code === origin.originalCode);
                                     if (raw) setEditing({ kind: "patch", phase: p, weekIdx: idx, original: raw });
@@ -289,6 +328,23 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
                                   {isAdded && <Badge variant="secondary" className="text-[9px]">novo</Badge>}
                                 </div>
                               </button>
+                              {/* Selector para mover para outro dia */}
+                              <div className="mt-1">
+                                <Select
+                                  value={a.day}
+                                  onValueChange={(v) => changeWorkoutDay(p, idx, origin, v as DayCode)}
+                                >
+                                  <SelectTrigger className="h-7 text-[11px] w-full">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {selectedDays.map((d) => (
+                                      <SelectItem key={d} value={d}>Mover para {DAY_LABEL[d]}</SelectItem>
+                                    ))}
+                                    <SelectItem value="__none">Sem dia</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
                               <button
                                 type="button"
                                 aria-label="Remover treino"

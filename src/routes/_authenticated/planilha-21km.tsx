@@ -383,7 +383,8 @@ function Planilha21kmPage() {
           initialPhase={phase}
           phaseLabels={PHASE_LABELS_21KM}
           getRawPhaseWeeks={(p) => WORKOUTS_21KM[level][p as 1|2|3|4|5] as never}
-          distributeWeek={(wos) => distributeWeek(wos as never, weekDays, level, WORKOUT_TYPES_21KM) as never}
+          distributeWeek={(wos, opts) => distributeWeek(wos as never, weekDays, level, WORKOUT_TYPES_21KM, opts) as never}
+          selectedDays={weekDays}
           workoutTypes={WORKOUT_TYPES_21KM}
           workoutTypesList={Object.keys(WORKOUT_TYPES_21KM)}
         />

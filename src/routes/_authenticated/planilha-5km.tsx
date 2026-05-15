@@ -277,24 +277,39 @@ function Planilha5kmPage() {
               </Tabs>
             </div>
 
-            <div className="flex items-center gap-3 text-sm">
-              <Label className="shrink-0">Dias de treino por semana</Label>
-              <span className="font-semibold">{daysPerWeek}</span>
-              <span className="text-muted-foreground">(definido pelo Nível {level})</span>
-            </div>
-
             <div>
               <Label>Dias da semana</Label>
-              <p className="text-xs text-muted-foreground mt-1">Dias prescritos pelo programa — não editáveis.</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Sugestão para Nível {level}: {suggestedCount} dias. Você pode escolher quantos quiser.
+              </p>
               <div className="flex gap-3 mt-2 flex-wrap">
-                {DAY_ORDER.map((d) => (
-                  <label key={d} className="flex items-center gap-2 text-sm opacity-80">
-                    <Checkbox checked={weekDays.includes(d)} disabled />
-                    {DAY_LABEL[d]}
-                  </label>
-                ))}
+                {DAY_ORDER.map((d) => {
+                  const checked = weekDays.includes(d);
+                  return (
+                    <label key={d} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(v) => {
+                          setWeekDays((prev) => v ? [...prev, d] : prev.filter((x) => x !== d));
+                          setApplied(false);
+                        }}
+                      />
+                      {DAY_LABEL[d]}
+                    </label>
+                  );
+                })}
               </div>
+              <p className="text-xs mt-2 text-muted-foreground">Selecionados: <span className="font-semibold">{weekDays.length}</span></p>
+              {softMessage && (
+                <p className="text-xs mt-2 text-blue-600 dark:text-blue-400">{softMessage}</p>
+              )}
             </div>
+
+            {validation && (
+              <p className="text-xs text-amber-600 flex items-center gap-1">
+                <AlertTriangle className="size-3" /> {validation}
+              </p>
+            )}
 
             <div className="flex gap-2">
               <Button onClick={handleApply} disabled={!!validation || saving}>

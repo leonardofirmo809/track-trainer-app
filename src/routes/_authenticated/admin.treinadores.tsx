@@ -293,7 +293,7 @@ function AdminUsersPage() {
                 {loading ? <p className="text-muted-foreground">Carregando…</p> : coaches.length === 0 ? (
                   <p className="text-muted-foreground">Nenhum treinador cadastrado.</p>
                 ) : (
-                  <Table>
+                  <div className="-mx-2 sm:mx-0 overflow-x-auto"><Table className="min-w-[640px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nome</TableHead>
@@ -325,7 +325,7 @@ function AdminUsersPage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
+                  </Table></div>
                 )}
               </CardContent>
             </Card>
@@ -337,7 +337,7 @@ function AdminUsersPage() {
                 {loading ? <p className="text-muted-foreground">Carregando…</p> : invites.length === 0 ? (
                   <p className="text-muted-foreground">Nenhum convite ainda.</p>
                 ) : (
-                  <Table>
+                  <div className="-mx-2 sm:mx-0 overflow-x-auto"><Table className="min-w-[640px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nome</TableHead>
@@ -369,7 +369,7 @@ function AdminUsersPage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
+                  </Table></div>
                 )}
               </CardContent>
             </Card>
@@ -386,7 +386,7 @@ function AdminUsersPage() {
               {loadingStudents ? <p className="text-muted-foreground">Carregando…</p> : (students?.length ?? 0) === 0 ? (
                 <p className="text-muted-foreground">Este treinador ainda não tem alunos.</p>
               ) : (
-                <Table>
+                <div className="-mx-2 sm:mx-0 overflow-x-auto"><Table className="min-w-[640px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome</TableHead>
@@ -403,7 +403,7 @@ function AdminUsersPage() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </Table></div>
               )}
             </div>
           </SheetContent>

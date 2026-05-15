@@ -86,7 +86,7 @@ function AlunosList() {
               <Button asChild className="mt-4"><Link to="/alunos/novo">Cadastrar aluno</Link></Button>
             </div>
           ) : (
-            <Table>
+            <div className="-mx-2 sm:mx-0 overflow-x-auto"><Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Aluno</TableHead>
@@ -117,7 +117,7 @@ function AlunosList() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </Table></div>
           )}
         </CardContent>
       </Card>

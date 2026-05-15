@@ -95,6 +95,11 @@ export function AppSidebar() {
                     <Link to="/admin/auditoria"><ScrollText /><span>Auditoria</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/admin/configuracoes")}>
+                    <Link to="/admin/configuracoes"><Settings /><span>Configurações</span></Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

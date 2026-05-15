@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PlanilhaCustomizerSheet } from "@/components/planilha/PlanilhaCustomizerSheet";
+import { DistanceSelector } from "@/components/planilha/distance-selector";
+import { StudentPicker } from "@/components/planilha/student-picker";
 import { applyOverrides, getOverridesFromPayload, type WorkoutOverrides } from "@/lib/workout-overrides";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

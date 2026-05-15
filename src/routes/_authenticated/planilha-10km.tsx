@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PlanilhaCustomizerSheet } from "@/components/planilha/PlanilhaCustomizerSheet";
+import { DistanceSelector } from "@/components/planilha/distance-selector";
+import { StudentPicker } from "@/components/planilha/student-picker";
 import { applyOverrides, getOverridesFromPayload, type WorkoutOverrides } from "@/lib/workout-overrides";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -177,19 +179,19 @@ function Planilha10kmPage() {
         <p className="text-muted-foreground">Monte a planilha do aluno com paces personalizados a partir do Teste 3km.</p>
       </div>
 
+      <DistanceSelector current="10km" />
+
       {/* Card 1 — Aluno */}
       <Card>
-        <CardHeader><CardTitle>1. Selecione o aluno</CardTitle></CardHeader>
+        <CardHeader><CardTitle>1. Atribuir a um aluno</CardTitle></CardHeader>
         <CardContent>
-          <Label htmlFor="aluno">Aluno</Label>
-          <Select value={studentId} onValueChange={setStudentId}>
-            <SelectTrigger id="aluno" className="max-w-md">
-              <SelectValue placeholder={students.isLoading ? "Carregando…" : "Selecione um aluno"} />
-            </SelectTrigger>
-            <SelectContent>
-              {students.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="aluno" className="mb-2 block">Aluno</Label>
+          <StudentPicker
+            value={studentId}
+            onChange={setStudentId}
+            distanceLabel="10km"
+            level={level}
+          />
         </CardContent>
       </Card>
 
@@ -404,6 +406,14 @@ function Planilha10kmPage() {
           workoutTypesList={Object.keys(WORKOUT_TYPES_10KM)}
         />
       )}
+
+      <StudentPicker
+        value={studentId}
+        onChange={setStudentId}
+        variant="fab"
+        distanceLabel="10km"
+        level={level}
+      />
     </div>
   );
 }

@@ -265,7 +265,7 @@ function Planilha10kmPage() {
             <div>
               <Label>Dias da semana</Label>
               <p className="text-xs text-muted-foreground mt-1">
-                {level === 1 ? "Selecione exatamente 3 dias." : "Selecione 4 ou 5 dias."}
+                {level === 1 ? "Sugestão para Nível 1: 3 dias." : "Sugestão para Nível 2: 4 dias."} Você pode escolher quantos quiser.
               </p>
               <div className="flex gap-3 mt-2 flex-wrap">
                 {DAY_ORDER.map((d) => {

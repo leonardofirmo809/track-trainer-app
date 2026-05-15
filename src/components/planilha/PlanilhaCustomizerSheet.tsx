@@ -12,13 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   type DayCode, type ZoneId, type Item, type Section, type SectionName, type Workout,
-  DAY_LABEL,
+  DAY_LABEL, DAY_ORDER,
 } from "@/lib/planilha-5km-data";
 import type { DistributionResult, TypesMap } from "@/lib/planilha-5km-distribute";
 import {
   type WorkoutOverrides, type WorkoutPatch,
   applyOverrides, getPatch, setOverride,
-  getWeekPatches, getRemoved, getAdded,
+  getWeekPatches, getRemoved, getAdded, getManualDayMap, setWorkoutDay,
   removeWorkout, restoreRemovedWorkout,
   addWorkout, updateAddedWorkout, deleteAddedWorkout,
 } from "@/lib/workout-overrides";

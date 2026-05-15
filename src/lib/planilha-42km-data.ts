@@ -41,7 +41,7 @@ export const PHASE_LABELS_42KM: Record<Phase42, { title: string; subtitle: strin
   2: { title: "Planilha 2", subtitle: "Preparação Geral" },
   3: { title: "Planilha 3", subtitle: "Preparação Geral" },
   4: { title: "Planilha 4", subtitle: "Preparação Específica" },
-  5: { title: "Planilha 5", subtitle: "Preparação Específica / Prova" },
+  5: { title: "Planilha 5", subtitle: "Polimento / Prova" },
 };
 
 export type Workout42km = {

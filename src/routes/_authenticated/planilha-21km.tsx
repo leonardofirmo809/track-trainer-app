@@ -365,6 +365,16 @@ function Planilha21kmPage() {
           </Button>
         </div>
       )}
+
+      {dataQuery.data?.plan?.id && (
+        <PrescricaoEditorSheet
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          studentId={studentId}
+          planId={dataQuery.data.plan.id}
+          onSaved={() => dataQuery.refetch()}
+        />
+      )}
     </div>
   );
 }

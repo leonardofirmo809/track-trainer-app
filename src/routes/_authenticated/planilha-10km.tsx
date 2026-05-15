@@ -405,6 +405,8 @@ function Planilha10kmPage() {
           workoutTypes={WORKOUT_TYPES_10KM}
           workoutTypesList={Object.keys(WORKOUT_TYPES_10KM)}
         />
+      )}
+
       <StudentPicker
         value={studentId}
         onChange={setStudentId}

@@ -75,6 +75,66 @@ export const getPlanCustomization = createServerFn({ method: "GET" })
     return { plan, student };
   });
 
+// ----- Workout overrides (Personalizar planilha — Fase/Semana/Treino) -----
+
+const UnitEnum = z.enum(["min", "sec", "m"]);
+const SingleSchema = z.object({
+  kind: z.literal("single"),
+  value: z.number().int().min(0).max(100000),
+  unit: UnitEnum,
+  zone: ZoneEnum,
+});
+const IntervalsSchema = z.object({
+  kind: z.literal("intervals"),
+  reps: z.number().int().min(1).max(50),
+  on: SingleSchema,
+  off: SingleSchema,
+});
+const TestSchema = z.object({
+  kind: z.literal("test"),
+  meters: z.number().int().min(100).max(100000),
+  label: z.string().max(120),
+  note: z.string().max(500).optional(),
+});
+const ItemSchema = z.discriminatedUnion("kind", [SingleSchema, IntervalsSchema, TestSchema]);
+const SectionSchemaWO = z.object({
+  name: z.enum(["warmup", "main", "recovery", "complement"]),
+  items: z.array(ItemSchema).max(20),
+});
+const WorkoutPatchSchema = z.object({
+  code: z.string().max(32).optional(),
+  type: z.string().max(40).optional(),
+  zones: z.array(ZoneEnum).max(5).optional(),
+  sections: z.array(SectionSchemaWO).max(8).optional(),
+  note: z.string().max(500).nullable().optional(),
+});
+
+const OverridesSchema = z.record(
+  z.string().max(4),
+  z.record(z.string().max(4), z.record(z.string().max(32), WorkoutPatchSchema)),
+);
+
+export const savePlanWorkoutOverrides = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ planId: z.string().uuid(), overrides: OverridesSchema }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const plan = await fetchPlanForCoach(data.planId, context.userId);
+    const basePayload = (plan.payload && typeof plan.payload === "object" ? plan.payload : {}) as Record<string, unknown>;
+    const newPayload = {
+      ...basePayload,
+      workoutOverrides: data.overrides,
+      workoutOverridesUpdatedAt: new Date().toISOString(),
+    };
+    const { error } = await supabaseAdmin
+      .from("training_plans")
+      .update({ payload: newPayload, updated_at: new Date().toISOString() })
+      .eq("id", data.planId);
+    if (error) throw new Response(error.message, { status: 500 });
+    return { ok: true as const };
+  });
+
 export const savePlanCustomization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PrescricaoEditorSheet } from "@/components/prescricao/PrescricaoEditorSheet";
+import { PlanilhaCustomizerSheet } from "@/components/planilha/PlanilhaCustomizerSheet";
+import { applyOverrides, getOverridesFromPayload, type WorkoutOverrides } from "@/lib/workout-overrides";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -51,6 +52,7 @@ function Planilha10kmPage() {
   const [openWorkout, setOpenWorkout] = useState<{ wo: Workout; day: DayCode } | null>(null);
   const [saving, setSaving] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [overrides, setOverrides] = useState<WorkoutOverrides>({});
   const [exporting, setExporting] = useState(false);
   const branding = useCoachBranding();
 
@@ -90,6 +92,7 @@ function Planilha10kmPage() {
       setWeekDays(validDays);
       setPhase(ph);
       setApplied(validDays.length > 0);
+      setOverrides(getOverridesFromPayload(plan.payload));
     } else if (dataQuery.data) {
       const studentLevel = dataQuery.data.student?.level;
       const suggested: 1 | 2 = studentLevel === "iniciante" ? 1 : 2;
@@ -106,8 +109,9 @@ function Planilha10kmPage() {
   const weeks = useMemo(() => {
     if (!applied || validation) return null;
     const phaseWeeks = WORKOUTS_10KM[level][phase];
-    return phaseWeeks.map((wos) => distributeWeek(wos, weekDays, level, WORKOUT_TYPES_10KM));
-  }, [applied, level, phase, weekDays, validation]);
+    const phaseOv = overrides[String(phase)] ?? {};
+    return phaseWeeks.map((wos, w) => distributeWeek(applyOverrides(wos as never, phaseOv[String(w)]) as unknown as typeof wos, weekDays, level, WORKOUT_TYPES_10KM));
+  }, [applied, level, phase, weekDays, validation, overrides]);
 
   async function persistConfig(opts: { phase?: 1 | 2 | 3 | 4 } = {}) {
     if (!studentId) return;
@@ -385,12 +389,19 @@ function Planilha10kmPage() {
       )}
 
       {dataQuery.data?.plan?.id && (
-        <PrescricaoEditorSheet
+        <PlanilhaCustomizerSheet
           open={editorOpen}
           onOpenChange={setEditorOpen}
-          studentId={studentId}
           planId={dataQuery.data.plan.id}
-          onSaved={() => dataQuery.refetch()}
+          initialOverrides={overrides}
+          onSaved={(ov) => { setOverrides(ov); dataQuery.refetch(); }}
+          phases={[1, 2, 3, 4]}
+          initialPhase={phase}
+          phaseLabels={PHASE_LABELS_10KM}
+          getRawPhaseWeeks={(p) => WORKOUTS_10KM[level][p as 1|2|3|4] as never}
+          distributeWeek={(wos) => distributeWeek(wos as never, weekDays, level, WORKOUT_TYPES_10KM) as never}
+          workoutTypes={WORKOUT_TYPES_10KM}
+          workoutTypesList={Object.keys(WORKOUT_TYPES_10KM)}
         />
       )}
     </div>

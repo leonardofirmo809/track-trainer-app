@@ -94,6 +94,8 @@ function PrescricaoPage() {
     else store.moveSession(from, to);
   };
 
+  if (isLoading || !data) return <p className="text-muted-foreground">Carregando…</p>;
+
   return (
     <div className="space-y-5 max-w-[1400px]">
       <div className="flex items-center justify-between flex-wrap gap-3">

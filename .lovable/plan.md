@@ -1,48 +1,84 @@
-## Situação atual
+# Personalização rápida da planilha gerada
 
-A rota `/alunos/$studentId/prescricao/$planId` já está totalmente implementada em iterações anteriores:
+Hoje, para customizar uma planilha já gerada, o treinador precisa: sair de `/planilha-5km` → ir em **Alunos** → abrir o aluno → clicar **Personalizar** na linha da planilha. Muitos cliques e troca de contexto.
 
-- **Rota**: `src/routes/_authenticated/alunos.$studentId.prescricao.$planId.tsx` (533 linhas) — header, grade semanal 7 colunas, DnD com `@dnd-kit`, Sheet de Biblioteca com filtros LOW/MOD/HIGH + tipos + busca, Sheet do Editor com todos os campos (código, nome, intensidade, tipo, HH:MM:SS, distância, blocos, zonas Z1-Z5, auto-calcular, %L/%M+H, tags, descrição, "salvar também na biblioteca").
-- **Store**: `src/lib/training-store.ts` com Zustand + persist, undo (10 níveis), recalcSummary em todos os mutators, clone de presets em `isCustom:true`.
-- **Tipos / lib / adapter**: `training-session-types.ts`, `session-library.ts`, `plan-to-weeks.ts` prontos.
-- **Persistência servidor**: `plan-customization.functions.ts` com `getPlanCustomization` / `savePlanCustomization` validados por Zod, RLS via coach owner + bypass admin.
-- **Tokens de intensidade** em `src/styles.css` (light + dark).
-- **Botão "Personalizar"** já adicionado na tabela de planilhas em `alunos.$studentId.tsx`.
+## Objetivo
 
-## O que falta corrigir
+Logo após gerar/salvar uma planilha (5/10/21/42 km), permitir personalizar em 1–2 cliques sem sair da tela, e tornar a ação mais usada — **trocar uma sessão pela biblioteca** — imediata.
 
-### 1. Bug crítico: violação das regras dos hooks no `PrescricaoPage`
+## O que será entregue
 
-Hoje na rota:
+### 1. Atalho "Personalizar planilha" no topo de cada planilha
 
-```text
-linha 85: if (isLoading || !data) return <p>Carregando…</p>;
-linha 87: const sensors = useSensors(useSensor(PointerSensor, ...));
-```
+Nas telas `planilha-5km.tsx`, `planilha-10km.tsx`, `planilha-21km.tsx`, `planilha-42km.tsx`, adicionar botão no header (junto a Salvar/Exportar PDF):
 
-`useSensors` é chamado **depois** de um early-return condicional, o que quebra a ordem dos hooks no primeiro render (quando `isLoading` é true) e dispara erro do React assim que o dado chega. Mover `useSensors` para antes do early-return.
+- Habilitado quando há `studentId` selecionado e a planilha já foi salva (existe `planId`).
+- Navega direto para `/alunos/$studentId/prescricao/$planId`.
+- Desabilitado com tooltip "Salve a planilha primeiro" enquanto não houver `planId`.
 
-### 2. Pequenos ajustes de robustez
+### 2. Edição inline na grade da prescrição
 
-- `useEffect` de hidratação tem `store` no array de dependências; trocar por callback estável (`useTrainingStore.getState().loadPrescription`) para evitar reexecuções desnecessárias.
-- `useTrainingStore()` no topo causa re-render do componente inteiro a cada mutação; manter mas confirmar que não trava a UX.
+Na rota `/alunos/$studentId/prescricao/$planId`, tornar cada **card de sessão** mais direto:
 
-### 3. Verificação ponta a ponta
+- **Clique simples no card** → abre `QuickSwapPopover` (item 3) ancorado no card.
+- **Ícone de lápis** (já existe) → continua abrindo o Sheet completo de edição.
+- **Hover** revela 2 ações compactas: **Trocar** (popover) e **Remover** (zera o slot — usa `removeSession` já existente no store).
 
-- Abrir `/alunos/<id>` → clicar **Personalizar** numa planilha 5/10/21/42 km existente.
-- Conferir que carrega 4+ semanas, cards aparecem com badges de intensidade, drag-and-drop entre dias funciona (swap quando ocupado, move quando vazio), botão **Desfazer** desativa quando histórico vazio, **Salvar** persiste no `training_plans.payload.customization`.
-- Reload da página → o estado salvo é re-hidratado a partir do banco.
-- Abrir **Biblioteca** → filtrar HIGH → "Usar" injeta cópia com novo id.
-- Editar um preset num dia → salvar → confere que virou `isCustom:true` no card e (opcionalmente) entrou na biblioteca.
+Elimina a necessidade de abrir o Sheet só para trocar uma sessão.
 
-## Arquivos a tocar
+### 3. `QuickSwapPopover` — troca rápida pela biblioteca (ação principal)
 
-- `src/routes/_authenticated/alunos.$studentId.prescricao.$planId.tsx` — mover `useSensors` para antes do early-return; estabilizar deps do `useEffect` de hidratação.
+Novo componente `src/components/prescricao/QuickSwapPopover.tsx` usando `Popover` + `Command` (cmdk) do shadcn:
 
-Sem novos arquivos, sem migrations, sem dependências.
+- Input de busca no topo (filtra `sessionLibrary` + `customSessions` por código, nome e tags).
+- Chips de filtro: **Todas / LOW / MOD / HIGH** (mesma classificação já usada).
+- Lista rolável (até ~10 itens visíveis) com: código, nome, badge de intensidade, duração/distância de referência.
+- Selecionar preset → chama `updateSession(weekIndex, day, { ...preset, id: newSessionId(), isCustom: true })`, fecha o popover, toast discreto: "Sessão trocada • Desfazer".
+- Atalhos nativos do `cmdk`: `↑`/`↓` navegam, `Enter` confirma, `Esc` fecha.
 
-## Fora de escopo
+Reusa a fonte de verdade já existente (`sessionLibrary` + `customSessions` do `training-store`); não duplica lista.
 
-- Versionamento de histórico no banco.
+### 4. Salvamento manual preservado
+
+Mantém o botão **Salvar alterações** atual (sem auto-save). Cada troca pelo popover já entra no histórico de **Desfazer** porque usa `updateSession` do store.
+
+### Fora de escopo
+
+- Drag-and-drop entre dias (já existe via `@dnd-kit`, sem mudança).
+- Edição inline de HH:MM:SS / km no próprio card.
+- Duplicar semana, marcar dia como descanso em 1 clique.
+- Auto-save.
+- Versionamento histórico no banco.
 - Regenerar PDF a partir do plano customizado.
-- Ordenação `@dnd-kit/sortable` dos blocos do editor (a UI atual usa add/remove sem reorder).
+
+## Detalhes técnicos
+
+**Arquivos a editar:**
+
+- `src/routes/_authenticated/planilha-5km.tsx`, `planilha-10km.tsx`, `planilha-21km.tsx`, `planilha-42km.tsx` — adicionar botão **Personalizar planilha** no header. Usa o `planId` retornado por `savePlanilha*Config` / exposto em `dataQuery.data` (verificar campo `savedPlan.id` ou similar; se não estiver exposto, expor no retorno da server fn).
+- `src/routes/_authenticated/alunos.$studentId.prescricao.$planId.tsx` — substituir clique simples do card pelo `QuickSwapPopover`; adicionar botões hover **Trocar** / **Remover**; manter ícone de lápis para o Sheet completo. Também aplicar o fix dos hooks já listado em `.lovable/plan.md` (mover `useSensors` para antes do early-return e estabilizar deps do `useEffect` de hidratação).
+
+**Arquivos novos:**
+
+- `src/components/prescricao/QuickSwapPopover.tsx` — props: `open`, `onOpenChange`, `anchor` (ou children como trigger), `currentSessionId`, `onPick(preset)`. Usa `Popover` + `Command`/`CommandInput`/`CommandList`/`CommandItem` já disponíveis.
+
+**Store (`src/lib/training-store.ts`):**
+
+- Sem mudanças estruturais. `updateSession` + `removeSession` + `undo` já cobrem o fluxo. Apenas garantir que os presets selecionados sejam clonados com `newSessionId()` e `isCustom: true` antes de chamar `updateSession` (lógica fica no popover, não no store).
+
+**Persistência:**
+
+- Sem mudanças. **Salvar alterações** continua chamando `savePlanCustomization` (Zod + RLS) gravando em `training_plans.payload.customization`.
+
+**Acessibilidade:**
+
+- `Popover` com foco inicial no input de busca (cmdk já faz isso).
+- `aria-label` no card descrevendo a sessão atual ("Trocar sessão de TER, semana 2: Longão Z2").
+
+## Validação
+
+1. Em `/planilha-5km`, gerar e salvar planilha → botão **Personalizar planilha** habilita e leva direto à prescrição.
+2. Na prescrição, clicar num card → popover abre com biblioteca filtrada; escolher preset → card atualiza, toast aparece, `Ctrl+Z` reverte.
+3. Hover no card → botão **Remover** zera o dia; **Salvar** persiste; reload re-hidrata do banco.
+4. Clicar no lápis → Sheet completo abre como hoje (regressão zero).
+5. Repetir nas planilhas 10/21/42 km.

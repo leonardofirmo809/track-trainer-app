@@ -1,9 +1,19 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/signup")({ component: SignupClosed });
+interface SignupSearch { token?: string }
+
+export const Route = createFileRoute("/signup")({
+  validateSearch: (s: Record<string, unknown>): SignupSearch => ({ token: typeof s.token === "string" ? s.token : undefined }),
+  beforeLoad: ({ search }) => {
+    if (search.token) {
+      throw redirect({ to: "/aceitar-convite", search: { token: search.token } });
+    }
+  },
+  component: SignupClosed,
+});
 
 function SignupClosed() {
   return (
@@ -22,13 +32,13 @@ function SignupClosed() {
       <div className="flex items-center justify-center p-6">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl">Cadastro por convite</CardTitle>
-            <CardDescription>Você precisa de um link de convite para criar sua conta.</CardDescription>
+            <CardTitle className="text-2xl">Cadastro exclusivo para convidados</CardTitle>
+            <CardDescription>Solicite um convite ao administrador.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
               <Mail className="size-4 mt-0.5 shrink-0" />
-              <p>Após adquirir o sistema, você receberá um e-mail com o link para definir sua senha e ativar a conta.</p>
+              <p>O cadastro é exclusivo para convidados. Após receber seu convite por e-mail, use o link enviado para definir sua senha e ativar a conta.</p>
             </div>
             <Button asChild className="w-full" variant="outline">
               <Link to="/login">Já tenho conta — Entrar</Link>

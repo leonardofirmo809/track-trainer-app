@@ -129,7 +129,7 @@ function Planilha5kmPage() {
     setSaving(true);
     try {
       await saveFn({ data: {
-        studentId, level, daysPerWeek, weekDays, currentPhase: opts.phase ?? phase,
+        studentId, level, daysPerWeek: weekDays.length, weekDays, currentPhase: opts.phase ?? phase,
       }});
       qc.invalidateQueries({ queryKey: ["planilha-5km", studentId] });
     } catch (e) {

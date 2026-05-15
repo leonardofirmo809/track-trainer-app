@@ -133,41 +133,34 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
                   <div key={idx} className="space-y-2">
                     <p className="font-semibold">Semana {idx + 1}</p>
                     <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
-                      {wk.dist.assignments.map((a) => (
-                        <div key={a.day}>
-                          {a.workout ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                // achar workout ORIGINAL (pelo code patcheado pode ter mudado — mas a chave do override é o code original).
-                                // patched preserva ordem e a key code do original quando não foi alterada.
-                                // Procuramos pela posição do workout no array patched para recuperar o original raw.
-                                const raw = getRawPhaseWeeks(p);
-                                const patched = wk.patched;
-                                const i = patched.findIndex((x) => x.code === a.workout!.code);
-                                const original = (raw[idx]?.[i] ?? a.workout!) as WorkoutLike;
-                                setEditing({ phase: p, weekIdx: idx, original });
-                              }}
-                              className={`w-full text-left rounded-md border-2 p-3 hover:opacity-90 transition ${workoutTypes[a.workout.type]?.color ?? ""}`}
-                            >
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-bold">{DAY_LABEL[a.day]}</span>
-                                <span className="text-[10px] opacity-80">{a.workout.code}</span>
+                      {wk.dist.assignments.map((a) => {
+                        const original = a.workout ? wk.originalsByPatchedCode.get(a.workout.code) : null;
+                        const isEdited = original ? !!phaseOv[original.code] : false;
+                        return (
+                          <div key={a.day}>
+                            {a.workout && original ? (
+                              <button
+                                type="button"
+                                onClick={() => setEditing({ phase: p, weekIdx: idx, original })}
+                                className={`w-full text-left rounded-md border-2 p-3 hover:opacity-90 transition ${workoutTypes[a.workout.type]?.color ?? ""}`}
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs font-bold">{DAY_LABEL[a.day]}</span>
+                                  <span className="text-[10px] opacity-80">{a.workout.code}</span>
+                                </div>
+                                <p className="text-sm font-semibold leading-tight">{a.workout.type}</p>
+                                <p className="text-[11px] opacity-80 mt-1">{a.workout.zones.join(" / ")}</p>
+                                {isEdited && <Badge variant="secondary" className="mt-1 text-[9px]">editado</Badge>}
+                              </button>
+                            ) : (
+                              <div className="rounded-md border-2 border-dashed border-muted-foreground/30 p-3 text-center text-xs text-muted-foreground bg-muted/30">
+                                <p className="font-bold">{DAY_LABEL[a.day]}</p>
+                                <p className="mt-2">OFF</p>
                               </div>
-                              <p className="text-sm font-semibold leading-tight">{a.workout.type}</p>
-                              <p className="text-[11px] opacity-80 mt-1">{a.workout.zones.join(" / ")}</p>
-                              {phaseOv[(getRawPhaseWeeks(p)[idx]?.find((_, i) => wk.patched[i]?.code === a.workout!.code)?.code) ?? a.workout.code] && (
-                                <Badge variant="secondary" className="mt-1 text-[9px]">editado</Badge>
-                              )}
-                            </button>
-                          ) : (
-                            <div className="rounded-md border-2 border-dashed border-muted-foreground/30 p-3 text-center text-xs text-muted-foreground bg-muted/30">
-                              <p className="font-bold">{DAY_LABEL[a.day]}</p>
-                              <p className="mt-2">OFF</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );

@@ -55,6 +55,7 @@ function Planilha5kmPage() {
   const [pendingApply, setPendingApply] = useState<null | (() => void)>(null);
   const [openWorkout, setOpenWorkout] = useState<{ wo: Workout; day: DayCode } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const branding = useCoachBranding();
 

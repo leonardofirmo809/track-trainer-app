@@ -1,101 +1,48 @@
-## Objetivo
+## Situação atual
 
-Criar uma camada de **personalização do plano gerado** por aluno: depois que a planilha (5/10/21/42km) é gerada, o treinador abre a tela de Prescrição daquele aluno e pode trocar dias, mover treinos, editar campos livremente e usar/criar sessões da biblioteca. Tudo persiste no `training_plans.payload` (sem mudança de schema) e em `localStorage` (cache otimista + undo).
+A rota `/alunos/$studentId/prescricao/$planId` já está totalmente implementada em iterações anteriores:
 
-## Arquitetura
+- **Rota**: `src/routes/_authenticated/alunos.$studentId.prescricao.$planId.tsx` (533 linhas) — header, grade semanal 7 colunas, DnD com `@dnd-kit`, Sheet de Biblioteca com filtros LOW/MOD/HIGH + tipos + busca, Sheet do Editor com todos os campos (código, nome, intensidade, tipo, HH:MM:SS, distância, blocos, zonas Z1-Z5, auto-calcular, %L/%M+H, tags, descrição, "salvar também na biblioteca").
+- **Store**: `src/lib/training-store.ts` com Zustand + persist, undo (10 níveis), recalcSummary em todos os mutators, clone de presets em `isCustom:true`.
+- **Tipos / lib / adapter**: `training-session-types.ts`, `session-library.ts`, `plan-to-weeks.ts` prontos.
+- **Persistência servidor**: `plan-customization.functions.ts` com `getPlanCustomization` / `savePlanCustomization` validados por Zod, RLS via coach owner + bypass admin.
+- **Tokens de intensidade** em `src/styles.css` (light + dark).
+- **Botão "Personalizar"** já adicionado na tabela de planilhas em `alunos.$studentId.tsx`.
 
-### Nova rota
-`/_authenticated/alunos/$studentId/prescricao/$planId.tsx`
-- Carrega `training_plans` (payload base + `customized_weeks` se já existir).
-- Acessada por novo botão **"Personalizar"** na aba *Planilhas* do perfil do aluno (`alunos.$studentId.tsx`).
+## O que falta corrigir
 
-### Persistência (sem migration)
-- Reaproveita `training_plans.payload` (jsonb).
-- Adiciona campo `payload.customization = { weeks: WeekPlan[], updatedAt }`.
-- Ao abrir: se `customization.weeks` existe → usa; senão **deriva** a partir do plano gerado.
-- Novo server fn `savePlanCustomization(planId, weeks)` (auth-middleware, RLS já garante coach-owner).
-- Biblioteca custom (`customSessions`) fica no zustand persist por treinador (chave `training-store-v1`), independente de aluno.
+### 1. Bug crítico: violação das regras dos hooks no `PrescricaoPage`
 
-### Tipos compartilhados
-Novo arquivo `src/lib/training-session-types.ts` com `Zone`, `SessionType`, `IntensityLevel`, `DayOfWeek`, `TrainingSession`, `WeekPlan`, e a constante `INTENSITY_CONFIG`.
+Hoje na rota:
 
-### Biblioteca de sessões
-Novo arquivo `src/lib/session-library.ts` com o array `sessionLibrary` literal exato fornecido pelo usuário (RE/BA/IAE/LON/PRO/PRL/TRU/IAM/CRL/CRAP/SUB/IAI/IAL/IMI). Imutável.
-
-### Store
-Novo `src/lib/training-store.ts` com Zustand + `persist` exatamente conforme spec, mais:
-- `loadPrescription(planId, weeks)` — hidrata estado a partir do banco.
-- `markDirty / markClean` para o botão "Salvar".
-- `recalcSummary` aplicado em todos os mutators (add/remove/swap/move/update).
-- `history` capado em 10 (Ctrl+Z).
-- Sessão pré-pronta (isCustom:false) editada na grade → clona com novo `crypto.randomUUID()` e `isCustom:true` antes de salvar.
-
-### Adapter plano gerado → WeekPlan[]
-Novo `src/lib/plan-to-weeks.ts`:
-- Lê o `payload` das planilhas existentes (5/10/21/42km já têm estruturas distintas) e mapeia cada treino para um `TrainingSession` plausível buscando por código/tipo na biblioteca, fallback `CUSTOM`.
-- Distribui pelos 7 dias da semana respeitando a distribuição original do plano.
-- Preenche `summary` via `recalcSummary`.
-
-### Server function
-`src/lib/plan-customization.functions.ts`:
-- `getPlanCustomization({ planId })` → `{ basePayload, weeks | null }`.
-- `savePlanCustomization({ planId, weeks })` → faz `select` para conferir `coach_id = userId`, atualiza `payload = jsonb_set(payload,'{customization}', ...)`.
-- Validação Zod estrita do shape de `WeekPlan[]`.
-- Registrado em `start.ts` via `attachSupabaseAuth` (já configurado).
-
-## Componentes (novos em `src/components/prescription/`)
-
-```
-PrescriptionPage.tsx     route component, header + WeeklyGrid + drawers
-WeeklyGrid.tsx           7×N grade, DndContext, Ctrl+Z, "Salvar" / "Desfazer"
-SessionDayCard.tsx       card compacto com badge intensidade, drag handle, 3 botões
-EmptyDayCell.tsx         célula vazia com "+", abre SessionLibrary com target
-WeekSummary.tsx          totais km / duração / barra L vs M+H / minutos por zona
-SessionLibrary.tsx       Sheet lateral: filtros LOW/MOD/HIGH + chips tipo + busca + cards
-SessionLibraryCard.tsx   "Usar" / "Ver/Editar" / lixeira (custom)
-SessionEditor.tsx        Sheet lateral: form completo (campos abaixo)
-StructureBlocksEditor.tsx lista @dnd-kit/sortable de blocos warmup/main/recovery
-ZoneInputs.tsx           5 inputs Z1-Z5 + botão "⚡ Auto-calcular" (parse blocos)
-TagsInput.tsx            chips removíveis + input "adicionar"
-IntensityBadge.tsx       usa INTENSITY_CONFIG
+```text
+linha 85: if (isLoading || !data) return <p>Carregando…</p>;
+linha 87: const sensors = useSensors(useSensor(PointerSensor, ...));
 ```
 
-### SessionEditor — campos (conforme spec)
-Código, Nome, toggle LOW/MOD/HIGH, select SessionType, radio modo (tempo/distância), duração HH:MM:SS, distância em metros, blocos de estrutura ordenáveis (fase / label / content / zona / duração ou distância), zonas Z1-Z5 editáveis + auto-calcular, %Low e %M+H editáveis, tags, descrição.
-- Se `editorTarget` setado → `updateSession`. Se não → `saveToLibrary`.
-- Checkbox "Salvar na biblioteca também" (quando há target).
-- Sessões biblioteca pré-pronta editadas em prescrição clonam com novo uuid + `isCustom:true`.
+`useSensors` é chamado **depois** de um early-return condicional, o que quebra a ordem dos hooks no primeiro render (quando `isLoading` é true) e dispara erro do React assim que o dado chega. Mover `useSensors` para antes do early-return.
 
-## Dependências
+### 2. Pequenos ajustes de robustez
 
-```bash
-bun add zustand @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
-```
-(Já existem: zod, sonner, todos shadcn.) `crypto.randomUUID()` para ids — sem `uuid`.
+- `useEffect` de hidratação tem `store` no array de dependências; trocar por callback estável (`useTrainingStore.getState().loadPrescription`) para evitar reexecuções desnecessárias.
+- `useTrainingStore()` no topo causa re-render do componente inteiro a cada mutação; manter mas confirmar que não trava a UX.
 
-## Integração com o perfil do aluno
-`src/routes/_authenticated/alunos.$studentId.tsx` aba *Planilhas*: nova coluna **Ação** com botão **"Personalizar"** que linka para `/alunos/$studentId/prescricao/$planId`.
+### 3. Verificação ponta a ponta
 
-## Cores intensidade
-Seguindo a spec, mas via CSS tokens semânticos em `src/styles.css`:
-```css
---intensity-low-bg: oklch(...);  --intensity-low-fg: ...;
---intensity-mod-bg: ...;         --intensity-mod-fg: ...;
---intensity-high-bg: ...;        --intensity-high-fg: ...;
-```
-`INTENSITY_CONFIG` referencia classes Tailwind que usam essas vars (não hex direto em componentes).
+- Abrir `/alunos/<id>` → clicar **Personalizar** numa planilha 5/10/21/42 km existente.
+- Conferir que carrega 4+ semanas, cards aparecem com badges de intensidade, drag-and-drop entre dias funciona (swap quando ocupado, move quando vazio), botão **Desfazer** desativa quando histórico vazio, **Salvar** persiste no `training_plans.payload.customization`.
+- Reload da página → o estado salvo é re-hidratado a partir do banco.
+- Abrir **Biblioteca** → filtrar HIGH → "Usar" injeta cópia com novo id.
+- Editar um preset num dia → salvar → confere que virou `isCustom:true` no card e (opcionalmente) entrou na biblioteca.
 
-## Ordem de execução
+## Arquivos a tocar
 
-1. `bun add zustand @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities`.
-2. Criar tipos + biblioteca + store + adapter + tokens CSS de intensidade.
-3. Criar server fn `plan-customization.functions.ts`.
-4. Criar componentes em `src/components/prescription/` (de baixo para cima).
-5. Criar rota `alunos.$studentId.prescricao.$planId.tsx`.
-6. Adicionar botão "Personalizar" em `alunos.$studentId.tsx`.
-7. Smoke test: gerar planilha 10km → personalizar → swap dois dias → editar um treino → salvar → reload → conferir persistência.
+- `src/routes/_authenticated/alunos.$studentId.prescricao.$planId.tsx` — mover `useSensors` para antes do early-return; estabilizar deps do `useEffect` de hidratação.
 
-## Fora de escopo (não nesta entrega)
-- Versionar histórico no banco (history fica só em memória/localStorage).
-- Multi-coach colaborativo / conflito de edição.
-- Regenerar PDF a partir do plano customizado (próxima iteração).
+Sem novos arquivos, sem migrations, sem dependências.
+
+## Fora de escopo
+
+- Versionamento de histórico no banco.
+- Regenerar PDF a partir do plano customizado.
+- Ordenação `@dnd-kit/sortable` dos blocos do editor (a UI atual usa add/remove sem reorder).

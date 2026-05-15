@@ -48,14 +48,16 @@ function PrescricaoPage() {
 
   const store = useTrainingStore();
   const [saving, setSaving] = useState(false);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   // Hydrate prescription from server when data arrives
   useEffect(() => {
     if (!data?.plan) return;
-    if (store.prescription.id === planId) return;
+    const state = useTrainingStore.getState();
+    if (state.prescription.id === planId) return;
     const weeks = planPayloadToWeeks(data.plan.payload, 4);
-    store.loadPrescription(planId, studentId, weeks);
-  }, [data?.plan, planId, studentId, store]);
+    state.loadPrescription(planId, studentId, weeks);
+  }, [data?.plan, planId, studentId]);
 
   // Ctrl+Z
   useEffect(() => {
@@ -82,10 +84,6 @@ function PrescricaoPage() {
     }
   };
 
-  if (isLoading || !data) return <p className="text-muted-foreground">Carregando…</p>;
-
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
-
   const onDragEnd = (e: DragEndEvent) => {
     const from = e.active.data.current as { weekIndex: number; day: DayOfWeek } | undefined;
     const to = e.over?.data.current as { weekIndex: number; day: DayOfWeek } | undefined;
@@ -95,6 +93,8 @@ function PrescricaoPage() {
     if (target) store.swapSessions(from, to);
     else store.moveSession(from, to);
   };
+
+  if (isLoading || !data) return <p className="text-muted-foreground">Carregando…</p>;
 
   return (
     <div className="space-y-5 max-w-[1400px]">

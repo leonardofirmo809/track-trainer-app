@@ -1,61 +1,71 @@
-# Plano — Layout responsivo completo
+# Plano — Reformular tela de listagem de alunos
 
-## 1. Layout shell (`src/routes/_authenticated.tsx`)
+## Mapeamentos importantes
 
-- Envolver em `SidebarProvider` com `defaultOpen` controlado por breakpoint:
-  - `≥1024px`: sidebar expandida (240px).
-  - `768–1023px`: sidebar colapsada em ícones (64px) via `defaultOpen={false}` + `collapsible="icon"`.
-  - `<768px`: sidebar escondida; usar `Sheet` (drawer) controlado por estado próprio.
-- Detectar breakpoint via hook `useIsMobile` existente (`src/hooks/use-mobile.tsx`) + criar `useIsTablet` se necessário.
-- Header:
-  - Desktop/tablet: header atual com `SidebarTrigger`.
-  - Mobile: header fixo (`sticky top-0`) com logo à esquerda + botão hamburguer (`Menu` icon) que abre o drawer.
-- Main:
-  - Padding responsivo: `p-4 sm:p-6 lg:p-8`.
-  - Mobile: adicionar `pb-20` para não ficar atrás do bottom nav.
-- Renderizar `<MobileBottomNav />` apenas em `<768px`.
+- **Programa** (modal) = `target_distance` no schema. Valores: `10km` / `21km` / `42km` (sem 5km, conforme spec).
+- **Nível** (modal) = `level` enum existente. Mapeamento:
+  - "Nível 1" → `iniciante`
+  - "Nível 2" → `intermediario`
+  - Coluna na lista mostra "Nível 1" / "Nível 2" / "—" (escondendo `avancado` se aparecer dados antigos exibe "Avançado").
+- **Última atividade**: maior `created_at` em `tests` para o aluno; fallback `students.created_at` rotulado "Cadastro".
 
-## 2. Sidebar (`src/components/app-sidebar.tsx`)
+## 1. Header da tela (`src/routes/_authenticated/alunos.index.tsx`)
 
-- Desktop expandida (240px): manter conteúdo atual; aplicar estilo do item ativo:
-  - `data-[active=true]:bg-accent data-[active=true]:text-primary data-[active=true]:border-l-[3px] data-[active=true]:border-primary data-[active=true]:rounded-l-none` no `SidebarMenuButton`.
-- Tablet colapsada (64px): shadcn já mostra só ícones; garantir `tooltip` no `SidebarMenuButton` (`tooltip={i.title}`) para mostrar nome ao hover.
-- Footer: manter avatar + nome + logout (botão de logout sempre visível, mesmo colapsado, como ícone).
+- Título `Meus Alunos` + contador `({n})` ao lado.
+- Barra de busca por nome com filtro client-side em tempo real (mantém `useState` + filtro local — já existe).
+- Remover filtros de nível/distância existentes (escopo: simplificar conforme spec — apenas busca).
+- Botão "Novo aluno":
+  - Desktop: `Button` primário com ícone + texto, abre modal.
+  - Mobile: FAB `fixed bottom-20 right-4` (acima do bottom nav), ícone `Plus`, `aria-label`.
 
-## 3. Drawer mobile
+## 2. Lista desktop (`md:` e acima)
 
-- Reaproveitar `Sheet` (`@/components/ui/sheet`) com `side="left"`.
-- Conteúdo: mesma lista de navegação da sidebar (extrair em componente `<SidebarNav />` compartilhado para evitar duplicação).
-- Overlay escuro automático do `Sheet`; fecha ao clicar fora.
-- Trigger: botão hamburguer no header mobile.
+- Tabela com colunas: Avatar+Nome (email abaixo), Programa (badge), Nível ("Nível 1/2"), Última atividade (data relativa), Ações.
+- Linha clicável (`onClick` para navegar ao perfil) com `cursor-pointer hover:bg-muted/50`.
+- Coluna ações: `Pencil` (abre modal de edição — fora de escopo agora, deixar disabled OU navegar para `/alunos/$studentId`) e `Trash2` em vermelho (`text-destructive`) com confirmação `AlertDialog`. **Decisão:** botão editar navega para o perfil (não há tela de editar inline). Lixeira chama `supabase.from('students').delete()` após confirmação.
+- Empty state: ícone `Users`, "Nenhum aluno cadastrado ainda", botão "Cadastrar primeiro aluno" que abre o modal.
 
-## 4. Bottom Navigation (`src/components/mobile-bottom-nav.tsx` — novo)
+## 3. Lista mobile (`< md`)
 
-- Fixo no rodapé: `fixed bottom-0 inset-x-0 z-40 h-16 bg-card border-t`.
-- 4 itens: Dashboard (`/dashboard`, Home), Alunos (`/alunos`, Users), Planilhas (`/planilha-5km` ou menu), Perfil (`/minha-marca`, User).
-- Cada item: ícone (24px) + label pequeno (`text-[10px]`), `flex-col items-center justify-center`, mínimo 44px touch.
-- Item ativo: `text-primary`; inativo: `text-muted-foreground`.
-- Renderizar via `md:hidden`.
+- Cards empilhados (`md:hidden space-y-3`).
+- Cada card:
+  - `Avatar` 40px com iniciais; cor de fundo determinística por hash da inicial usando paleta de tokens do design system (variantes do `--primary`, `--accent`, `--success`, `--warning`, `--chart-*`).
+  - Nome em destaque (`font-medium`), linha menor com programa + nível.
+  - `ChevronRight` à direita.
+  - Card inteiro é `<Link>`.
+- **Swipe-to-remove**: implementar com touch events nativos no `<li>` (touchstart/move/end). Translate negativo até -88px revela botão "Remover" (vermelho, full-height, à direita absoluto). Abre AlertDialog ao tocar. Sem libs externas.
+- **Pull-to-refresh**: detectar `touchstart` no topo do scroll (window scrollY === 0), `touchmove` calcula delta vertical, mostra indicador (ícone `RefreshCw` rotacionando) acima da lista; ao soltar com delta > 70px chama `refetch()` do React Query. Implementação custom (~50 linhas), sem libs.
 
-## 5. Ajustes globais de touch + iOS (`src/styles.css`)
+## 4. Modal Novo Aluno (`src/components/student-create-modal.tsx` — novo)
 
-- Garantir `font-size: 16px` em inputs/textareas/selects via `@layer base` (evitar zoom iOS).
-- Botões mínimo 44px: ajustar variante `default`/`sm` do `Button` apenas no mobile via classe utilitária `min-h-11 md:min-h-9` ou adicionar `min-h-[44px]` na variante padrão (preferir abordagem de classe utilitária só onde necessário para não inflar tudo no desktop).
-- `body { overflow-x: hidden }` para garantir nada vaze horizontalmente.
+- Componente único responsivo:
+  - **Desktop (`md:`+):** `Dialog` shadcn central.
+  - **Mobile:** `Sheet` com `side="bottom"` (bottom sheet que sobe).
+- Campos:
+  - Nome completo (obrigatório, trim, 2–120 chars)
+  - E-mail (opcional, validação `z.string().email()`)
+  - Telefone (opcional, máx 32 chars)
+  - Programa — `Select`: `10km` / `21km` / `42km` (obrigatório)
+  - Nível — `Select`: "Nível 1" / "Nível 2" → grava `iniciante`/`intermediario`
+  - Observações — `Textarea` (opcional, máx 1000)
+- Validação inline com Zod + erro abaixo do campo (mensagem em vermelho).
+- Botão "Salvar" desabilitado até `nome.trim().length>=2 && programa`.
+- Submit: `supabase.from('students').insert({...})` com `coach_id`, `toast.success`, fecha modal, `queryClient.invalidateQueries(['students'])`.
 
-## 6. Tabelas → cards no mobile
+## 5. Query e dados
 
-- Páginas alvo com `<Table>`: `admin.treinadores.tsx`, `admin.alunos.tsx`, `admin.auditoria.tsx`, `alunos.index.tsx`.
-- Padrão: `<div className="hidden md:block"><Table>…</Table></div>` + `<div className="md:hidden space-y-3">{rows.map(r => <Card>…</Card>)}</div>`.
-- Card mostra os mesmos campos da linha em layout vertical com labels.
+- Query `['students']`: já carrega students. Adicionar query `['student-last-activity']` que faz `supabase.from('tests').select('student_id, created_at').order('created_at', { ascending: false })` e reduz para `Map<student_id, date>` no client.
+- `count` no header = `data?.length ?? 0`.
 
-## 7. Fora de escopo
+## 6. Fora de escopo
 
-- Sem mudanças em lógica de negócio, queries, RLS ou rotas.
-- Sem alteração nas planilhas `planilha-*.tsx` internamente (apenas wrapper de padding responsivo já cobre).
+- Não tocar em `src/routes/_authenticated/alunos.novo.tsx` (manter para link direto / SEO; pode redirecionar futuramente).
+- Sem mudanças no schema do banco, RLS ou na rota de perfil do aluno.
+- Sem nova tabela "programas/níveis".
 
 ## Arquivos afetados
 
-- editar: `src/routes/_authenticated.tsx`, `src/components/app-sidebar.tsx`, `src/styles.css`
-- criar: `src/components/mobile-bottom-nav.tsx`, `src/components/sidebar-nav.tsx` (extração compartilhada)
-- editar tabelas: `src/routes/_authenticated/admin.treinadores.tsx`, `admin.alunos.tsx`, `admin.auditoria.tsx`, `alunos.index.tsx`
+- editar: `src/routes/_authenticated/alunos.index.tsx` (rewrite completo)
+- criar: `src/components/student-create-modal.tsx`
+- criar: `src/components/student-mobile-card.tsx` (card com swipe)
+- criar: `src/hooks/use-pull-to-refresh.ts`

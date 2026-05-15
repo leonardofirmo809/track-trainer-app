@@ -29,6 +29,7 @@ import { Route as AuthenticatedAlunosStudentIdRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminTreinadoresRouteImport } from './routes/_authenticated/admin.treinadores'
 import { Route as AuthenticatedAdminAuditoriaRouteImport } from './routes/_authenticated/admin.auditoria'
 import { Route as AuthenticatedAdminAlunosRouteImport } from './routes/_authenticated/admin.alunos'
+import { Route as AuthenticatedAlunosStudentIdPrescricaoPlanIdRouteImport } from './routes/_authenticated/alunos.$studentId.prescricao.$planId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -138,6 +139,12 @@ const AuthenticatedAdminAlunosRoute =
     path: '/alunos',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute =
+  AuthenticatedAlunosStudentIdPrescricaoPlanIdRouteImport.update({
+    id: '/prescricao/$planId',
+    path: '/prescricao/$planId',
+    getParentRoute: () => AuthenticatedAlunosStudentIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -155,10 +162,11 @@ export interface FileRoutesByFullPath {
   '/admin/alunos': typeof AuthenticatedAdminAlunosRoute
   '/admin/auditoria': typeof AuthenticatedAdminAuditoriaRoute
   '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
-  '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
+  '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRouteWithChildren
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/alunos/': typeof AuthenticatedAlunosIndexRoute
+  '/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -175,10 +183,11 @@ export interface FileRoutesByTo {
   '/admin/alunos': typeof AuthenticatedAdminAlunosRoute
   '/admin/auditoria': typeof AuthenticatedAdminAuditoriaRoute
   '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
-  '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
+  '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRouteWithChildren
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/alunos': typeof AuthenticatedAlunosIndexRoute
+  '/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -198,10 +207,11 @@ export interface FileRoutesById {
   '/_authenticated/admin/alunos': typeof AuthenticatedAdminAlunosRoute
   '/_authenticated/admin/auditoria': typeof AuthenticatedAdminAuditoriaRoute
   '/_authenticated/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
-  '/_authenticated/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRoute
+  '/_authenticated/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRouteWithChildren
   '/_authenticated/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/alunos/': typeof AuthenticatedAlunosIndexRoute
+  '/_authenticated/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
     | '/alunos/novo'
     | '/admin/'
     | '/alunos/'
+    | '/alunos/$studentId/prescricao/$planId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/alunos/novo'
     | '/admin'
     | '/alunos'
+    | '/alunos/$studentId/prescricao/$planId'
   id:
     | '__root__'
     | '/'
@@ -267,6 +279,7 @@ export interface FileRouteTypes {
     | '/_authenticated/alunos/novo'
     | '/_authenticated/admin/'
     | '/_authenticated/alunos/'
+    | '/_authenticated/alunos/$studentId/prescricao/$planId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -419,6 +432,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAlunosRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/alunos/$studentId/prescricao/$planId': {
+      id: '/_authenticated/alunos/$studentId/prescricao/$planId'
+      path: '/prescricao/$planId'
+      fullPath: '/alunos/$studentId/prescricao/$planId'
+      preLoaderRoute: typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRouteImport
+      parentRoute: typeof AuthenticatedAlunosStudentIdRoute
+    }
   }
 }
 
@@ -439,6 +459,21 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
+interface AuthenticatedAlunosStudentIdRouteChildren {
+  AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute: typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
+}
+
+const AuthenticatedAlunosStudentIdRouteChildren: AuthenticatedAlunosStudentIdRouteChildren =
+  {
+    AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute:
+      AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute,
+  }
+
+const AuthenticatedAlunosStudentIdRouteWithChildren =
+  AuthenticatedAlunosStudentIdRoute._addFileChildren(
+    AuthenticatedAlunosStudentIdRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -448,7 +483,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPlanilha42kmRoute: typeof AuthenticatedPlanilha42kmRoute
   AuthenticatedPlanilha5kmRoute: typeof AuthenticatedPlanilha5kmRoute
   AuthenticatedTeste3kmRoute: typeof AuthenticatedTeste3kmRoute
-  AuthenticatedAlunosStudentIdRoute: typeof AuthenticatedAlunosStudentIdRoute
+  AuthenticatedAlunosStudentIdRoute: typeof AuthenticatedAlunosStudentIdRouteWithChildren
   AuthenticatedAlunosNovoRoute: typeof AuthenticatedAlunosNovoRoute
   AuthenticatedAlunosIndexRoute: typeof AuthenticatedAlunosIndexRoute
 }
@@ -462,7 +497,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPlanilha42kmRoute: AuthenticatedPlanilha42kmRoute,
   AuthenticatedPlanilha5kmRoute: AuthenticatedPlanilha5kmRoute,
   AuthenticatedTeste3kmRoute: AuthenticatedTeste3kmRoute,
-  AuthenticatedAlunosStudentIdRoute: AuthenticatedAlunosStudentIdRoute,
+  AuthenticatedAlunosStudentIdRoute:
+    AuthenticatedAlunosStudentIdRouteWithChildren,
   AuthenticatedAlunosNovoRoute: AuthenticatedAlunosNovoRoute,
   AuthenticatedAlunosIndexRoute: AuthenticatedAlunosIndexRoute,
 }
@@ -481,3 +517,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

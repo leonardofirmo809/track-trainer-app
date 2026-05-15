@@ -83,33 +83,38 @@ function Planilha5kmPage() {
     return meta?.zones ?? null;
   }, [dataQuery.data]);
 
-  // Pré-carrega config salva (sempre força dias travados pelo nível)
+  // Pré-carrega config salva
   useEffect(() => {
     const plan = dataQuery.data?.plan;
     if (plan?.payload) {
       const p = plan.payload as { level: 1 | 2; daysPerWeek: number; weekDays: DayCode[]; currentPhase: 1 | 2 | 3 | 4 };
-      const lockedDays = p.level === 1 ? 3 : 4;
+      const wd: DayCode[] = Array.isArray(p.weekDays) && p.weekDays.length > 0 ? p.weekDays : defaultDaysFor(p.level);
       setLevel(p.level);
-      setDaysPerWeek(lockedDays);
-      setWeekDays(defaultDaysFor(p.level));
+      setDaysPerWeek(wd.length);
+      setWeekDays(wd);
       setPhase(p.currentPhase);
       setApplied(true);
       setOverrides(getOverridesFromPayload(plan.payload));
     } else if (dataQuery.data) {
       const studentLevel = dataQuery.data.student?.level;
       const suggested: 1 | 2 = studentLevel === "iniciante" ? 1 : 2;
+      const def = defaultDaysFor(suggested);
       setLevel(suggested);
-      setDaysPerWeek(suggested === 1 ? 3 : 4);
-      setWeekDays(defaultDaysFor(suggested));
+      setDaysPerWeek(def.length);
+      setWeekDays(def);
       setApplied(false);
     }
   }, [dataQuery.data]);
 
   const validation = useMemo<string | null>(() => {
-    // Configuração travada pelo nível — salvaguarda silenciosa.
-    if (weekDays.length !== daysPerWeek) return "Configuração inválida para o nível selecionado.";
+    if (weekDays.length === 0) return "Selecione pelo menos 1 dia de treino.";
     return null;
-  }, [weekDays, daysPerWeek]);
+  }, [weekDays]);
+
+  const suggestedCount = level === 1 ? 3 : 4;
+  const softMessage = weekDays.length > 0 && weekDays.length !== suggestedCount
+    ? `Sugestão para Nível ${level}: ${suggestedCount} dias. Você pode escolher quantos quiser — ajuste a alocação dos treinos no Personalizar planilha.`
+    : null;
 
   // Distribuição da fase atual
   const weeks = useMemo(() => {

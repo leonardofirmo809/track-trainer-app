@@ -1,8 +1,9 @@
 import { createFileRoute, Outlet, Navigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Activity, Menu } from "lucide-react";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { Button } from "@/components/ui/button";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";

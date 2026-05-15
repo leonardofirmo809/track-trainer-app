@@ -92,6 +92,7 @@ function Planilha5kmPage() {
       setWeekDays(defaultDaysFor(p.level));
       setPhase(p.currentPhase);
       setApplied(true);
+      setOverrides(getOverridesFromPayload(plan.payload));
     } else if (dataQuery.data) {
       const studentLevel = dataQuery.data.student?.level;
       const suggested: 1 | 2 = studentLevel === "iniciante" ? 1 : 2;

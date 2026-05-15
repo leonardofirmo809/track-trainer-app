@@ -1,50 +1,83 @@
-## Fechar o signup público — apenas convidados criam conta
+## Evoluir `/admin/treinadores` com abas, ver alunos, remover acesso e limite
 
-Antes de mais nada: a página `/signup` **já é fechada hoje** (mostra "Cadastro por convite" com link para `/login`, sem formulário). E o fluxo `/aceitar-convite?token=...` também já existe. O que falta é fechar o portão no **Auth** e ajustar o aceite de convite para continuar funcionando depois disso.
+Mantemos a URL atual e ampliamos a página. Sem nova rota.
 
-### O problema com a abordagem ingênua
-Se simplesmente desabilitarmos signups no Auth (`disable_signup = true`), a página `/aceitar-convite` para de funcionar — ela usa `supabase.auth.signUp`, que passa a ser bloqueado. Precisamos trocar esse caminho por uma criação de usuário **server-side**, que ignora a flag.
+### 1. Backend — RPC `get_all_coaches`
+Migration nova:
+```sql
+CREATE OR REPLACE FUNCTION public.get_all_coaches()
+RETURNS TABLE (
+  id uuid, full_name text, email text,
+  created_at timestamptz, has_role boolean,
+  students_count integer
+)
+LANGUAGE sql SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    p.id, p.full_name, u.email, u.created_at,
+    EXISTS (SELECT 1 FROM public.user_roles r WHERE r.user_id = p.id AND r.role = 'coach') AS has_role,
+    (SELECT count(*)::int FROM public.students s WHERE s.coach_id = p.id) AS students_count
+  FROM public.profiles p
+  JOIN auth.users u ON u.id = p.id
+  WHERE EXISTS (
+    SELECT 1 FROM public.user_roles r2
+    WHERE r2.user_id = auth.uid() AND r2.role = 'admin'
+  )
+  ORDER BY u.created_at DESC;
+$$;
 
-### Mudanças
+REVOKE EXECUTE ON FUNCTION public.get_all_coaches() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_all_coaches() TO authenticated;
+```
+A checagem de admin **dentro da função** é o gate de segurança (SECURITY DEFINER expõe `auth.users.email`, então retornamos vazio para não-admins).
 
-**1. Desabilitar signup público** (Lovable Cloud → Auth)
-- `disable_signup: true`. Login segue normal. Já existe um fluxo admin (`admin-coaches.functions.ts`) que usa `supabaseAdmin.auth.admin.createUser` — esse continua funcionando porque é service-role.
+### 2. Server function nova — `removeCoachRole`
+`src/lib/admin-coaches.functions.ts` ganha:
+- Input: `{ userId: string }` (Zod uuid).
+- Middleware `requireSupabaseAuth` + checagem `has_role('admin')`.
+- `supabaseAdmin.from('user_roles').delete().eq('user_id', userId).eq('role', 'coach')`.
+- Insere `admin_audit_log` com `event_type = 'coach_role_removed'` (precisa adicionar esse valor ao enum `audit_event` na mesma migration).
+- Bloqueia o admin de remover a própria role.
 
-**2. Mover a criação de conta do convite para o servidor**
-Novo `acceptInvite` em `src/lib/invites.functions.ts`:
-- Input: `{ token, password, fullName? }` (Zod, password ≥ 8).
-- Lê `coach_invites` por token (via `supabaseAdmin`); valida `status = 'pending'`, não expirado.
-- `supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name } })`.
-- Retorna `{ ok: true, email }` para o client. O trigger existente `handle_new_user` cuida de criar o `profile`, atribuir role `coach` e marcar o convite como `accepted`.
+Para "ver alunos", **não precisa server fn nova**: admin já tem RLS `admins see all students`, então o cliente pode `supabase.from('students').select(...).eq('coach_id', id)` direto.
 
-`src/routes/aceitar-convite.tsx`:
-- Submit chama `acceptInvite` (server fn, não autenticada — é pública).
-- Em sucesso, faz `supabase.auth.signInWithPassword({ email, password })` e navega para `/dashboard`.
-- Mantém a tela de erro/expirado igual.
+### 3. UI — `src/routes/_authenticated/admin.treinadores.tsx`
 
-**3. Endurecer o trigger `handle_new_user`** (defesa em profundidade)
-Hoje, qualquer signup vira `coach`, mesmo sem convite. Atualizar para:
-- Procurar convite pendente pelo email; se não houver, `RAISE EXCEPTION 'Cadastro permitido apenas por convite.'` — o usuário nem chega a ser criado.
-- Se houver, segue o comportamento atual (cria profile, atribui role `coach`, marca convite como `accepted`).
+**Topo** (acima das abas):
+- Título "Usuários" + descrição.
+- Badge contador: `X de 4 treinadores ativos` — `X = coaches.filter(c => c.has_role).length`. Constante `COACH_LIMIT = 4` no topo do arquivo. Quando `X >= 4`, os botões "Convidar treinador" e "Criar conta manual" ficam desabilitados com tooltip "Limite de 4 treinadores atingido".
 
-Isso garante que mesmo se alguém reabrir signup por engano, ou obtiver o service role, contas só nascem com convite válido.
+**Abas** (`Tabs` shadcn) com dois valores: `treinadores` (default) e `convites`.
 
-**4. Pequeno ajuste em `/signup`**
-- Se a URL trouxer `?token=xxx`, redirecionar imediatamente para `/aceitar-convite?token=xxx` (conveniência — caso o link do email aponte por engano para `/signup`).
-- Sem token: mantém a tela atual ("Cadastro por convite", botão para `/login`). O texto já cobre o pedido do enunciado.
+**Aba "Treinadores"**:
+- Tabela: Nome | Email | Cadastrado em | Status | Ações.
+- Status: badge "Ativo" se `has_role`, "Sem acesso" se não.
+- Ação **"Ver alunos"** → abre `Sheet` lateral que carrega `students` do coach (id, nome, email, nível, created_at) e mostra em tabela compacta. Se zero, "Este treinador ainda não tem alunos."
+- Ação **"Remover acesso"** → `AlertDialog` de confirmação ("Os dados dos alunos serão preservados. O treinador não conseguirá mais acessar o sistema."). Confirma → chama `removeCoachRole`. Botão escondido se `c.id === user.id` (não pode remover a si mesmo) ou se `!c.has_role` (já está sem acesso).
+- Botões do topo "Convidar treinador" e "Criar conta manual" continuam aqui (já existem).
 
-**5. Não mexer**
-- `/login`: intocado.
-- Fluxo admin de criar coach (`admin-coaches.functions.ts`): já usa service role; segue funcionando.
-- Templates de email do convite e link `/aceitar-convite`: já estão certos.
+**Aba "Convites"**:
+- Mantém a tabela atual (Nome | Email | Status | Expira em | Ações com Copiar/Reenviar/Revogar).
+- "Novo convite" usa o mesmo `Dialog` que já existe.
+
+**Carregamento**:
+- Substitui o `load()` atual por:
+  - `supabase.rpc('get_all_coaches')` → `setCoaches`.
+  - `supabase.from('coach_invites').select('*').order('created_at', { ascending: false })` → `setInvites`.
+- Apaga o duplo fetch atual (user_roles + profiles).
+
+### 4. Tipos
+- `Coach { id, full_name, email, created_at, has_role, students_count }`.
+- Atualiza `src/integrations/supabase/types.ts`? Não — é regenerado automaticamente pela migration; só usar typed RPC.
 
 ### Arquivos
-- **Novo**: `src/lib/invites.functions.ts` (server fn `acceptInvite`).
-- **Edita**: `src/routes/aceitar-convite.tsx` (chama server fn + signIn), `src/routes/signup.tsx` (redirect se houver token).
-- **Migration**: substitui `public.handle_new_user` para exigir convite pendente.
-- **Configuração**: desabilita signup público no Auth.
+- **Migration**: `get_all_coaches` + grants + adicionar `'coach_role_removed'` ao enum `audit_event`.
+- **Edita** `src/lib/admin-coaches.functions.ts`: nova server fn `removeCoachRole`.
+- **Reescreve** `src/routes/_authenticated/admin.treinadores.tsx`: abas, contador, drawer de alunos, remover acesso.
 
 ### Fora de escopo
-- "Esqueci minha senha" / página `/reset-password` (você mencionou que não tem hoje — posso fazer em separado se quiser).
-- Login social (Google, etc.).
-- HIBP / verificação de senha vazada.
+- Renomear/criar `/admin/usuarios` (você optou por manter a URL).
+- Excluir auth.users em cascata.
+- Tornar o limite de 4 configurável (fica hardcoded por enquanto).
+- Filtros / busca por nome (a base é pequena; podemos adicionar depois se precisar).

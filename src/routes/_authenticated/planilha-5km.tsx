@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PrescricaoEditorSheet } from "@/components/prescricao/PrescricaoEditorSheet";
+import { PlanilhaCustomizerSheet } from "@/components/planilha/PlanilhaCustomizerSheet";
+import { applyOverrides, getOverridesFromPayload, type WorkoutOverrides } from "@/lib/workout-overrides";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -56,6 +57,7 @@ function Planilha5kmPage() {
   const [openWorkout, setOpenWorkout] = useState<{ wo: Workout; day: DayCode } | null>(null);
   const [saving, setSaving] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [overrides, setOverrides] = useState<WorkoutOverrides>({});
   const [exporting, setExporting] = useState(false);
   const branding = useCoachBranding();
 
@@ -110,8 +112,9 @@ function Planilha5kmPage() {
   const weeks = useMemo(() => {
     if (!applied || validation) return null;
     const phaseWeeks = WORKOUTS[level][phase];
-    return phaseWeeks.map((wos) => distributeWeek(wos, weekDays, level));
-  }, [applied, level, phase, weekDays, validation]);
+    const phaseOv = overrides[String(phase)] ?? {};
+    return phaseWeeks.map((wos, w) => distributeWeek(applyOverrides(wos, phaseOv[String(w)]), weekDays, level));
+  }, [applied, level, phase, weekDays, validation, overrides]);
 
   async function persistConfig(opts: { phase?: 1 | 2 | 3 | 4 } = {}) {
     if (!studentId) return;
@@ -385,12 +388,19 @@ function Planilha5kmPage() {
       )}
 
       {dataQuery.data?.plan?.id && (
-        <PrescricaoEditorSheet
+        <PlanilhaCustomizerSheet
           open={editorOpen}
           onOpenChange={setEditorOpen}
-          studentId={studentId}
           planId={dataQuery.data.plan.id}
-          onSaved={() => dataQuery.refetch()}
+          initialOverrides={overrides}
+          onSaved={(ov) => { setOverrides(ov); dataQuery.refetch(); }}
+          phases={[1, 2, 3, 4]}
+          initialPhase={phase}
+          phaseLabels={PHASE_LABELS}
+          getRawPhaseWeeks={(p) => WORKOUTS[level][p as 1|2|3|4] as unknown as Workout[][]}
+          distributeWeek={(wos) => distributeWeek(wos as Workout[], weekDays, level)}
+          workoutTypes={WORKOUT_TYPES}
+          workoutTypesList={Object.keys(WORKOUT_TYPES)}
         />
       )}
     </div>

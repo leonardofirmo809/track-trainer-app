@@ -15,12 +15,13 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Copy, KeyRound, Plus, RefreshCw, ShieldOff, Trash2, UserPlus, Users } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/treinadores")({ component: AdminUsersPage });
 
-const COACH_LIMIT = 4;
+const LIMIT_TOOLTIP = "Limite de licenças atingido. Entre em contato para ampliar seu plano.";
 
 interface Invite {
   id: string;
@@ -59,6 +60,7 @@ function AdminUsersPage() {
   const { user } = useAuth();
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
+  const [coachLimit, setCoachLimit] = useState(4);
   const [loading, setLoading] = useState(true);
 
   const [openInvite, setOpenInvite] = useState(false);
@@ -84,20 +86,24 @@ function AdminUsersPage() {
 
   const load = async () => {
     setLoading(true);
-    const [coachRes, inviteRes] = await Promise.all([
+    const [coachRes, inviteRes, settingRes] = await Promise.all([
       supabase.rpc("get_all_coaches"),
       supabase.from("coach_invites").select("*").order("created_at", { ascending: false }),
+      supabase.from("app_settings").select("value").eq("key", "max_coaches").maybeSingle(),
     ]);
     if (coachRes.error) toast.error(coachRes.error.message);
     setCoaches((coachRes.data ?? []) as Coach[]);
     setInvites((inviteRes.data ?? []) as Invite[]);
+    const parsed = parseInt(settingRes.data?.value ?? "", 10);
+    setCoachLimit(Number.isFinite(parsed) && parsed > 0 ? parsed : 4);
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
   const activeCount = coaches.filter((c) => c.has_role).length;
-  const atLimit = activeCount >= COACH_LIMIT;
+  const atLimit = activeCount >= coachLimit;
+  const usagePct = Math.min(100, Math.round((activeCount / Math.max(coachLimit, 1)) * 100));
 
   const inviteLink = (token: string) => `${window.location.origin}/aceitar-convite?token=${token}`;
 
@@ -204,12 +210,16 @@ function AdminUsersPage() {
     <TooltipProvider>
       <div className="space-y-8 max-w-6xl">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
+          <div className="min-w-[260px]">
             <h1 className="text-3xl font-display font-bold">Usuários</h1>
             <p className="text-muted-foreground">Gerencie treinadores e convites.</p>
-            <Badge variant={atLimit ? "destructive" : "secondary"} className="mt-3">
-              {activeCount} de {COACH_LIMIT} treinadores ativos
-            </Badge>
+            <div className="mt-3 space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">Treinadores: {activeCount} / {coachLimit}</span>
+                {atLimit && <Badge variant="destructive">Limite atingido</Badge>}
+              </div>
+              <Progress value={usagePct} className={atLimit ? "[&>div]:bg-destructive" : ""} />
+            </div>
           </div>
           <div className="flex gap-2">
             <Tooltip>
@@ -240,7 +250,7 @@ function AdminUsersPage() {
                   </Dialog>
                 </span>
               </TooltipTrigger>
-              {atLimit && <TooltipContent>Limite de {COACH_LIMIT} treinadores atingido</TooltipContent>}
+              {atLimit && <TooltipContent>{LIMIT_TOOLTIP}</TooltipContent>}
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -266,7 +276,7 @@ function AdminUsersPage() {
                   </Dialog>
                 </span>
               </TooltipTrigger>
-              {atLimit && <TooltipContent>Limite de {COACH_LIMIT} treinadores atingido</TooltipContent>}
+              {atLimit && <TooltipContent>{LIMIT_TOOLTIP}</TooltipContent>}
             </Tooltip>
           </div>
         </div>

@@ -402,7 +402,10 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
         x: margin, y: y - dayPillH, width: contentW, height: dayPillH,
         color: dayPill,
       });
-      const dayLabel = dayFull[a.day] ?? a.day;
+      const rawDay = dayFull[a.day] ?? a.day;
+      const dayLabel = /^(SEGUNDA|TERÇA|QUARTA|QUINTA|SEXTA)$/i.test(rawDay)
+        ? `${rawDay}-FEIRA`
+        : rawDay;
       drawText(page, dayLabel, margin + 12, y - 15, bold, 10.5, ink);
 
       // título do treino

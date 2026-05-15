@@ -41,7 +41,7 @@ export const PHASE_LABELS_42KM: Record<Phase42, { title: string; subtitle: strin
   2: { title: "Planilha 2", subtitle: "Preparação Geral" },
   3: { title: "Planilha 3", subtitle: "Preparação Geral" },
   4: { title: "Planilha 4", subtitle: "Preparação Específica" },
-  5: { title: "Planilha 5", subtitle: "Preparação Específica / Prova" },
+  5: { title: "Planilha 5", subtitle: "Polimento / Prova" },
 };
 
 export type Workout42km = {
@@ -208,15 +208,15 @@ const N1_P4: PhaseWeeks42km = [
   [ tempoRun("T01",1,24),                intervaladoLongo("T02",2,3,3,2), regenerativo("T03",3,40), longaoDist("T04",4,29) ],
   [ baseAerobia("T05",1,60),             intervaladoLongo("T06",2,5,5,3), regenerativo("T07",3,40), progressivoLongo("T08",4,1000,23000,3000) ],
   [ tempoRun("T09",1,20),                intervaladoLongo("T10",2,4,3,2), regenerativo("T11",3,60), corridaRapidaLonga("T12",4,10,{recZ1m:800}) ],
-  [ teste3km("T13",1),                   regenerativo("T14",2,50),        regenerativo("T15",3,30,"Regenerativo curto pré-prova"), prova42km("T16",4,39000,3195) ],
+  [ regenerativo("T13",1,40),            teste3km("T14",2),               regenerativo("T15",3,40), longaoDist("T16",4,20) ],
 ];
 
-// Planilha 5 N1 — versão alternativa idêntica à P4
+// Planilha 5 N1 — Polimento + Prova (volumes ~15% menores que N2_P5)
 const N1_P5: PhaseWeeks42km = [
-  [ tempoRun("T01",1,24),                intervaladoLongo("T02",2,3,3,2), regenerativo("T03",3,40), longaoDist("T04",4,29) ],
-  [ baseAerobia("T05",1,60),             intervaladoLongo("T06",2,5,5,3), regenerativo("T07",3,40), progressivoLongo("T08",4,1000,23000,3000) ],
-  [ tempoRun("T09",1,20),                intervaladoLongo("T10",2,4,3,2), regenerativo("T11",3,60), corridaRapidaLonga("T12",4,10,{recZ1m:800}) ],
-  [ teste3km("T13",1),                   regenerativo("T14",2,50),        regenerativo("T15",3,30,"Regenerativo curto pré-prova"), prova42km("T16",4,39000,3195) ],
+  [ tempoRun("T01",1,24),                intervaladoLongo("T02",2,5,4,3),               regenerativo("T03",3,50), longaoDist("T04",4,22) ],
+  [ baseAerobia("T05",1,50),             intervaladoLongo("T06",2,4,4,3),               regenerativo("T07",3,50), longaoDist("T08",4,16) ],
+  [ tempoRun("T09",1,18),                corridaRapida("T10",2,6,2,2),                  regenerativo("T11",3,40), longaoDist("T12",4,12) ],
+  [ corridaRapida("T13",1,5,2,2),        regenerativo("T14",2,50),                      regenerativo("T15",3,30,"Regenerativo curto pré-prova"), prova42km("T16",4,39000,3195) ],
 ];
 
 export const LEVEL_1_42KM: PhasesByLevel42km = { 1: N1_P1, 2: N1_P2, 3: N1_P3, 4: N1_P4, 5: N1_P5 };

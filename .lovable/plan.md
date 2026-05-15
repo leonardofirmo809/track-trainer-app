@@ -1,73 +1,42 @@
-# Plano — Planilha 42km (Maratona)
+## Correção da estrutura das Planilhas 42km
 
-Replicar a arquitetura já consolidada da Planilha 21km, adaptando volume, tipos de treino e prova final (42.195m).
+A implementação atual coloca a PROVA na Semana 4 da Planilha 4 (N1_P4 e N2_P5) e duplica N1_P5 como cópia da P4. Isso viola a regra: prova só na **Semana 4 da Planilha 5**, nunca na Planilha 4.
 
-## Arquitetura (espelha 21km)
+### Mudanças em `src/lib/planilha-42km-data.ts`
 
-Banco de dados: `plan_type` enum já contém `'42km'`. Persistência em `training_plans.payload` (mesma tabela usada por 5/10/21km), nenhuma migration necessária.
+**Nível 1 — N1_P4 (Semana 4)** — remover prova, virar tapering com Teste 3km no T14:
+- T13 (TER): `regenerativo(40)`
+- T14 (QUI): `teste3km` ← era T13
+- T15 (SEX): `regenerativo(40)`
+- T16 (SAB): `longaoDist(20)` (longão, não prova)
 
-## Arquivos a criar
+**Nível 1 — N1_P5** — substituir a cópia atual por uma planilha real de polimento + prova:
+- Sem 1: tapering moderado (tempo run, intervalado curto, regenerativo, longão médio ~22km)
+- Sem 2: redução de volume (base aeróbia, intervalado leve, regenerativo, longão ~16km)
+- Sem 3: polimento (tempo run curto, CR curto, regenerativo, longão curto ~12km)
+- Sem 4 (semana da prova):
+  - T13 (TER): `corridaRapida` curto
+  - T14 (QUI): `regenerativo(50)`
+  - T15 (SEX): `regenerativo(30, "Pré-prova")`
+  - T16 (SAB): `prova42km(39000, 3195)` — 1km Z1 + 39km Z2 + 3,195km Z3
 
-```text
-src/lib/planilha-42km-data.ts          # 2 níveis × 5 planilhas × 4 semanas × 4 slots
-src/lib/planilha-42km-distribute.ts    # validação: sempre 4 dias
-src/lib/planilha-42km-stats.ts         # cálculo de duração/volume por FTP (cópia adaptada)
-src/lib/planilha-42km-pdf.ts           # geração PDF (cópia adaptada do 21km)
-src/lib/planilha-42km.functions.ts     # serverFns get/save (plan_type='42km')
-src/routes/_authenticated/planilha-42km.tsx   # substitui o placeholder atual
-```
+**Nível 2 — N2_P4 (Semana 4)** — manter como já está (Teste 3km T13, regen, regen, progressivo longo). Garantir que **não há prova**.
 
-## Banco de treinos (`planilha-42km-data.ts`)
+**Nível 2 — N2_P5 (Semana 4)** — já está correta (T13 CR, T14 Regen 50, T15 Regen 30, T16 Prova). Conferir e manter.
 
-Reutilizar os builders do 21km (`progressivo`, `corridaRapida`, `subidasSec/Min`, `tempoRun`, `intervaladoLongo/Moderado/Curto`, `corridaRapidaLonga`, `regenerativo`, `baseAerobia`, `longaoDist`, `progressivoLongo`, `teste3km`). Adicionar:
+### Ajustes auxiliares
 
-- `prova42km(code, slot, z2m, z3m)` — análogo a `simulado21km`, mas com label "PROVA 42KM" e nota "Prova de Maratona — 42.195m total". Estrutura padrão: `1000m Z1 + 39000m Z2 + 3195m Z3`.
-- Novo tipo no enum `WorkoutType42km`: adicionar `"Prova 42km"` em vez de `"Simulado 21km"`. Restante igual.
+- **`PHASE_LABELS_42KM`**: confirmar P4 = "Preparação Específica", P5 = "Polimento / Prova".
+- **`src/routes/_authenticated/planilha-42km.tsx`**: o destaque visual "PROVA 42KM" deve aparecer **apenas** na Sem 4 / Slot 4 da Planilha 5 (ambos os níveis). Remover qualquer destaque de prova na Planilha 4.
+- **`.lovable/plan.md`**: atualizar a descrição (item que diz "Sem 4 P4/P5 N1 e P5 N2") para refletir que a prova está só em P5.
 
-Cinco planilhas por nível, conforme dados fornecidos pelo usuário:
+### Verificação pós-fix
 
-- **N1_P1..P3**: Preparação Geral (mesmos tipos de treino do briefing).
-- **N1_P4 e N1_P5**: Preparação Específica. Sem 4 / Slot 4 = `prova42km`. Sem 4 / Slot 1 = `teste3km`.
-- **N2_P1..P3**: Preparação Geral, volume maior. P2 Sem 4 / Slot 1 = `teste3km`.
-- **N2_P4**: Específica com `teste3km` na Sem 4 Slot 1 (sem prova).
-- **N2_P5**: Específica com **PROVA 42km** na Sem 4 Slot 4.
+1. N1_P4 Sem 4 e N2_P4 Sem 4: nenhum workout do tipo `"Prova 42km"`.
+2. N1_P5 Sem 4 Slot 4 e N2_P5 Sem 4 Slot 4: exatamente um `prova42km` com `1000m Z1 + 39000m Z2 + 3195m Z3`.
+3. Teste 3km presente em N1_P4 Sem 4 (T14), N2_P2 Sem 4 (T13) e N2_P4 Sem 4 (T13) — não em P5.
+4. UI: badge "PROVA" só aparece em P5 Sem 4.
 
-Distribuição de slots em todas as semanas: Slot 1 = TER, Slot 2 = QUI, Slot 3 = SEX (regenerativo), Slot 4 = SAB (longão / CR longa / progressivo longo / prova).
+### Pergunta antes de implementar
 
-## Distribuição de dias (`planilha-42km-distribute.ts`)
-
-Sempre 4 dias (qualquer nível). Default: `["TER","QUI","SEX","SAB"]`. Mesmo padrão do 21km.
-
-## Stats / PDF / serverFns
-
-Cópias diretas dos arquivos `planilha-21km-*` com renomeações:
-- `makeStatsLookup42km`, `generatePlanilha42kmPdf`, `getPlanilha42kmData`, `savePlanilha42kmConfig`.
-- `plan_type` nas queries: `'42km'`.
-- Título do PDF: "Planilha 42km — Maratona".
-
-## Rota (`src/routes/_authenticated/planilha-42km.tsx`)
-
-Substituir o placeholder atual. Cópia da página 21km com:
-- Imports apontando para os módulos `*-42km*`.
-- Título "Planilha 42KM — Maratona".
-- Texto da prova final: "PROVA 42KM — 42.195m" (no destaque visual da Sem 4 Slot 4 das P4/P5 N1 e P5 N2).
-- Aviso do Teste 3km mantido idêntico.
-
-## Comportamentos UI/UX (todos já presentes no 21km, herdados)
-
-Seleção de nível/planilha, entrada de FTP com cálculo automático de zonas, calendário semanal SEG–DOM com OFFs fixos, card de treino com Aquecimento/Principal/Recuperação, destaque do Teste 3km e da Prova, totais (volume, duração, % L vs % M/H), 5 lembretes fixos, macro view por planilha — tudo já implementado na rota base copiada.
-
-## Verificação pós-implementação
-
-1. Build limpo (sem imports quebrados, sem chain de `createServerFn` quebrada).
-2. Acessar `/planilha-42km`, configurar nível/dias/FTP, navegar pelas 5 planilhas × 4 semanas e conferir:
-   - Aquecimentos das CR Longas: 800m Z1 + 1600m Z2 (exceto N2 P5 Sem 1: 1600m Z1 + 1600m Z2).
-   - Sem 4 P4/P5 N1 e P5 N2: Slot 4 marcado como **PROVA 42KM** com 1000m Z1 + 39000m Z2 + 3195m Z3.
-   - Teste 3km destacado nas semanas indicadas.
-3. Exportar PDF de ao menos uma planilha completa e conferir layout.
-
-## Notas técnicas
-
-- Nenhuma migration necessária (`plan_type` já tem `'42km'`).
-- Sidebar já tem entrada para `planilha-42km` apontando para a rota; nada a alterar lá.
-- Reuso máximo de tipos do `planilha-5km-data.ts` (`Item`, `Section`, `ZoneId`, `DayCode`, etc.) via re-export, igual ao 21km.
+A Planilha 5 do **Nível 1** precisa de conteúdo real para Sem 1–3 (a versão atual é uma cópia da P4). Posso usar a estrutura do N2_P5 como base (mesmos tipos de treino, volumes ~15% menores) ou você quer enviar os treinos exatos das semanas 1–3 da P5 N1?

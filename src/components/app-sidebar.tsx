@@ -22,6 +22,9 @@ const planos = [
   { title: "Planilha 42KM", url: "/planilha-42km", icon: RouteIcon },
 ];
 
+const activeCls =
+  "data-[active=true]:bg-accent data-[active=true]:text-primary data-[active=true]:font-semibold data-[active=true]:border-l-[3px] data-[active=true]:border-primary data-[active=true]:rounded-l-none";
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -48,7 +51,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {main.map((i) => (
                 <SidebarMenuItem key={i.url}>
-                  <SidebarMenuButton asChild isActive={isActive(i.url)}>
+                  <SidebarMenuButton asChild isActive={isActive(i.url)} tooltip={i.title} className={activeCls}>
                     <Link to={i.url}><i.icon /><span>{i.title}</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -62,7 +65,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {planos.map((i) => (
                 <SidebarMenuItem key={i.url}>
-                  <SidebarMenuButton asChild isActive={isActive(i.url)}>
+                  <SidebarMenuButton asChild isActive={isActive(i.url)} tooltip={i.title} className={activeCls}>
                     <Link to={i.url}><i.icon /><span>{i.title}</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -76,27 +79,27 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={path === "/admin"}>
+                  <SidebarMenuButton asChild isActive={path === "/admin"} tooltip="Visão geral" className={activeCls}>
                     <Link to="/admin"><Shield /><span>Visão geral</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin/treinadores")}>
+                  <SidebarMenuButton asChild isActive={isActive("/admin/treinadores")} tooltip="Treinadores" className={activeCls}>
                     <Link to="/admin/treinadores"><Users /><span>Treinadores</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin/alunos")}>
+                  <SidebarMenuButton asChild isActive={isActive("/admin/alunos")} tooltip="Alunos" className={activeCls}>
                     <Link to="/admin/alunos"><ClipboardList /><span>Alunos</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin/auditoria")}>
+                  <SidebarMenuButton asChild isActive={isActive("/admin/auditoria")} tooltip="Auditoria" className={activeCls}>
                     <Link to="/admin/auditoria"><ScrollText /><span>Auditoria</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin/configuracoes")}>
+                  <SidebarMenuButton asChild isActive={isActive("/admin/configuracoes")} tooltip="Configurações" className={activeCls}>
                     <Link to="/admin/configuracoes"><Settings /><span>Configurações</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -114,11 +117,9 @@ export function AppSidebar() {
               <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
             </div>
           )}
-          {!collapsed && (
-            <Button size="icon" variant="ghost" onClick={() => signOut()} title="Sair">
-              <LogOut className="size-4" />
-            </Button>
-          )}
+          <Button size="icon" variant="ghost" onClick={() => signOut()} title="Sair" className="shrink-0">
+            <LogOut className="size-4" />
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>

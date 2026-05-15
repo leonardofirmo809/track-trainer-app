@@ -206,39 +206,86 @@ function SessionDayCard({ weekIndex, day, session }: { weekIndex: number; day: D
     id: `card-${weekIndex}-${day}`,
     data: { weekIndex, day },
   });
-  const { openEditor, openLibrary, removeSession } = useTrainingStore();
+  const { openEditor, removeSession } = useTrainingStore();
+  const [swapOpen, setSwapOpen] = useState(false);
   const cfg = INTENSITY_CONFIG[session.intensity];
 
   return (
-    <div
-      ref={setNodeRef}
-      className={cn("flex-1 rounded-md bg-background p-2 flex flex-col gap-1.5 text-xs", cfg.cardClass, isDragging && "opacity-40")}
+    <QuickSwapPopover
+      weekIndex={weekIndex}
+      day={day}
+      currentSessionId={session.id}
+      open={swapOpen}
+      onOpenChange={setSwapOpen}
     >
-      <div className="flex items-start justify-between gap-1">
-        <button {...attributes} {...listeners} className="text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing">
-          <GripVertical className="size-3.5" />
-        </button>
-        <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 h-4", cfg.badgeClass)}>{cfg.label}</Badge>
+      <div
+        ref={setNodeRef}
+        role="button"
+        tabIndex={0}
+        aria-label={`Trocar sessão de ${day}, semana ${weekIndex + 1}: ${session.code} ${session.name}`}
+        onClick={() => setSwapOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setSwapOpen(true);
+          }
+        }}
+        className={cn(
+          "group flex-1 rounded-md bg-background p-2 flex flex-col gap-1.5 text-xs cursor-pointer hover:ring-1 hover:ring-primary/40 transition-shadow",
+          cfg.cardClass,
+          isDragging && "opacity-40",
+        )}
+      >
+        <div className="flex items-start justify-between gap-1">
+          <button
+            {...attributes}
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+            className="text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+            aria-label="Arrastar para outro dia"
+          >
+            <GripVertical className="size-3.5" />
+          </button>
+          <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0 h-4", cfg.badgeClass)}>{cfg.label}</Badge>
+        </div>
+        <div>
+          <div className="font-bold leading-tight">{session.code}</div>
+          <div className="text-muted-foreground text-[10px] leading-tight">{session.name}</div>
+        </div>
+        <div className="font-mono text-[10px] text-muted-foreground">
+          {session.duration ? formatDuration(session.duration) : formatDistance(session.distance)}
+        </div>
+        <div className="flex items-center gap-1 mt-auto pt-1 opacity-60 group-hover:opacity-100 transition-opacity">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-6"
+            title="Editar sessão"
+            onClick={(e) => { e.stopPropagation(); openEditor("edit", session, { weekIndex, day }); }}
+          >
+            <Pencil className="size-3" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-6"
+            title="Trocar pela biblioteca"
+            onClick={(e) => { e.stopPropagation(); setSwapOpen(true); }}
+          >
+            <Replace className="size-3" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-6 text-destructive"
+            title="Remover sessão"
+            onClick={(e) => { e.stopPropagation(); removeSession(weekIndex, day); }}
+          >
+            <X className="size-3" />
+          </Button>
+        </div>
       </div>
-      <div>
-        <div className="font-bold leading-tight">{session.code}</div>
-        <div className="text-muted-foreground text-[10px] leading-tight">{session.name}</div>
-      </div>
-      <div className="font-mono text-[10px] text-muted-foreground">
-        {session.duration ? formatDuration(session.duration) : formatDistance(session.distance)}
-      </div>
-      <div className="flex items-center gap-1 mt-auto pt-1">
-        <Button size="icon" variant="ghost" className="size-6" onClick={() => openEditor("edit", session, { weekIndex, day })}>
-          <Pencil className="size-3" />
-        </Button>
-        <Button size="icon" variant="ghost" className="size-6" onClick={() => openLibrary({ weekIndex, day })}>
-          <Replace className="size-3" />
-        </Button>
-        <Button size="icon" variant="ghost" className="size-6 text-destructive" onClick={() => removeSession(weekIndex, day)}>
-          <X className="size-3" />
-        </Button>
-      </div>
-    </div>
+    </QuickSwapPopover>
   );
 }
 

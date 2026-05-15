@@ -1,71 +1,62 @@
-# Plano — Reformular tela de listagem de alunos
+## Objetivo
 
-## Mapeamentos importantes
+Redesenhar a UX das telas `/planilha-5km|10km|21km|42km` mantendo todo o backend existente (zonas, PDF, customizer, persistência por aluno). Mudanças são puramente de UI/presentation.
 
-- **Programa** (modal) = `target_distance` no schema. Valores: `10km` / `21km` / `42km` (sem 5km, conforme spec).
-- **Nível** (modal) = `level` enum existente. Mapeamento:
-  - "Nível 1" → `iniciante`
-  - "Nível 2" → `intermediario`
-  - Coluna na lista mostra "Nível 1" / "Nível 2" / "—" (escondendo `avancado` se aparecer dados antigos exibe "Avançado").
-- **Última atividade**: maior `created_at` em `tests` para o aluno; fallback `students.created_at` rotulado "Cadastro".
+## Escopo
 
-## 1. Header da tela (`src/routes/_authenticated/alunos.index.tsx`)
+Aplicar em todas as 4 telas `src/routes/_authenticated/planilha-*km.tsx`:
 
-- Título `Meus Alunos` + contador `({n})` ao lado.
-- Barra de busca por nome com filtro client-side em tempo real (mantém `useState` + filtro local — já existe).
-- Remover filtros de nível/distância existentes (escopo: simplificar conforme spec — apenas busca).
-- Botão "Novo aluno":
-  - Desktop: `Button` primário com ícone + texto, abre modal.
-  - Mobile: FAB `fixed bottom-20 right-4` (acima do bottom nav), ícone `Plus`, `aria-label`.
+1. **Seletor de planilha (topo)** — cards visuais para 5/10/21/42km
+2. **Seletor de aluno** — substituir o `Select` atual por search + popover
+3. **Toggle Nível 1 / Nível 2** — visual mais claro (mantém lógica atual)
+4. **Visualização das semanas** — desktop grid (já é), mobile vira accordion
+5. **Badges de intensidade** por tipo de treino (verde/amarelo/vermelho)
+6. **FAB mobile "Atribuir"** — abre o seletor de aluno
+7. **Toast de confirmação** ao trocar/atribuir aluno
 
-## 2. Lista desktop (`md:` e acima)
+## Componentes novos (compartilhados)
 
-- Tabela com colunas: Avatar+Nome (email abaixo), Programa (badge), Nível ("Nível 1/2"), Última atividade (data relativa), Ações.
-- Linha clicável (`onClick` para navegar ao perfil) com `cursor-pointer hover:bg-muted/50`.
-- Coluna ações: `Pencil` (abre modal de edição — fora de escopo agora, deixar disabled OU navegar para `/alunos/$studentId`) e `Trash2` em vermelho (`text-destructive`) com confirmação `AlertDialog`. **Decisão:** botão editar navega para o perfil (não há tela de editar inline). Lixeira chama `supabase.from('students').delete()` após confirmação.
-- Empty state: ícone `Users`, "Nenhum aluno cadastrado ainda", botão "Cadastrar primeiro aluno" que abre o modal.
+- `src/components/planilha/distance-selector.tsx` — 4 cards (5/10/21/42), aceita `current` e usa `<Link>` para navegar entre rotas. Card ativo: `border-primary bg-primary/5`. Cada card: ícone + título ("10 km") + subtítulo ("Para corredores de 45 a 55 min").
+- `src/components/planilha/student-picker.tsx` — Popover + Command (shadcn) com search por nome. Renderiza como botão "Atribuir a aluno" no desktop e como FAB no mobile (prop `variant`). Toast: `"Planilha {distância} Nível {n} atribuída a {nome}"`.
+- `src/components/planilha/intensity-badge.tsx` — mapeia `WORKOUT_TYPES_*` → cor (regenerativo/leve = verde, moderado/limiar = amarelo, intervalado/VO2/intenso = vermelho).
+- `src/components/planilha/weeks-view.tsx` — wrapper responsivo: `hidden md:grid` para o grid de semanas atual + `md:hidden` com `<Accordion>` (shadcn) onde cada item é uma semana. Recebe `weeks` (já calculado pela página) e renderiza cada treino com `IntensityBadge` + dia + duração/volume.
 
-## 3. Lista mobile (`< md`)
+## Mudanças por página `planilha-*km.tsx`
 
-- Cards empilhados (`md:hidden space-y-3`).
-- Cada card:
-  - `Avatar` 40px com iniciais; cor de fundo determinística por hash da inicial usando paleta de tokens do design system (variantes do `--primary`, `--accent`, `--success`, `--warning`, `--chart-*`).
-  - Nome em destaque (`font-medium`), linha menor com programa + nível.
-  - `ChevronRight` à direita.
-  - Card inteiro é `<Link>`.
-- **Swipe-to-remove**: implementar com touch events nativos no `<li>` (touchstart/move/end). Translate negativo até -88px revela botão "Remover" (vermelho, full-height, à direita absoluto). Abre AlertDialog ao tocar. Sem libs externas.
-- **Pull-to-refresh**: detectar `touchstart` no topo do scroll (window scrollY === 0), `touchmove` calcula delta vertical, mostra indicador (ícone `RefreshCw` rotacionando) acima da lista; ao soltar com delta > 70px chama `refetch()` do React Query. Implementação custom (~50 linhas), sem libs.
+Cada uma das 4 páginas recebe edições paralelas e mínimas:
 
-## 4. Modal Novo Aluno (`src/components/student-create-modal.tsx` — novo)
+- **Topo da página**: inserir `<DistanceSelector current="10km" />` antes do bloco de seleção de aluno.
+- **Bloco de aluno**: trocar o `Select` por `<StudentPicker variant="inline" value={studentId} onChange={setStudentId} />`.
+- **Toggle de nível**: manter o `Tabs` atual mas estilizar como pill-toggle maior (border/active state em `primary`).
+- **Lista de semanas**: substituir o JSX que hoje renderiza o grid por `<WeeksView weeks={weeks} />`. A lógica de cálculo (`distributeWeek`, `applyOverrides`, `phase`) fica intacta — só muda o componente de apresentação.
+- **FAB mobile**: adicionar `<StudentPicker variant="fab" .../>` no fim do JSX (fixed bottom-right, `md:hidden`, respeita o bottom-nav existente com `bottom-20`).
+- Tipos de treino → cor da badge: derivar de `WORKOUT_TYPES_5KM/10KM/21KM/42KM` (já existem em `src/lib/planilha-*-data.ts`).
 
-- Componente único responsivo:
-  - **Desktop (`md:`+):** `Dialog` shadcn central.
-  - **Mobile:** `Sheet` com `side="bottom"` (bottom sheet que sobe).
-- Campos:
-  - Nome completo (obrigatório, trim, 2–120 chars)
-  - E-mail (opcional, validação `z.string().email()`)
-  - Telefone (opcional, máx 32 chars)
-  - Programa — `Select`: `10km` / `21km` / `42km` (obrigatório)
-  - Nível — `Select`: "Nível 1" / "Nível 2" → grava `iniciante`/`intermediario`
-  - Observações — `Textarea` (opcional, máx 1000)
-- Validação inline com Zod + erro abaixo do campo (mensagem em vermelho).
-- Botão "Salvar" desabilitado até `nome.trim().length>=2 && programa`.
-- Submit: `supabase.from('students').insert({...})` com `coach_id`, `toast.success`, fecha modal, `queryClient.invalidateQueries(['students'])`.
+## Notas técnicas
 
-## 5. Query e dados
+- Acordeão mobile usa o componente `accordion` de shadcn (já presente em `src/components/ui/accordion.tsx`).
+- Cards de distância: `Link to="/planilha-Xkm"` — rotas já existem.
+- Intensidade: criar uma função única `getIntensity(typeKey: string): "leve" | "moderado" | "intenso"` em `src/lib/workout-intensity.ts` para ser usada pelas 4 planilhas.
+- Não mexer em: PDF (`generatePlanilha10kmPdf`), customizer (`PlanilhaCustomizerSheet`), cálculo de zonas, `savePlanilha*Config`, schema do banco.
+- Sem migrations, sem mudanças em RLS, sem novas dependências.
 
-- Query `['students']`: já carrega students. Adicionar query `['student-last-activity']` que faz `supabase.from('tests').select('student_id, created_at').order('created_at', { ascending: false })` e reduz para `Map<student_id, date>` no client.
-- `count` no header = `data?.length ?? 0`.
+## Fora de escopo
 
-## 6. Fora de escopo
+- Sidebar (continua com 4 itens; cards no topo já facilitam navegação).
+- Refatorar a lógica de `distributeWeek` ou overrides.
+- Persistência de "atribuição" diferente — o fluxo atual já salva o plano por `student_id` quando o usuário escolhe um aluno e configura.
 
-- Não tocar em `src/routes/_authenticated/alunos.novo.tsx` (manter para link direto / SEO; pode redirecionar futuramente).
-- Sem mudanças no schema do banco, RLS ou na rota de perfil do aluno.
-- Sem nova tabela "programas/níveis".
+## Arquivos
 
-## Arquivos afetados
+**Criar:**
+- `src/components/planilha/distance-selector.tsx`
+- `src/components/planilha/student-picker.tsx`
+- `src/components/planilha/intensity-badge.tsx`
+- `src/components/planilha/weeks-view.tsx`
+- `src/lib/workout-intensity.ts`
 
-- editar: `src/routes/_authenticated/alunos.index.tsx` (rewrite completo)
-- criar: `src/components/student-create-modal.tsx`
-- criar: `src/components/student-mobile-card.tsx` (card com swipe)
-- criar: `src/hooks/use-pull-to-refresh.ts`
+**Editar (apenas UI nas 4):**
+- `src/routes/_authenticated/planilha-5km.tsx`
+- `src/routes/_authenticated/planilha-10km.tsx`
+- `src/routes/_authenticated/planilha-21km.tsx`
+- `src/routes/_authenticated/planilha-42km.tsx`

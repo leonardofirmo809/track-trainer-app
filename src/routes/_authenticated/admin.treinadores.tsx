@@ -60,6 +60,7 @@ function AdminUsersPage() {
   const { user } = useAuth();
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
+  const [coachLimit, setCoachLimit] = useState(4);
   const [loading, setLoading] = useState(true);
 
   const [openInvite, setOpenInvite] = useState(false);

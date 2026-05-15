@@ -56,6 +56,9 @@ function LoginPage() {
                 <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>{loading ? "Entrando…" : "Entrar"}</Button>
+              <div className="text-center">
+                <Link to="/recuperar-senha" className="text-sm text-primary hover:underline">Esqueci minha senha</Link>
+              </div>
               <p className="text-xs text-muted-foreground text-center">
                 Acesso por convite. <Link to="/signup" className="text-primary font-medium hover:underline">Saiba mais</Link>
               </p>

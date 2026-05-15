@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
+import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
@@ -34,6 +36,16 @@ import { Route as AuthenticatedAlunosStudentIdPrescricaoPlanIdRouteImport } from
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
+  id: '/recuperar-senha',
+  path: '/recuperar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NovaSenhaRoute = NovaSenhaRouteImport.update({
+  id: '/nova-senha',
+  path: '/nova-senha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -150,6 +162,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
+  '/nova-senha': typeof NovaSenhaRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -172,6 +186,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
+  '/nova-senha': typeof NovaSenhaRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/minha-marca': typeof AuthenticatedMinhaMarcaRoute
@@ -195,6 +211,8 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
+  '/nova-senha': typeof NovaSenhaRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/signup': typeof SignupRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -219,6 +237,8 @@ export interface FileRouteTypes {
     | '/'
     | '/aceitar-convite'
     | '/login'
+    | '/nova-senha'
+    | '/recuperar-senha'
     | '/signup'
     | '/admin'
     | '/dashboard'
@@ -241,6 +261,8 @@ export interface FileRouteTypes {
     | '/'
     | '/aceitar-convite'
     | '/login'
+    | '/nova-senha'
+    | '/recuperar-senha'
     | '/signup'
     | '/dashboard'
     | '/minha-marca'
@@ -263,6 +285,8 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/aceitar-convite'
     | '/login'
+    | '/nova-senha'
+    | '/recuperar-senha'
     | '/signup'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
@@ -287,6 +311,8 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AceitarConviteRoute: typeof AceitarConviteRoute
   LoginRoute: typeof LoginRoute
+  NovaSenhaRoute: typeof NovaSenhaRoute
+  RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   SignupRoute: typeof SignupRoute
 }
 
@@ -297,6 +323,20 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar-senha': {
+      id: '/recuperar-senha'
+      path: '/recuperar-senha'
+      fullPath: '/recuperar-senha'
+      preLoaderRoute: typeof RecuperarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nova-senha': {
+      id: '/nova-senha'
+      path: '/nova-senha'
+      fullPath: '/nova-senha'
+      preLoaderRoute: typeof NovaSenhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -512,6 +552,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AceitarConviteRoute: AceitarConviteRoute,
   LoginRoute: LoginRoute,
+  NovaSenhaRoute: NovaSenhaRoute,
+  RecuperarSenhaRoute: RecuperarSenhaRoute,
   SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport

@@ -124,6 +124,15 @@
   --intensity-hard: oklch(0.68 0.20 45);
   --intensity-light-fg: oklch(0.45 0.18 145);
   --intensity-hard-fg: oklch(0.55 0.22 40);
+  --intensity-low-bg: oklch(0.94 0.06 165);
+  --intensity-low-fg: oklch(0.32 0.09 165);
+  --intensity-low-border: oklch(0.55 0.13 165);
+  --intensity-mod-bg: oklch(0.93 0.06 75);
+  --intensity-mod-fg: oklch(0.38 0.10 60);
+  --intensity-mod-border: oklch(0.60 0.13 60);
+  --intensity-high-bg: oklch(0.93 0.05 30);
+  --intensity-high-fg: oklch(0.40 0.13 30);
+  --intensity-high-border: oklch(0.62 0.18 30);
 }
 
 .dark {

@@ -289,9 +289,22 @@ function Planilha42kmPage() {
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle>4. Planilha e treinos</CardTitle>
-            <Button onClick={handleExportPdf} disabled={exporting} size="sm">
-              <Download /> {exporting ? "Gerando…" : "Exportar PDF"}
-            </Button>
+            <div className="flex gap-2">
+              {dataQuery.data?.plan?.id ? (
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/alunos/$studentId/prescricao/$planId" params={{ studentId, planId: dataQuery.data.plan.id }}>
+                    <Settings2 /> Personalizar planilha
+                  </Link>
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" disabled title="Salve a planilha primeiro">
+                  <Settings2 /> Personalizar planilha
+                </Button>
+              )}
+              <Button onClick={handleExportPdf} disabled={exporting} size="sm">
+                <Download /> {exporting ? "Gerando…" : "Exportar PDF"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <Tabs value={String(phase)} onValueChange={(v) => changePhase(Number(v) as Phase42)}>

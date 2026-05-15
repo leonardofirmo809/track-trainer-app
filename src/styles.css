@@ -203,9 +203,23 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+  label {
+    font-weight: 500;
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
+    font-weight: 600;
     letter-spacing: -0.02em;
+  }
+  [data-slot="card"] {
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease;
+  }
+  a > [data-slot="card"]:hover,
+  button > [data-slot="card"]:hover {
+    box-shadow: var(--shadow-card-hover);
   }
 }

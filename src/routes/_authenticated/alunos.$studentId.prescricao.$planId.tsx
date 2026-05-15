@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { ArrowLeft, Save, Undo2, Plus, X, Pencil, Replace, GripVertical, Trash2, Sparkles } from "lucide-react";
+import { QuickSwapPopover } from "@/components/prescricao/QuickSwapPopover";
 import {
   DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,

@@ -63,7 +63,7 @@ function AuditPage() {
           {loading ? <p className="text-muted-foreground">Carregando…</p> : rows.length === 0 ? (
             <p className="text-muted-foreground">Nenhum evento registrado.</p>
           ) : (
-            <Table>
+            <div className="-mx-2 sm:mx-0 overflow-x-auto"><Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Quando</TableHead>
@@ -85,7 +85,7 @@ function AuditPage() {
                   );
                 })}
               </TableBody>
-            </Table>
+            </Table></div>
           )}
         </CardContent>
       </Card>

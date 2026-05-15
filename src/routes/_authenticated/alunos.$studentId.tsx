@@ -119,7 +119,7 @@ function PerfilAluno() {
             <CardHeader><CardTitle>Histórico de testes</CardTitle></CardHeader>
             <CardContent className="p-0">
               {tests.data && tests.data.length > 0 ? (
-                <Table>
+                <div className="-mx-2 sm:mx-0 overflow-x-auto"><Table className="min-w-[640px]">
                   <TableHeader><TableRow>
                     <TableHead>Data</TableHead><TableHead>Tipo</TableHead><TableHead>Tempo</TableHead><TableHead>FTP (min/km)</TableHead><TableHead>Zonas</TableHead>
                   </TableRow></TableHeader>
@@ -167,7 +167,7 @@ function PerfilAluno() {
                       );
                     })}
                   </TableBody>
-                </Table>
+                </Table></div>
               ) : (
                 <p className="p-8 text-center text-sm text-muted-foreground">Nenhum teste registrado ainda.</p>
               )}
@@ -180,7 +180,7 @@ function PerfilAluno() {
             <CardHeader><CardTitle>Histórico de planilhas</CardTitle></CardHeader>
             <CardContent className="p-0">
               {plans.data && plans.data.length > 0 ? (
-                <Table>
+                <div className="-mx-2 sm:mx-0 overflow-x-auto"><Table className="min-w-[640px]">
                   <TableHeader><TableRow>
                     <TableHead>Tipo</TableHead><TableHead>Início</TableHead><TableHead>Fim</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
                   </TableRow></TableHeader>
@@ -201,7 +201,7 @@ function PerfilAluno() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </Table></div>
               ) : (
                 <p className="p-8 text-center text-sm text-muted-foreground">Nenhuma planilha gerada ainda.</p>
               )}

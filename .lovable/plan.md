@@ -1,70 +1,61 @@
-## Identidade visual: assessoria esportiva de corrida
+# Plano — Layout responsivo completo
 
-A boa notícia é que o projeto já usa tokens semânticos (`--primary`, `--background`, `--card`, etc.) consumidos por todos os componentes shadcn (Button, Input, Badge, Card…). Então **não preciso editar componentes**: basta reescrever o token central em `src/styles.css` e trocar a fonte. Tudo se propaga.
+## 1. Layout shell (`src/routes/_authenticated.tsx`)
 
-### 1. Fontes
-- Em `src/routes/__root.tsx` (head links): substituir Inter+Sora pelo Google Font **Plus Jakarta Sans** (pesos 400, 500, 600, 700).
-- Em `src/styles.css` `@theme inline`:
-  - `--font-sans: "Plus Jakarta Sans", system-ui, sans-serif;`
-  - `--font-display: "Plus Jakarta Sans", system-ui, sans-serif;` (mesma família, peso 600/700 nos títulos via h1–h4)
-- Pesos aplicados via base layer: `body { font-weight: 400 }`, `label { font-weight: 500 }`, `h1–h4 { font-weight: 600 }`.
+- Envolver em `SidebarProvider` com `defaultOpen` controlado por breakpoint:
+  - `≥1024px`: sidebar expandida (240px).
+  - `768–1023px`: sidebar colapsada em ícones (64px) via `defaultOpen={false}` + `collapsible="icon"`.
+  - `<768px`: sidebar escondida; usar `Sheet` (drawer) controlado por estado próprio.
+- Detectar breakpoint via hook `useIsMobile` existente (`src/hooks/use-mobile.tsx`) + criar `useIsTablet` se necessário.
+- Header:
+  - Desktop/tablet: header atual com `SidebarTrigger`.
+  - Mobile: header fixo (`sticky top-0`) com logo à esquerda + botão hamburguer (`Menu` icon) que abre o drawer.
+- Main:
+  - Padding responsivo: `p-4 sm:p-6 lg:p-8`.
+  - Mobile: adicionar `pb-20` para não ficar atrás do bottom nav.
+- Renderizar `<MobileBottomNav />` apenas em `<768px`.
 
-### 2. Paleta (light theme — `:root`)
-Converter os hex pedidos para `oklch` (formato exigido pela base do projeto):
+## 2. Sidebar (`src/components/app-sidebar.tsx`)
 
-| Token | Hex | oklch |
-|---|---|---|
-| `--primary` | #0F6E56 | `oklch(0.475 0.105 165)` |
-| `--primary-foreground` | #FFFFFF | `oklch(1 0 0)` |
-| `--accent` (primary light bg) | #E1F5EE | `oklch(0.95 0.035 165)` |
-| `--accent-foreground` (primary dark) | #085041 | `oklch(0.36 0.085 165)` |
-| `--ring` | primary | mesma de `--primary` |
-| `--destructive` | #E24B4A | `oklch(0.62 0.20 25)` |
-| `--warning` | #BA7517 | `oklch(0.60 0.13 65)` |
-| `--success` | #1D9E75 (accent) | `oklch(0.62 0.13 165)` |
-| `--background` | #FAFAFA | `oklch(0.985 0 0)` |
-| `--card` / `--popover` | #FFFFFF | `oklch(1 0 0)` |
-| `--foreground` / `--card-foreground` | #1C1C1E | `oklch(0.20 0.005 270)` |
-| `--muted` | #F4F4F5 | `oklch(0.965 0.002 270)` |
-| `--muted-foreground` | #6B7280 | `oklch(0.55 0.015 265)` |
-| `--secondary` | #F4F4F5 | `oklch(0.965 0.002 270)` |
-| `--secondary-foreground` | #1C1C1E | `oklch(0.20 0.005 270)` |
-| `--border` / `--input` | #E4E4E7 | `oklch(0.92 0.003 270)` |
+- Desktop expandida (240px): manter conteúdo atual; aplicar estilo do item ativo:
+  - `data-[active=true]:bg-accent data-[active=true]:text-primary data-[active=true]:border-l-[3px] data-[active=true]:border-primary data-[active=true]:rounded-l-none` no `SidebarMenuButton`.
+- Tablet colapsada (64px): shadcn já mostra só ícones; garantir `tooltip` no `SidebarMenuButton` (`tooltip={i.title}`) para mostrar nome ao hover.
+- Footer: manter avatar + nome + logout (botão de logout sempre visível, mesmo colapsado, como ícone).
 
-Variável extra para uso semântico onde fizer sentido:
-- `--primary-dark: oklch(0.36 0.085 165)` (#085041) — disponível como `bg-[var(--primary-dark)]` se necessário; não é estritamente requerido pelos componentes shadcn.
+## 3. Drawer mobile
 
-Os tokens de **zone/volume/intensity** (pace charts) ficam como estão — não foram pedidos e são domínio específico das planilhas.
+- Reaproveitar `Sheet` (`@/components/ui/sheet`) com `side="left"`.
+- Conteúdo: mesma lista de navegação da sidebar (extrair em componente `<SidebarNav />` compartilhado para evitar duplicação).
+- Overlay escuro automático do `Sheet`; fecha ao clicar fora.
+- Trigger: botão hamburguer no header mobile.
 
-Sidebar (atualmente escura) — manter padrão escuro neutro com accent verde:
-- `--sidebar: oklch(0.20 0.005 270)` (#1C1C1E)
-- `--sidebar-foreground: oklch(0.96 0 0)`
-- `--sidebar-primary: var(--primary)`
-- `--sidebar-accent: oklch(0.26 0.005 270)`
-- `--sidebar-border: oklch(1 0 0 / 10%)`
+## 4. Bottom Navigation (`src/components/mobile-bottom-nav.tsx` — novo)
 
-### 3. Dark theme (`.dark`)
-Realinhar para a mesma família verde — mantém `bg` neutro escuro `#1C1C1E`, `card` levemente mais claro, `primary` em `oklch(0.62 0.13 165)` (versão mais clara para contraste em fundo escuro). Não mudar a estrutura.
+- Fixo no rodapé: `fixed bottom-0 inset-x-0 z-40 h-16 bg-card border-t`.
+- 4 itens: Dashboard (`/dashboard`, Home), Alunos (`/alunos`, Users), Planilhas (`/planilha-5km` ou menu), Perfil (`/minha-marca`, User).
+- Cada item: ícone (24px) + label pequeno (`text-[10px]`), `flex-col items-center justify-center`, mínimo 44px touch.
+- Item ativo: `text-primary`; inativo: `text-muted-foreground`.
+- Renderizar via `md:hidden`.
 
-### 4. Raios e sombras
-- `--radius: 0.5rem` (8px) → vira o raio base de botões e inputs (`--radius-md` = 0.5rem - 2px = ~6px; `--radius-lg` = 8px). Cards usam `rounded-xl` no shadcn → `--radius-xl = radius + 4px = 12px`. Bate exatamente com o briefing.
-- Adicionar tokens de sombra no `@theme inline`:
-  - `--shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);`
-  - `--shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08);`
-- Aplicar via regra base: `.card, [data-slot="card"] { box-shadow: var(--shadow-card); transition: box-shadow .2s; } .card:hover, [data-slot="card"]:hover { box-shadow: var(--shadow-card-hover); }` — só nos cards "interativos" (links/botões dentro). Para evitar hover ruidoso em cards estáticos de formulário, vou aplicar **somente o shadow base nos cards** e o hover apenas em `a > [data-slot="card"]` ou `button > [data-slot="card"]`.
+## 5. Ajustes globais de touch + iOS (`src/styles.css`)
 
-### 5. Ajustes finos para os componentes existentes
-Tudo é gerado automaticamente pelos tokens, mas vou validar:
-- **Botão primário** → já usa `bg-primary text-primary-foreground hover:bg-primary/90`. Resultado: verde #0F6E56 → branco, hover levemente mais escuro. Atende o briefing.
-- **Botão secundário (variant outline)** → já usa `border border-input bg-background hover:bg-accent hover:text-accent-foreground`. Para que fique "borda primary, texto primary, hover primary light", vou ajustar **apenas a variant `outline`** em `src/components/ui/button.tsx` para `border-primary text-primary hover:bg-accent hover:text-accent-foreground`. Ajuste mínimo, segue padrão shadcn.
-- **Inputs** → `src/components/ui/input.tsx` usa `border-input focus-visible:border-ring focus-visible:ring-ring/50`. Com os novos tokens, focus já fica verde com halo claro. OK sem alteração.
-- **Links e ícones ativos** → sidebar e nav já usam `text-sidebar-primary` e `text-primary` em estado ativo. Vão herdar a nova cor.
-- **Badges de status** → variants destructive/secondary/outline já mapeiam. Onde o código usa cores hardcoded (ex.: `bg-amber-500`), não vou tocar nesta passada — fora do escopo de tokens globais.
+- Garantir `font-size: 16px` em inputs/textareas/selects via `@layer base` (evitar zoom iOS).
+- Botões mínimo 44px: ajustar variante `default`/`sm` do `Button` apenas no mobile via classe utilitária `min-h-11 md:min-h-9` ou adicionar `min-h-[44px]` na variante padrão (preferir abordagem de classe utilitária só onde necessário para não inflar tudo no desktop).
+- `body { overflow-x: hidden }` para garantir nada vaze horizontalmente.
 
-### 6. Validação
-Após o commit, abrir o preview em `/dashboard`, `/alunos`, `/admin/treinadores` e `/login` e conferir botões, sidebar, cards e badges. Toast com Sonner já lê os tokens.
+## 6. Tabelas → cards no mobile
 
-### Fora de escopo
-- Não vou refatorar componentes que usam Tailwind colors hardcoded pontualmente (ex.: avisos amber em `admin.configuracoes`).
-- Não vou mexer nos tokens de zone/volume/intensity das planilhas.
-- Não vou criar nova logo.
+- Páginas alvo com `<Table>`: `admin.treinadores.tsx`, `admin.alunos.tsx`, `admin.auditoria.tsx`, `alunos.index.tsx`.
+- Padrão: `<div className="hidden md:block"><Table>…</Table></div>` + `<div className="md:hidden space-y-3">{rows.map(r => <Card>…</Card>)}</div>`.
+- Card mostra os mesmos campos da linha em layout vertical com labels.
+
+## 7. Fora de escopo
+
+- Sem mudanças em lógica de negócio, queries, RLS ou rotas.
+- Sem alteração nas planilhas `planilha-*.tsx` internamente (apenas wrapper de padding responsivo já cobre).
+
+## Arquivos afetados
+
+- editar: `src/routes/_authenticated.tsx`, `src/components/app-sidebar.tsx`, `src/styles.css`
+- criar: `src/components/mobile-bottom-nav.tsx`, `src/components/sidebar-nav.tsx` (extração compartilhada)
+- editar tabelas: `src/routes/_authenticated/admin.treinadores.tsx`, `admin.alunos.tsx`, `admin.auditoria.tsx`, `alunos.index.tsx`

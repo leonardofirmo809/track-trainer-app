@@ -86,7 +86,7 @@ function AdminStudentsPage() {
           {loading ? <p className="text-muted-foreground">Carregando…</p> : filtered.length === 0 ? (
             <p className="text-muted-foreground">Nenhum aluno encontrado.</p>
           ) : (
-            <Table>
+            <div className="-mx-2 sm:mx-0 overflow-x-auto"><Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Aluno</TableHead>
@@ -109,7 +109,7 @@ function AdminStudentsPage() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </Table></div>
           )}
         </CardContent>
       </Card>

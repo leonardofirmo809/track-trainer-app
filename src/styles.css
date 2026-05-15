@@ -199,12 +199,20 @@
   * {
     border-color: var(--color-border);
   }
+  html, body {
+    overflow-x: hidden;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
+  }
+  @media (max-width: 767px) {
+    input, textarea, select {
+      font-size: 16px !important;
+    }
   }
   label {
     font-weight: 500;

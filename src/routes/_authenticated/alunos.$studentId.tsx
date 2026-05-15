@@ -182,7 +182,7 @@ function PerfilAluno() {
               {plans.data && plans.data.length > 0 ? (
                 <Table>
                   <TableHeader><TableRow>
-                    <TableHead>Tipo</TableHead><TableHead>Início</TableHead><TableHead>Fim</TableHead><TableHead>Status</TableHead>
+                    <TableHead>Tipo</TableHead><TableHead>Início</TableHead><TableHead>Fim</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
                     {plans.data.map((p) => (
@@ -191,6 +191,13 @@ function PerfilAluno() {
                         <TableCell>{p.start_date ? new Date(p.start_date).toLocaleDateString("pt-BR") : "—"}</TableCell>
                         <TableCell>{p.end_date ? new Date(p.end_date).toLocaleDateString("pt-BR") : "—"}</TableCell>
                         <TableCell><Badge variant="secondary" className="capitalize">{p.status}</Badge></TableCell>
+                        <TableCell className="text-right">
+                          <Button asChild size="sm" variant="outline">
+                            <Link to="/alunos/$studentId/prescricao/$planId" params={{ studentId, planId: p.id }}>
+                              <Settings2 className="h-3.5 w-3.5 mr-1" /> Personalizar
+                            </Link>
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

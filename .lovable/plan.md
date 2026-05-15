@@ -1,65 +1,70 @@
-## Limite configurável de licenças de treinadores
+## Identidade visual: assessoria esportiva de corrida
 
-### 1. Migração: `app_settings` + reforço no trigger
+A boa notícia é que o projeto já usa tokens semânticos (`--primary`, `--background`, `--card`, etc.) consumidos por todos os componentes shadcn (Button, Input, Badge, Card…). Então **não preciso editar componentes**: basta reescrever o token central em `src/styles.css` e trocar a fonte. Tudo se propaga.
 
-Tabela:
-```sql
-CREATE TABLE public.app_settings (
-  key text PRIMARY KEY,
-  value text NOT NULL,
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+### 1. Fontes
+- Em `src/routes/__root.tsx` (head links): substituir Inter+Sora pelo Google Font **Plus Jakarta Sans** (pesos 400, 500, 600, 700).
+- Em `src/styles.css` `@theme inline`:
+  - `--font-sans: "Plus Jakarta Sans", system-ui, sans-serif;`
+  - `--font-display: "Plus Jakarta Sans", system-ui, sans-serif;` (mesma família, peso 600/700 nos títulos via h1–h4)
+- Pesos aplicados via base layer: `body { font-weight: 400 }`, `label { font-weight: 500 }`, `h1–h4 { font-weight: 600 }`.
 
-CREATE POLICY "admins read app_settings" ON public.app_settings
-  FOR SELECT USING (has_role(auth.uid(), 'admin'));
-CREATE POLICY "admins insert app_settings" ON public.app_settings
-  FOR INSERT WITH CHECK (has_role(auth.uid(), 'admin'));
-CREATE POLICY "admins update app_settings" ON public.app_settings
-  FOR UPDATE USING (has_role(auth.uid(), 'admin'));
+### 2. Paleta (light theme — `:root`)
+Converter os hex pedidos para `oklch` (formato exigido pela base do projeto):
 
-INSERT INTO public.app_settings(key, value) VALUES ('max_coaches', '4')
-  ON CONFLICT (key) DO NOTHING;
-```
+| Token | Hex | oklch |
+|---|---|---|
+| `--primary` | #0F6E56 | `oklch(0.475 0.105 165)` |
+| `--primary-foreground` | #FFFFFF | `oklch(1 0 0)` |
+| `--accent` (primary light bg) | #E1F5EE | `oklch(0.95 0.035 165)` |
+| `--accent-foreground` (primary dark) | #085041 | `oklch(0.36 0.085 165)` |
+| `--ring` | primary | mesma de `--primary` |
+| `--destructive` | #E24B4A | `oklch(0.62 0.20 25)` |
+| `--warning` | #BA7517 | `oklch(0.60 0.13 65)` |
+| `--success` | #1D9E75 (accent) | `oklch(0.62 0.13 165)` |
+| `--background` | #FAFAFA | `oklch(0.985 0 0)` |
+| `--card` / `--popover` | #FFFFFF | `oklch(1 0 0)` |
+| `--foreground` / `--card-foreground` | #1C1C1E | `oklch(0.20 0.005 270)` |
+| `--muted` | #F4F4F5 | `oklch(0.965 0.002 270)` |
+| `--muted-foreground` | #6B7280 | `oklch(0.55 0.015 265)` |
+| `--secondary` | #F4F4F5 | `oklch(0.965 0.002 270)` |
+| `--secondary-foreground` | #1C1C1E | `oklch(0.20 0.005 270)` |
+| `--border` / `--input` | #E4E4E7 | `oklch(0.92 0.003 270)` |
 
-Reforço no servidor — atualizar `handle_new_user()` (já existente) para checar o limite **antes** de inserir em `user_roles`:
-```sql
-SELECT COALESCE((SELECT value::int FROM app_settings WHERE key='max_coaches'), 4) INTO _limit;
-SELECT count(*) FROM user_roles WHERE role='coach' INTO _current;
-IF _current >= _limit THEN
-  RAISE EXCEPTION 'Limite de treinadores atingido (% de %).', _current, _limit
-    USING ERRCODE = 'check_violation';
-END IF;
-```
-Esse é o único chokepoint: cobre tanto `acceptInvite` quanto `createCoachAccount`, já que ambos passam por `auth.users` insert.
+Variável extra para uso semântico onde fizer sentido:
+- `--primary-dark: oklch(0.36 0.085 165)` (#085041) — disponível como `bg-[var(--primary-dark)]` se necessário; não é estritamente requerido pelos componentes shadcn.
 
-### 2. UI `/admin/treinadores`
+Os tokens de **zone/volume/intensity** (pace charts) ficam como estão — não foram pedidos e são domínio específico das planilhas.
 
-- Substituir a constante `COACH_LIMIT = 4` por leitura de `app_settings` no `load()`:
-  `supabase.from('app_settings').select('value').eq('key','max_coaches').maybeSingle()`. Fallback 4 se vazio.
-- Trocar o `Badge "X de N treinadores ativos"` por um bloco com:
-  - Texto "Treinadores: X / N"
-  - Barra de progresso (`<Progress value={(active/limit)*100} />`)
-  - Cor destaque (destructive) quando `atLimit`
-- Tooltip dos botões "Convidar" e "Criar conta manual" passa a exibir: *"Limite de licenças atingido. Entre em contato para ampliar seu plano."*
-- Tratar erro do RPC/insert quando o trigger lançar a exceção (toast com a mensagem retornada pelo Postgres).
+Sidebar (atualmente escura) — manter padrão escuro neutro com accent verde:
+- `--sidebar: oklch(0.20 0.005 270)` (#1C1C1E)
+- `--sidebar-foreground: oklch(0.96 0 0)`
+- `--sidebar-primary: var(--primary)`
+- `--sidebar-accent: oklch(0.26 0.005 270)`
+- `--sidebar-border: oklch(1 0 0 / 10%)`
 
-### 3. Nova rota `/admin/configuracoes`
+### 3. Dark theme (`.dark`)
+Realinhar para a mesma família verde — mantém `bg` neutro escuro `#1C1C1E`, `card` levemente mais claro, `primary` em `oklch(0.62 0.13 165)` (versão mais clara para contraste em fundo escuro). Não mudar a estrutura.
 
-Arquivo `src/routes/_authenticated/admin.configuracoes.tsx` (entra no layout `_authenticated/admin` que já valida admin):
+### 4. Raios e sombras
+- `--radius: 0.5rem` (8px) → vira o raio base de botões e inputs (`--radius-md` = 0.5rem - 2px = ~6px; `--radius-lg` = 8px). Cards usam `rounded-xl` no shadcn → `--radius-xl = radius + 4px = 12px`. Bate exatamente com o briefing.
+- Adicionar tokens de sombra no `@theme inline`:
+  - `--shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);`
+  - `--shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08);`
+- Aplicar via regra base: `.card, [data-slot="card"] { box-shadow: var(--shadow-card); transition: box-shadow .2s; } .card:hover, [data-slot="card"]:hover { box-shadow: var(--shadow-card-hover); }` — só nos cards "interativos" (links/botões dentro). Para evitar hover ruidoso em cards estáticos de formulário, vou aplicar **somente o shadow base nos cards** e o hover apenas em `a > [data-slot="card"]` ou `button > [data-slot="card"]`.
 
-- Card "Limite de treinadores"
-  - Mostra valor atual (input numérico, `min={1}`, `max={1000}`)
-  - Mostra "Treinadores ativos no momento: X" (read-only, via `get_all_coaches` ou `count` direto em `user_roles`)
-  - Botão "Salvar" → `supabase.from('app_settings').update({ value: String(n), updated_at: now() }).eq('key','max_coaches')`
-  - Validação client: inteiro ≥ que `activeCount` (avisa se tentar setar abaixo do número atual de coaches; permite mas mostra warning).
-  - Toast de sucesso/erro.
+### 5. Ajustes finos para os componentes existentes
+Tudo é gerado automaticamente pelos tokens, mas vou validar:
+- **Botão primário** → já usa `bg-primary text-primary-foreground hover:bg-primary/90`. Resultado: verde #0F6E56 → branco, hover levemente mais escuro. Atende o briefing.
+- **Botão secundário (variant outline)** → já usa `border border-input bg-background hover:bg-accent hover:text-accent-foreground`. Para que fique "borda primary, texto primary, hover primary light", vou ajustar **apenas a variant `outline`** em `src/components/ui/button.tsx` para `border-primary text-primary hover:bg-accent hover:text-accent-foreground`. Ajuste mínimo, segue padrão shadcn.
+- **Inputs** → `src/components/ui/input.tsx` usa `border-input focus-visible:border-ring focus-visible:ring-ring/50`. Com os novos tokens, focus já fica verde com halo claro. OK sem alteração.
+- **Links e ícones ativos** → sidebar e nav já usam `text-sidebar-primary` e `text-primary` em estado ativo. Vão herdar a nova cor.
+- **Badges de status** → variants destructive/secondary/outline já mapeiam. Onde o código usa cores hardcoded (ex.: `bg-amber-500`), não vou tocar nesta passada — fora do escopo de tokens globais.
 
-### 4. Sidebar
-
-Adicionar entrada "Configurações" (ícone `Settings`) no grupo Administração de `src/components/app-sidebar.tsx`, apontando para `/admin/configuracoes`.
+### 6. Validação
+Após o commit, abrir o preview em `/dashboard`, `/alunos`, `/admin/treinadores` e `/login` e conferir botões, sidebar, cards e badges. Toast com Sonner já lê os tokens.
 
 ### Fora de escopo
-- Não criar página de cobrança/upgrade real (apenas o texto na tooltip).
-- Não permitir múltiplos settings genéricos ainda — só `max_coaches` é exposto na UI.
-- Não migrar nada para uma tabela de planos/assinatura.
+- Não vou refatorar componentes que usam Tailwind colors hardcoded pontualmente (ex.: avisos amber em `admin.configuracoes`).
+- Não vou mexer nos tokens de zone/volume/intensity das planilhas.
+- Não vou criar nova logo.

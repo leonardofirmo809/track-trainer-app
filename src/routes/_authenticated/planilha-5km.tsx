@@ -406,6 +406,14 @@ function Planilha5kmPage() {
           workoutTypesList={Object.keys(WORKOUT_TYPES)}
         />
       )}
+
+      <StudentPicker
+        value={studentId}
+        onChange={setStudentId}
+        variant="fab"
+        distanceLabel="5km"
+        level={level}
+      />
     </div>
   );
 }

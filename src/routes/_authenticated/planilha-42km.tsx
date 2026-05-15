@@ -293,10 +293,8 @@ function Planilha42kmPage() {
             <CardTitle>4. Planilha e treinos</CardTitle>
             <div className="flex gap-2">
               {dataQuery.data?.plan?.id ? (
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/alunos/$studentId/prescricao/$planId" params={{ studentId, planId: dataQuery.data.plan.id }}>
-                    <Settings2 /> Personalizar planilha
-                  </Link>
+                <Button variant="outline" size="sm" onClick={() => setEditorOpen(true)}>
+                  <Settings2 /> Personalizar planilha
                 </Button>
               ) : (
                 <Button variant="outline" size="sm" disabled title="Salve a planilha primeiro">

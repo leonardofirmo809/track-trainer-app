@@ -86,32 +86,41 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           brand_logo_url: string | null
           brand_primary_color: string | null
           brand_secondary_color: string | null
           created_at: string
           full_name: string | null
           id: string
+          onboarding_completed: boolean
+          specialty: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           brand_logo_url?: string | null
           brand_primary_color?: string | null
           brand_secondary_color?: string | null
           created_at?: string
           full_name?: string | null
           id: string
+          onboarding_completed?: boolean
+          specialty?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           brand_logo_url?: string | null
           brand_primary_color?: string | null
           brand_secondary_color?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
+          onboarding_completed?: boolean
+          specialty?: string | null
           updated_at?: string
         }
         Relationships: []

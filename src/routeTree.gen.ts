@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
@@ -41,6 +42,11 @@ const SignupRoute = SignupRouteImport.update({
 const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
   id: '/recuperar-senha',
   path: '/recuperar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NovaSenhaRoute = NovaSenhaRouteImport.update({
@@ -163,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
+  '/onboarding': typeof OnboardingRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/signup': typeof SignupRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
+  '/onboarding': typeof OnboardingRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/aceitar-convite': typeof AceitarConviteRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
+  '/onboarding': typeof OnboardingRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/signup': typeof SignupRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/aceitar-convite'
     | '/login'
     | '/nova-senha'
+    | '/onboarding'
     | '/recuperar-senha'
     | '/signup'
     | '/admin'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/aceitar-convite'
     | '/login'
     | '/nova-senha'
+    | '/onboarding'
     | '/recuperar-senha'
     | '/signup'
     | '/dashboard'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/aceitar-convite'
     | '/login'
     | '/nova-senha'
+    | '/onboarding'
     | '/recuperar-senha'
     | '/signup'
     | '/_authenticated/admin'
@@ -312,6 +324,7 @@ export interface RootRouteChildren {
   AceitarConviteRoute: typeof AceitarConviteRoute
   LoginRoute: typeof LoginRoute
   NovaSenhaRoute: typeof NovaSenhaRoute
+  OnboardingRoute: typeof OnboardingRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   SignupRoute: typeof SignupRoute
 }
@@ -330,6 +343,13 @@ declare module '@tanstack/react-router' {
       path: '/recuperar-senha'
       fullPath: '/recuperar-senha'
       preLoaderRoute: typeof RecuperarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nova-senha': {
@@ -553,6 +573,7 @@ const rootRouteChildren: RootRouteChildren = {
   AceitarConviteRoute: AceitarConviteRoute,
   LoginRoute: LoginRoute,
   NovaSenhaRoute: NovaSenhaRoute,
+  OnboardingRoute: OnboardingRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   SignupRoute: SignupRoute,
 }

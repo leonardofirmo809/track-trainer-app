@@ -79,7 +79,9 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
     const phaseOverrides = overrides[String(phase)] ?? {};
     return raw.map((wos, w) => {
       const patched = applyOverrides(wos, phaseOverrides[String(w)]);
-      return { dist: distributeWeek(patched), patched };
+      const originalsByPatchedCode = new Map<string, WorkoutLike>();
+      patched.forEach((pw, i) => originalsByPatchedCode.set(pw.code, wos[i]));
+      return { dist: distributeWeek(patched), originalsByPatchedCode };
     });
   }, [phase, overrides, getRawPhaseWeeks, distributeWeek]);
 

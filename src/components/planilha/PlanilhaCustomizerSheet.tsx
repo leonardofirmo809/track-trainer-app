@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Trash2, RotateCcw, ChevronUp, ChevronDown, Save } from "lucide-react";
+import { Plus, Trash2, RotateCcw, ChevronUp, ChevronDown, Save, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +18,22 @@ import type { DistributionResult, TypesMap } from "@/lib/planilha-5km-distribute
 import {
   type WorkoutOverrides, type WorkoutPatch,
   applyOverrides, getPatch, setOverride,
+  getWeekPatches, getRemoved, getAdded,
+  removeWorkout, restoreRemovedWorkout,
+  addWorkout, updateAddedWorkout, deleteAddedWorkout,
 } from "@/lib/workout-overrides";
 import { savePlanWorkoutOverrides } from "@/lib/plan-customization.functions";
 
 type WorkoutLike = Workout & { defaultDay?: DayCode; slot?: number };
+
+type Origin =
+  | { kind: "original"; originalCode: string; edited: boolean }
+  | { kind: "added"; index: number };
+
+type EditingTarget =
+  | { kind: "patch"; phase: number; weekIdx: number; original: WorkoutLike }
+  | { kind: "added"; phase: number; weekIdx: number; index: number; workout: WorkoutLike }
+  | { kind: "new"; phase: number; weekIdx: number };
 
 export interface PlanilhaCustomizerSheetProps<TPhase extends number = number> {
   open: boolean;
@@ -49,6 +61,28 @@ const SECTION_LABEL: Record<SectionName, string> = {
   warmup: "Aquecimento", main: "Treino Principal", recovery: "Recuperação", complement: "Complemento",
 };
 
+function applyPatch<T extends Workout>(wo: T, patch: WorkoutPatch | undefined): T {
+  if (!patch) return wo;
+  return {
+    ...wo,
+    ...(patch.code !== undefined ? { code: patch.code } : {}),
+    ...(patch.type !== undefined ? { type: patch.type as T["type"] } : {}),
+    ...(patch.zones !== undefined ? { zones: patch.zones as T["zones"] } : {}),
+    ...(patch.sections !== undefined ? { sections: patch.sections } : {}),
+    ...(patch.note !== undefined ? { note: patch.note ?? undefined } : {}),
+  } as T;
+}
+
+function makeBlankWorkout(): Workout {
+  return {
+    code: "",
+    defaultDay: "QUA",
+    type: "Base aeróbia",
+    zones: ["Z2"],
+    sections: [{ name: "main", items: [{ kind: "single", value: 30, unit: "min", zone: "Z2" }] }],
+  };
+}
+
 export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCustomizerSheetProps<TPhase>) {
   const {
     open, onOpenChange, planId, initialOverrides, onSaved,
@@ -60,7 +94,7 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
   const saveFn = useServerFn(savePlanWorkoutOverrides);
   const [overrides, setOverridesState] = useState<WorkoutOverrides>(initialOverrides);
   const [phase, setPhase] = useState<TPhase>(initialPhase);
-  const [editing, setEditing] = useState<{ phase: TPhase; weekIdx: number; original: WorkoutLike } | null>(null);
+  const [editing, setEditing] = useState<EditingTarget | null>(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
@@ -77,19 +111,71 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
   const weeks = useMemo(() => {
     const raw = getRawPhaseWeeks(phase);
     const phaseOverrides = overrides[String(phase)] ?? {};
-    return raw.map((wos, w) => {
-      const patched = applyOverrides(wos, phaseOverrides[String(w)]);
-      const originalsByPatchedCode = new Map<string, WorkoutLike>();
-      patched.forEach((pw, i) => originalsByPatchedCode.set(pw.code, wos[i]));
-      return { dist: distributeWeek(patched), originalsByPatchedCode };
+    return raw.map((rawList, w) => {
+      const weekObj = phaseOverrides[String(w)];
+      const patches = getWeekPatches(weekObj);
+      const removedSet = new Set(getRemoved(weekObj));
+      const added = getAdded(weekObj);
+
+      const kept: { workout: WorkoutLike; origin: Origin }[] = rawList
+        .filter((wo) => !removedSet.has(wo.code))
+        .map((wo) => ({
+          workout: applyPatch(wo, patches[wo.code]) as WorkoutLike,
+          origin: { kind: "original", originalCode: wo.code, edited: !!patches[wo.code] },
+        }));
+      const addedTagged: { workout: WorkoutLike; origin: Origin }[] = added.map((wo, i) => ({
+        workout: wo as WorkoutLike,
+        origin: { kind: "added", index: i },
+      }));
+      const all = [...kept, ...addedTagged];
+      const dist = distributeWeek(all.map((x) => x.workout));
+      const originByCode = new Map<string, Origin>(all.map((x) => [x.workout.code, x.origin]));
+      const removedOriginals = rawList.filter((wo) => removedSet.has(wo.code));
+      const overflow = Math.max(0, all.length - dist.assignments.length);
+      return { dist, originByCode, removedOriginals, overflow };
     });
   }, [phase, overrides, getRawPhaseWeeks, distributeWeek]);
 
   function applyEdit(patch: WorkoutPatch | null) {
-    if (!editing) return;
+    if (!editing || editing.kind !== "patch") return;
     setOverridesState((cur) => setOverride(cur, editing.phase, editing.weekIdx, editing.original.code, patch));
     setDirty(true);
     setEditing(null);
+  }
+
+  function applyAddedEdit(workout: Workout) {
+    if (!editing || editing.kind !== "added") return;
+    setOverridesState((cur) => updateAddedWorkout(cur, editing.phase, editing.weekIdx, editing.index, workout));
+    setDirty(true);
+    setEditing(null);
+  }
+
+  function applyNew(workout: Workout) {
+    if (!editing || editing.kind !== "new") return;
+    setOverridesState((cur) => addWorkout(cur, editing.phase, editing.weekIdx, workout).overrides);
+    setDirty(true);
+    setEditing(null);
+  }
+
+  function deleteAdded() {
+    if (!editing || editing.kind !== "added") return;
+    setOverridesState((cur) => deleteAddedWorkout(cur, editing.phase, editing.weekIdx, editing.index));
+    setDirty(true);
+    setEditing(null);
+  }
+
+  function handleRemoveCard(p: TPhase, weekIdx: number, origin: Origin) {
+    if (origin.kind === "original") {
+      setOverridesState((cur) => removeWorkout(cur, p, weekIdx, origin.originalCode));
+    } else {
+      setOverridesState((cur) => deleteAddedWorkout(cur, p, weekIdx, origin.index));
+    }
+    setDirty(true);
+  }
+
+  function handleRestore(p: TPhase, weekIdx: number, originalCode: string) {
+    setOverridesState((cur) => restoreRemovedWorkout(cur, p, weekIdx, originalCode));
+    setDirty(true);
   }
 
   async function handleSave() {
@@ -114,7 +200,7 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
         <SheetHeader>
           <SheetTitle>Personalizar planilha</SheetTitle>
           <SheetDescription>
-            Edite os treinos diretamente. As mudanças são aplicadas à planilha do aluno após salvar.
+            Edite, adicione ou remova treinos. As mudanças são aplicadas à planilha do aluno após salvar.
           </SheetDescription>
         </SheetHeader>
 
@@ -127,44 +213,94 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
           {phases.map((p) => (
             <TabsContent key={p} value={String(p)} className="space-y-6">
               <p className="text-sm text-muted-foreground">{phaseLabels[p]?.subtitle}</p>
-              {phase === p && weeks.map((wk, idx) => {
-                const phaseOv = overrides[String(p)]?.[String(idx)] ?? {};
-                return (
-                  <div key={idx} className="space-y-2">
+              {phase === p && weeks.map((wk, idx) => (
+                <div key={idx} className="space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold">Semana {idx + 1}</p>
-                    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
-                      {wk.dist.assignments.map((a) => {
-                        const original = a.workout ? wk.originalsByPatchedCode.get(a.workout.code) : null;
-                        const isEdited = original ? !!phaseOv[original.code] : false;
-                        return (
-                          <div key={a.day}>
-                            {a.workout && original ? (
+                    {wk.overflow > 0 && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        {wk.overflow} treino(s) não couberam nos dias da semana
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
+                    {wk.dist.assignments.map((a) => {
+                      const origin = a.workout ? wk.originByCode.get(a.workout.code) : null;
+                      const isEdited = origin?.kind === "original" && origin.edited;
+                      const isAdded = origin?.kind === "added";
+                      return (
+                        <div key={a.day}>
+                          {a.workout && origin ? (
+                            <div className="relative">
                               <button
                                 type="button"
-                                onClick={() => setEditing({ phase: p, weekIdx: idx, original })}
+                                onClick={() => {
+                                  if (origin.kind === "original") {
+                                    // recupera o original a partir do raw
+                                    const raw = getRawPhaseWeeks(p)[idx]
+                                      .find((w) => w.code === origin.originalCode);
+                                    if (raw) setEditing({ kind: "patch", phase: p, weekIdx: idx, original: raw });
+                                  } else {
+                                    setEditing({ kind: "added", phase: p, weekIdx: idx, index: origin.index, workout: a.workout! });
+                                  }
+                                }}
                                 className={`w-full text-left rounded-md border-2 p-3 hover:opacity-90 transition ${workoutTypes[a.workout.type]?.color ?? ""}`}
                               >
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-xs font-bold">{DAY_LABEL[a.day]}</span>
-                                  <span className="text-[10px] opacity-80">{a.workout.code}</span>
+                                  <span className="text-[10px] opacity-80 truncate max-w-[60%]">{a.workout.code}</span>
                                 </div>
                                 <p className="text-sm font-semibold leading-tight">{a.workout.type}</p>
                                 <p className="text-[11px] opacity-80 mt-1">{a.workout.zones.join(" / ")}</p>
-                                {isEdited && <Badge variant="secondary" className="mt-1 text-[9px]">editado</Badge>}
+                                <div className="flex gap-1 mt-1 flex-wrap">
+                                  {isEdited && <Badge variant="secondary" className="text-[9px]">editado</Badge>}
+                                  {isAdded && <Badge variant="secondary" className="text-[9px]">novo</Badge>}
+                                </div>
                               </button>
-                            ) : (
-                              <div className="rounded-md border-2 border-dashed border-muted-foreground/30 p-3 text-center text-xs text-muted-foreground bg-muted/30">
-                                <p className="font-bold">{DAY_LABEL[a.day]}</p>
-                                <p className="mt-2">OFF</p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                              <button
+                                type="button"
+                                aria-label="Remover treino"
+                                onClick={(e) => { e.stopPropagation(); handleRemoveCard(p, idx, origin); }}
+                                className="absolute top-1 right-1 rounded-full bg-background/80 hover:bg-background border p-1 shadow-sm"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="rounded-md border-2 border-dashed border-muted-foreground/30 p-3 text-center text-xs text-muted-foreground bg-muted/30">
+                              <p className="font-bold">{DAY_LABEL[a.day]}</p>
+                              <p className="mt-2">OFF</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+
+                  <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
+                    <Button
+                      type="button" size="sm" variant="outline"
+                      onClick={() => setEditing({ kind: "new", phase: p, weekIdx: idx })}
+                    >
+                      <Plus /> Adicionar treino
+                    </Button>
+                    {wk.removedOriginals.length > 0 && (
+                      <div className="flex items-center gap-1 flex-wrap text-xs text-muted-foreground">
+                        <span>Removidos:</span>
+                        {wk.removedOriginals.map((wo) => (
+                          <Button
+                            key={wo.code} type="button" size="sm" variant="ghost"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => handleRestore(p, idx, wo.code)}
+                          >
+                            <RotateCcw className="h-3 w-3" /> {wo.code}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </TabsContent>
           ))}
         </Tabs>
@@ -177,13 +313,36 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
           </Button>
         </div>
 
-        {editing && (
+        {editing && editing.kind === "patch" && (
           <WorkoutEditorDialog
-            original={editing.original}
+            mode="patch"
+            title={`Editar treino — ${editing.original.code}`}
+            initial={editing.original}
             currentPatch={getPatch(overrides, editing.phase, editing.weekIdx, editing.original.code)}
             workoutTypesList={workoutTypesList}
             onCancel={() => setEditing(null)}
-            onApply={applyEdit}
+            onSavePatch={applyEdit}
+          />
+        )}
+        {editing && editing.kind === "added" && (
+          <WorkoutEditorDialog
+            mode="added"
+            title={`Editar treino — ${editing.workout.code || "(novo)"}`}
+            initial={editing.workout}
+            workoutTypesList={workoutTypesList}
+            onCancel={() => setEditing(null)}
+            onSaveWorkout={applyAddedEdit}
+            onDelete={deleteAdded}
+          />
+        )}
+        {editing && editing.kind === "new" && (
+          <WorkoutEditorDialog
+            mode="new"
+            title="Novo treino"
+            initial={makeBlankWorkout()}
+            workoutTypesList={workoutTypesList}
+            onCancel={() => setEditing(null)}
+            onSaveWorkout={applyNew}
           />
         )}
       </SheetContent>
@@ -193,23 +352,31 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
 
 // ---------- Editor de um único Workout ----------
 
-function WorkoutEditorDialog({
-  original, currentPatch, workoutTypesList, onCancel, onApply,
-}: {
-  original: WorkoutLike;
-  currentPatch: WorkoutPatch | undefined;
+type EditorMode = "patch" | "added" | "new";
+
+function WorkoutEditorDialog(props: {
+  mode: EditorMode;
+  title: string;
+  initial: WorkoutLike;
+  currentPatch?: WorkoutPatch | undefined;
   workoutTypesList: string[];
   onCancel: () => void;
-  onApply: (patch: WorkoutPatch | null) => void;
+  onSavePatch?: (patch: WorkoutPatch | null) => void;
+  onSaveWorkout?: (workout: Workout) => void;
+  onDelete?: () => void;
 }) {
-  const merged: Workout = {
-    ...original,
-    ...(currentPatch?.code !== undefined ? { code: currentPatch.code } : {}),
-    ...(currentPatch?.type !== undefined ? { type: currentPatch.type as Workout["type"] } : {}),
-    ...(currentPatch?.zones !== undefined ? { zones: currentPatch.zones as ZoneId[] } : {}),
-    ...(currentPatch?.sections !== undefined ? { sections: currentPatch.sections } : {}),
-    ...(currentPatch?.note !== undefined ? { note: currentPatch.note ?? undefined } : {}),
-  } as Workout;
+  const { mode, title, initial, currentPatch, workoutTypesList, onCancel, onSavePatch, onSaveWorkout, onDelete } = props;
+
+  const merged: Workout = mode === "patch"
+    ? ({
+        ...initial,
+        ...(currentPatch?.code !== undefined ? { code: currentPatch.code } : {}),
+        ...(currentPatch?.type !== undefined ? { type: currentPatch.type as Workout["type"] } : {}),
+        ...(currentPatch?.zones !== undefined ? { zones: currentPatch.zones as ZoneId[] } : {}),
+        ...(currentPatch?.sections !== undefined ? { sections: currentPatch.sections } : {}),
+        ...(currentPatch?.note !== undefined ? { note: currentPatch.note ?? undefined } : {}),
+      } as Workout)
+    : (initial as Workout);
 
   const [code, setCode] = useState(merged.code);
   const [type, setType] = useState<string>(merged.type);
@@ -253,17 +420,36 @@ function WorkoutEditorDialog({
     updateSection(sIdx, { items: sections[sIdx].items.filter((_, i) => i !== iIdx) });
   }
 
+  function buildWorkout(): Workout | null {
+    const trimmed = code.trim();
+    if (!trimmed) {
+      toast.error("Informe um código para o treino.");
+      return null;
+    }
+    return {
+      code: trimmed,
+      defaultDay: (initial as WorkoutLike).defaultDay ?? "QUA",
+      type: type as Workout["type"],
+      zones,
+      sections,
+      ...(note ? { note } : {}),
+    };
+  }
+
   function handleSave() {
-    const patch: WorkoutPatch = {};
-    if (code !== original.code) patch.code = code;
-    if (type !== original.type) patch.type = type;
-    if (JSON.stringify(zones) !== JSON.stringify(original.zones)) patch.zones = zones;
-    if (JSON.stringify(sections) !== JSON.stringify(original.sections)) patch.sections = sections;
-    if ((note || "") !== (original.note ?? "")) patch.note = note || null;
-    if (Object.keys(patch).length === 0) {
-      onApply(null);
+    if (mode === "patch") {
+      const original = initial;
+      const patch: WorkoutPatch = {};
+      if (code !== original.code) patch.code = code;
+      if (type !== original.type) patch.type = type;
+      if (JSON.stringify(zones) !== JSON.stringify(original.zones)) patch.zones = zones;
+      if (JSON.stringify(sections) !== JSON.stringify(original.sections)) patch.sections = sections;
+      if ((note || "") !== (original.note ?? "")) patch.note = note || null;
+      onSavePatch?.(Object.keys(patch).length === 0 ? null : patch);
     } else {
-      onApply(patch);
+      const wo = buildWorkout();
+      if (!wo) return;
+      onSaveWorkout?.(wo);
     }
   }
 
@@ -271,7 +457,7 @@ function WorkoutEditorDialog({
     <Sheet open={true} onOpenChange={(o) => !o && onCancel()}>
       <SheetContent side="right" className="w-full sm:max-w-[640px] overflow-y-auto p-6 space-y-5">
         <SheetHeader>
-          <SheetTitle>Editar treino — {original.code}</SheetTitle>
+          <SheetTitle>{title}</SheetTitle>
           <SheetDescription>Personalize código, tipo, zonas e blocos deste treino.</SheetDescription>
         </SheetHeader>
 
@@ -347,14 +533,18 @@ function WorkoutEditorDialog({
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-4 border-t">
-          {currentPatch ? (
-            <Button type="button" variant="outline" onClick={() => onApply(null)}>
+          {mode === "patch" && currentPatch ? (
+            <Button type="button" variant="outline" onClick={() => onSavePatch?.(null)}>
               <RotateCcw /> Restaurar original
+            </Button>
+          ) : mode === "added" && onDelete ? (
+            <Button type="button" variant="destructive" onClick={onDelete}>
+              <Trash2 /> Excluir treino
             </Button>
           ) : <span />}
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-            <Button type="button" onClick={handleSave}>Aplicar</Button>
+            <Button type="button" onClick={handleSave}>{mode === "new" ? "Adicionar" : "Aplicar"}</Button>
           </div>
         </div>
       </SheetContent>

@@ -109,9 +109,29 @@ const WorkoutPatchSchema = z.object({
   note: z.string().max(500).nullable().optional(),
 });
 
+const WorkoutSchema = z.object({
+  code: z.string().min(1).max(32),
+  defaultDay: z.enum(["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"]).optional(),
+  type: z.string().max(40),
+  zones: z.array(ZoneEnum).max(5),
+  sections: z.array(SectionSchemaWO).max(8),
+  note: z.string().max(500).optional(),
+});
+
+// Cada semana é um objeto cujas chaves são códigos originais (WorkoutPatch),
+// com duas chaves reservadas: __removed (string[]) e __added (Workout[]).
+const WeekOverrideSchema = z.record(
+  z.string().max(32),
+  z.union([
+    WorkoutPatchSchema,
+    z.array(z.string().max(32)).max(20),
+    z.array(WorkoutSchema).max(14),
+  ]),
+);
+
 const OverridesSchema = z.record(
   z.string().max(4),
-  z.record(z.string().max(4), z.record(z.string().max(32), WorkoutPatchSchema)),
+  z.record(z.string().max(4), WeekOverrideSchema),
 );
 
 export const savePlanWorkoutOverrides = createServerFn({ method: "POST" })

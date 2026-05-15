@@ -13,6 +13,8 @@ export type WorkoutPatch = {
   zones?: string[];
   sections?: Section[];
   note?: string | null;
+  /** Dia da semana atribuído manualmente. `null` = explicitamente sem dia. */
+  day?: DayCode | null;
 };
 
 const REMOVED_KEY = "__removed";

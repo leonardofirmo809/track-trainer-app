@@ -1,72 +1,80 @@
-## Objetivo
+## Problema
 
-Adotar o layout do PDF enviado (`Planilha_5km_Leonardo_v2.pdf`) como modelo padrão para os 4 geradores: 5km, 10km, 21km e 42km. Mantém toda a lógica existente (zonas, distribuição, customizações) — só muda a renderização visual.
+Hoje a tela "3. Configuração da semana" (5km, 10km, 21km e 42km) **trava** se o treinador escolher uma quantidade de dias diferente da regra fixa:
 
-## Diferenças vs. PDF atual
+- 5km / 10km Nível 1 → exatamente 3 dias
+- 10km Nível 2 → 4 ou 5 dias
+- 21km / 42km → exatamente 4 dias
 
-O gerador atual já tem a estrutura certa (header colorido, FTP, tabela de zonas, semanas com aquecimento/principal/recuperação). O modelo novo refina:
+Quando o número não bate, aparece o aviso laranja "Selecione exatamente X dias" e o botão **Aplicar configuração** fica desativado. Pior: mesmo quando a contagem casa, o sistema **distribui automaticamente** os treinos pelos dias selecionados (em ordem da semana) e **descarta silenciosamente** os treinos que sobram (Regenerativos primeiro, depois duplicados). O treinador não escolhe **qual** treino vai em **qual** dia.
 
-1. **Header** — cor `branding.primary` do treinador (mantém variável por treinador). Logo à esquerda OU nome em uppercase grande. FTP em card translúcido no canto superior direito (mesma faixa do header, sem caixa separada abaixo).
-2. **Tabela de zonas** — coluna "Zona" com fundo colorido por zona:
-   - Z1 verde claro / texto verde
-   - Z2 azul claro / texto azul
-   - Z3 laranja claro / texto laranja
-   - Z4 vermelho claro / texto vermelho
-   - Z5 roxo claro / texto roxo
-3. **Faixa "SEMANA N"** — mantém na cor primary, full-width.
-4. **Cabeçalho do dia** — pill claro (`#E8F1EC` ou primary 8%) com `TERÇA-FEIRA` em bold + título do treino + tags `[Z1/Z2]` coloridas inline.
-5. **Seções (AQUECIMENTO/TREINO PRINCIPAL/RECUPERAÇÃO)** — label pequeno colorido (verde/azul/cinza respectivamente).
-6. **Itens de treino** — duas colunas: à esquerda `5min [Z1]` (zona em badge colorido), à direita range em itálico cinza `6:58–8:50 min/km | 6,79–8,60 km/h`.
-7. **Barra de intensidade vertical** — traço colorido na borda direita de cada bloco de seção (verde/amarelo/vermelho conforme intensidade do treino).
-8. **Footer** — "Página N" centralizado em cinza (já existe — manter).
+## O que muda
 
-## Implementação técnica
+Liberar totalmente a montagem da semana:
 
-### Novo módulo compartilhado
+1. **Quantos dias quiser (1 a 7)** — sem regra rígida.
+2. **Adicionar / remover treino** dentro do "Personalizar planilha", já existente, com o botão "Adicionar treino" que já está lá.
+3. **Mover treino de um dia para outro** — arrastar ou escolher o dia em um menu dentro do card.
+4. **Sem descarte silencioso** — se sobrar treino, ele aparece numa bandeja "Treinos sem dia" pra você decidir; se sobrar dia, ele vira "OFF".
 
-Criar `src/lib/planilha-pdf-theme.ts`:
-- `ZONE_COLORS: Record<ZoneId, { bg: RGB; fg: RGB; bar: RGB }>` — paleta única para todas as planilhas.
-- `SECTION_COLORS: Record<SectionName, RGB>` — cor do label de cada seção.
-- `intensityBar(workoutType): RGB` — verde/amarelo/vermelho derivado do flag `intense` + tipo (já existe `WORKOUT_TYPES_*`).
-- Helpers de desenho reutilizáveis: `drawHeaderBand`, `drawZonesTable`, `drawWeekBand`, `drawWorkoutCard`, `drawSectionLabel`, `drawWorkoutItem`. Recebem `(page, font, bold, italic, branding, ...)` e cuidam de medir/quebrar.
+## Telas afetadas
 
-### Atualizar os 4 geradores
+- `Planilha 5km`, `Planilha 10km`, `Planilha 21km`, `Planilha 42km` (card "3. Configuração da semana")
+- Modal **Personalizar planilha** (passa a ser onde o treinador realmente monta a semana)
 
-Editar (apenas a parte de renderização, mantendo a interface pública e a lógica de zona/distribuição):
+## Comportamento novo do card "Configuração da semana"
 
-- `src/lib/planilha-5km-pdf.ts`
-- `src/lib/planilha-10km-pdf.ts`
-- `src/lib/planilha-21km-pdf.ts`
-- `src/lib/planilha-42km-pdf.ts`
+- O texto de regra ("Selecione exatamente 3 dias") vira só uma **sugestão**: "Sugestão para o nível X: 3 dias. Você pode escolher quantos quiser."
+- O aviso laranja some.
+- Botão **Aplicar configuração** sempre habilitado (desde que pelo menos 1 dia esteja marcado).
+- Se a contagem ficar diferente da sugestão, mostra um **aviso suave azul** (não bloqueia): "Você escolheu 5 dias; a planilha original tem 3 treinos por semana — os 2 dias extras ficarão como descanso, ou adicione treinos extras na próxima etapa."
 
-Cada um passa a chamar os helpers do `planilha-pdf-theme.ts`, passando seus dados (`zones`, `weeks`, `WORKOUT_TYPES_*`). Assinaturas das funções `generatePlanilha*kmPdf(opts)` ficam inalteradas — chamadores das rotas não mudam.
+## Comportamento novo do "Personalizar planilha"
 
-### Cor do header
+Hoje cada card de treino mostra apenas o dia que o sistema decidiu. Vai passar a ter:
 
-`branding.primary` (já vem de `useCoachBranding` / `profiles.brand_primary_color`). O verde do PDF de exemplo era apenas a cor do treinador "Leonardo". Se o treinador não tiver cor configurada, mantém o default `#0EA5E9` já existente.
+- Um **seletor de dia** dentro de cada card (SEG/TER/.../DOM/Sem dia).
+- Arrastar e soltar entre dias da grade (desktop). No mobile, o seletor dropdown resolve.
+- Uma **bandeja "Treinos sem dia"** acima da grade quando houver treinos não atribuídos (em vez de descartá-los).
+- Os dias OFF continuam aparecendo como cards tracejados.
 
-### Cores das zonas
+A semana inteira passa a ser **livre**: o treinador pode ter 2 treinos no sábado se quiser (não vamos impedir, só mostraremos um aviso suave "Você tem mais de um treino no mesmo dia").
 
-Fixas no tema (independentes do branding) — a relação Z1=verde, Z5=roxo é universal de fisiologia, não muda por treinador.
+## Detalhes técnicos
 
-## QA obrigatório
+1. **Validações relaxadas** em:
+   - `src/lib/planilha-5km-distribute.ts` (já não trava, mas o `dropToFit` precisa virar opcional)
+   - `src/lib/planilha-10km-distribute.ts` → `validateWeekDays10km` retorna sempre `null` (vira só sugestão)
+   - `src/lib/planilha-21km-distribute.ts` e `src/lib/planilha-42km-distribute.ts` → idem
+   - `allowedDayCounts*` deixa de ser usado para bloquear
 
-Após implementar, gerar um PDF de teste para cada distância (5/10/21/42), converter para JPG com `pdftoppm -r 150` e inspecionar página por página: alinhamento das colunas de itens, badges de zona não quebrando, faixa SEMANA não cortada entre páginas, barra de intensidade na altura certa, header sem sobreposição com nome longo, cores acessíveis. Iterar até passar limpo.
+2. **Novo campo no override** (`src/lib/workout-overrides.ts`):
+   - `WorkoutPatch.day?: DayCode | null` — se setado, usa este dia em vez da distribuição automática.
+   - Adicionar helpers `setWorkoutDay(overrides, phase, week, code, day)` e equivalente para `__added`.
+
+3. **Nova distribuição** (`src/lib/planilha-5km-distribute.ts`):
+   - Nova função `distributeWeekManual(workouts, selectedDays, manualDayByCode)` que:
+     - respeita `manualDayByCode[code]` quando presente,
+     - preenche dias livres com os treinos restantes (na ordem do código),
+     - **não descarta** treinos: o que sobrar volta na lista `unassigned`.
+   - `DistributionResult` ganha `unassigned: T[]` e `multipleByDay: Record<DayCode, T[]>` (para o aviso de mais de 1 treino no dia).
+
+4. **PlanilhaCustomizerSheet** (`src/components/planilha/PlanilhaCustomizerSheet.tsx`):
+   - Adiciona seletor "Dia" no `WorkoutEditorDialog`.
+   - Renderiza a bandeja "Treinos sem dia" usando `dist.unassigned`.
+   - Drag-and-drop nativo HTML5 entre cards (desktop). Mobile fica só com o dropdown.
+   - Remove o badge vermelho "X treino(s) não couberam" — agora é um aviso amarelo "X treinos sem dia atribuído".
+
+5. **Páginas das 4 planilhas**: trocam `validateWeekDays*` por uma função de **sugestão** que devolve `{ suggested: number, message: string | null }` e ajustam o card 3 (texto + aviso suave + botão sempre habilitado se ≥1 dia).
+
+## Não muda
+
+- Geração de PDF, cálculo de zonas, paces, estatísticas e gráficos continuam iguais — recebem a `assignments` já com a alocação manual.
+- Catálogo de treinos por nível/fase continua o mesmo.
+- Personalização de carga (séries, paces, zonas) já existente segue funcionando.
 
 ## Fora de escopo
 
-- Mudar o conteúdo dos treinos, distribuição, ou cálculo de zonas.
-- Mudar UI das telas `/planilha-*`.
-- PDF do teste 3km (`teste-3km-pdf.ts`).
-- Salvar layout/preferências por treinador.
-
-## Arquivos
-
-**Criar:**
-- `src/lib/planilha-pdf-theme.ts`
-
-**Editar:**
-- `src/lib/planilha-5km-pdf.ts`
-- `src/lib/planilha-10km-pdf.ts`
-- `src/lib/planilha-21km-pdf.ts`
-- `src/lib/planilha-42km-pdf.ts`
+- Reordenar treinos **entre semanas/fases** (continua dentro da mesma semana).
+- Mover treino entre fases diferentes.
+- Salvar dias por semana (a configuração de dias ainda é a mesma para as 4 semanas da fase; o que muda é a alocação treino→dia, que é por semana).

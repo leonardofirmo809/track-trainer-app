@@ -250,7 +250,7 @@ function AdminUsersPage() {
                   </Dialog>
                 </span>
               </TooltipTrigger>
-              {atLimit && <TooltipContent>Limite de {COACH_LIMIT} treinadores atingido</TooltipContent>}
+              {atLimit && <TooltipContent>{LIMIT_TOOLTIP}</TooltipContent>}
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -276,7 +276,7 @@ function AdminUsersPage() {
                   </Dialog>
                 </span>
               </TooltipTrigger>
-              {atLimit && <TooltipContent>Limite de {COACH_LIMIT} treinadores atingido</TooltipContent>}
+              {atLimit && <TooltipContent>{LIMIT_TOOLTIP}</TooltipContent>}
             </Tooltip>
           </div>
         </div>

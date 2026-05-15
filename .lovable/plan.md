@@ -1,42 +1,101 @@
-## Correção da estrutura das Planilhas 42km
+## Objetivo
 
-A implementação atual coloca a PROVA na Semana 4 da Planilha 4 (N1_P4 e N2_P5) e duplica N1_P5 como cópia da P4. Isso viola a regra: prova só na **Semana 4 da Planilha 5**, nunca na Planilha 4.
+Criar uma camada de **personalização do plano gerado** por aluno: depois que a planilha (5/10/21/42km) é gerada, o treinador abre a tela de Prescrição daquele aluno e pode trocar dias, mover treinos, editar campos livremente e usar/criar sessões da biblioteca. Tudo persiste no `training_plans.payload` (sem mudança de schema) e em `localStorage` (cache otimista + undo).
 
-### Mudanças em `src/lib/planilha-42km-data.ts`
+## Arquitetura
 
-**Nível 1 — N1_P4 (Semana 4)** — remover prova, virar tapering com Teste 3km no T14:
-- T13 (TER): `regenerativo(40)`
-- T14 (QUI): `teste3km` ← era T13
-- T15 (SEX): `regenerativo(40)`
-- T16 (SAB): `longaoDist(20)` (longão, não prova)
+### Nova rota
+`/_authenticated/alunos/$studentId/prescricao/$planId.tsx`
+- Carrega `training_plans` (payload base + `customized_weeks` se já existir).
+- Acessada por novo botão **"Personalizar"** na aba *Planilhas* do perfil do aluno (`alunos.$studentId.tsx`).
 
-**Nível 1 — N1_P5** — substituir a cópia atual por uma planilha real de polimento + prova:
-- Sem 1: tapering moderado (tempo run, intervalado curto, regenerativo, longão médio ~22km)
-- Sem 2: redução de volume (base aeróbia, intervalado leve, regenerativo, longão ~16km)
-- Sem 3: polimento (tempo run curto, CR curto, regenerativo, longão curto ~12km)
-- Sem 4 (semana da prova):
-  - T13 (TER): `corridaRapida` curto
-  - T14 (QUI): `regenerativo(50)`
-  - T15 (SEX): `regenerativo(30, "Pré-prova")`
-  - T16 (SAB): `prova42km(39000, 3195)` — 1km Z1 + 39km Z2 + 3,195km Z3
+### Persistência (sem migration)
+- Reaproveita `training_plans.payload` (jsonb).
+- Adiciona campo `payload.customization = { weeks: WeekPlan[], updatedAt }`.
+- Ao abrir: se `customization.weeks` existe → usa; senão **deriva** a partir do plano gerado.
+- Novo server fn `savePlanCustomization(planId, weeks)` (auth-middleware, RLS já garante coach-owner).
+- Biblioteca custom (`customSessions`) fica no zustand persist por treinador (chave `training-store-v1`), independente de aluno.
 
-**Nível 2 — N2_P4 (Semana 4)** — manter como já está (Teste 3km T13, regen, regen, progressivo longo). Garantir que **não há prova**.
+### Tipos compartilhados
+Novo arquivo `src/lib/training-session-types.ts` com `Zone`, `SessionType`, `IntensityLevel`, `DayOfWeek`, `TrainingSession`, `WeekPlan`, e a constante `INTENSITY_CONFIG`.
 
-**Nível 2 — N2_P5 (Semana 4)** — já está correta (T13 CR, T14 Regen 50, T15 Regen 30, T16 Prova). Conferir e manter.
+### Biblioteca de sessões
+Novo arquivo `src/lib/session-library.ts` com o array `sessionLibrary` literal exato fornecido pelo usuário (RE/BA/IAE/LON/PRO/PRL/TRU/IAM/CRL/CRAP/SUB/IAI/IAL/IMI). Imutável.
 
-### Ajustes auxiliares
+### Store
+Novo `src/lib/training-store.ts` com Zustand + `persist` exatamente conforme spec, mais:
+- `loadPrescription(planId, weeks)` — hidrata estado a partir do banco.
+- `markDirty / markClean` para o botão "Salvar".
+- `recalcSummary` aplicado em todos os mutators (add/remove/swap/move/update).
+- `history` capado em 10 (Ctrl+Z).
+- Sessão pré-pronta (isCustom:false) editada na grade → clona com novo `crypto.randomUUID()` e `isCustom:true` antes de salvar.
 
-- **`PHASE_LABELS_42KM`**: confirmar P4 = "Preparação Específica", P5 = "Polimento / Prova".
-- **`src/routes/_authenticated/planilha-42km.tsx`**: o destaque visual "PROVA 42KM" deve aparecer **apenas** na Sem 4 / Slot 4 da Planilha 5 (ambos os níveis). Remover qualquer destaque de prova na Planilha 4.
-- **`.lovable/plan.md`**: atualizar a descrição (item que diz "Sem 4 P4/P5 N1 e P5 N2") para refletir que a prova está só em P5.
+### Adapter plano gerado → WeekPlan[]
+Novo `src/lib/plan-to-weeks.ts`:
+- Lê o `payload` das planilhas existentes (5/10/21/42km já têm estruturas distintas) e mapeia cada treino para um `TrainingSession` plausível buscando por código/tipo na biblioteca, fallback `CUSTOM`.
+- Distribui pelos 7 dias da semana respeitando a distribuição original do plano.
+- Preenche `summary` via `recalcSummary`.
 
-### Verificação pós-fix
+### Server function
+`src/lib/plan-customization.functions.ts`:
+- `getPlanCustomization({ planId })` → `{ basePayload, weeks | null }`.
+- `savePlanCustomization({ planId, weeks })` → faz `select` para conferir `coach_id = userId`, atualiza `payload = jsonb_set(payload,'{customization}', ...)`.
+- Validação Zod estrita do shape de `WeekPlan[]`.
+- Registrado em `start.ts` via `attachSupabaseAuth` (já configurado).
 
-1. N1_P4 Sem 4 e N2_P4 Sem 4: nenhum workout do tipo `"Prova 42km"`.
-2. N1_P5 Sem 4 Slot 4 e N2_P5 Sem 4 Slot 4: exatamente um `prova42km` com `1000m Z1 + 39000m Z2 + 3195m Z3`.
-3. Teste 3km presente em N1_P4 Sem 4 (T14), N2_P2 Sem 4 (T13) e N2_P4 Sem 4 (T13) — não em P5.
-4. UI: badge "PROVA" só aparece em P5 Sem 4.
+## Componentes (novos em `src/components/prescription/`)
 
-### Pergunta antes de implementar
+```
+PrescriptionPage.tsx     route component, header + WeeklyGrid + drawers
+WeeklyGrid.tsx           7×N grade, DndContext, Ctrl+Z, "Salvar" / "Desfazer"
+SessionDayCard.tsx       card compacto com badge intensidade, drag handle, 3 botões
+EmptyDayCell.tsx         célula vazia com "+", abre SessionLibrary com target
+WeekSummary.tsx          totais km / duração / barra L vs M+H / minutos por zona
+SessionLibrary.tsx       Sheet lateral: filtros LOW/MOD/HIGH + chips tipo + busca + cards
+SessionLibraryCard.tsx   "Usar" / "Ver/Editar" / lixeira (custom)
+SessionEditor.tsx        Sheet lateral: form completo (campos abaixo)
+StructureBlocksEditor.tsx lista @dnd-kit/sortable de blocos warmup/main/recovery
+ZoneInputs.tsx           5 inputs Z1-Z5 + botão "⚡ Auto-calcular" (parse blocos)
+TagsInput.tsx            chips removíveis + input "adicionar"
+IntensityBadge.tsx       usa INTENSITY_CONFIG
+```
 
-A Planilha 5 do **Nível 1** precisa de conteúdo real para Sem 1–3 (a versão atual é uma cópia da P4). Posso usar a estrutura do N2_P5 como base (mesmos tipos de treino, volumes ~15% menores) ou você quer enviar os treinos exatos das semanas 1–3 da P5 N1?
+### SessionEditor — campos (conforme spec)
+Código, Nome, toggle LOW/MOD/HIGH, select SessionType, radio modo (tempo/distância), duração HH:MM:SS, distância em metros, blocos de estrutura ordenáveis (fase / label / content / zona / duração ou distância), zonas Z1-Z5 editáveis + auto-calcular, %Low e %M+H editáveis, tags, descrição.
+- Se `editorTarget` setado → `updateSession`. Se não → `saveToLibrary`.
+- Checkbox "Salvar na biblioteca também" (quando há target).
+- Sessões biblioteca pré-pronta editadas em prescrição clonam com novo uuid + `isCustom:true`.
+
+## Dependências
+
+```bash
+bun add zustand @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities
+```
+(Já existem: zod, sonner, todos shadcn.) `crypto.randomUUID()` para ids — sem `uuid`.
+
+## Integração com o perfil do aluno
+`src/routes/_authenticated/alunos.$studentId.tsx` aba *Planilhas*: nova coluna **Ação** com botão **"Personalizar"** que linka para `/alunos/$studentId/prescricao/$planId`.
+
+## Cores intensidade
+Seguindo a spec, mas via CSS tokens semânticos em `src/styles.css`:
+```css
+--intensity-low-bg: oklch(...);  --intensity-low-fg: ...;
+--intensity-mod-bg: ...;         --intensity-mod-fg: ...;
+--intensity-high-bg: ...;        --intensity-high-fg: ...;
+```
+`INTENSITY_CONFIG` referencia classes Tailwind que usam essas vars (não hex direto em componentes).
+
+## Ordem de execução
+
+1. `bun add zustand @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities`.
+2. Criar tipos + biblioteca + store + adapter + tokens CSS de intensidade.
+3. Criar server fn `plan-customization.functions.ts`.
+4. Criar componentes em `src/components/prescription/` (de baixo para cima).
+5. Criar rota `alunos.$studentId.prescricao.$planId.tsx`.
+6. Adicionar botão "Personalizar" em `alunos.$studentId.tsx`.
+7. Smoke test: gerar planilha 10km → personalizar → swap dois dias → editar um treino → salvar → reload → conferir persistência.
+
+## Fora de escopo (não nesta entrega)
+- Versionar histórico no banco (history fica só em memória/localStorage).
+- Multi-coach colaborativo / conflito de edição.
+- Regenerar PDF a partir do plano customizado (próxima iteração).

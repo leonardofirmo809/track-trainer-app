@@ -86,20 +86,24 @@ function AdminUsersPage() {
 
   const load = async () => {
     setLoading(true);
-    const [coachRes, inviteRes] = await Promise.all([
+    const [coachRes, inviteRes, settingRes] = await Promise.all([
       supabase.rpc("get_all_coaches"),
       supabase.from("coach_invites").select("*").order("created_at", { ascending: false }),
+      supabase.from("app_settings").select("value").eq("key", "max_coaches").maybeSingle(),
     ]);
     if (coachRes.error) toast.error(coachRes.error.message);
     setCoaches((coachRes.data ?? []) as Coach[]);
     setInvites((inviteRes.data ?? []) as Invite[]);
+    const parsed = parseInt(settingRes.data?.value ?? "", 10);
+    setCoachLimit(Number.isFinite(parsed) && parsed > 0 ? parsed : 4);
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
   const activeCount = coaches.filter((c) => c.has_role).length;
-  const atLimit = activeCount >= COACH_LIMIT;
+  const atLimit = activeCount >= coachLimit;
+  const usagePct = Math.min(100, Math.round((activeCount / Math.max(coachLimit, 1)) * 100));
 
   const inviteLink = (token: string) => `${window.location.origin}/aceitar-convite?token=${token}`;
 

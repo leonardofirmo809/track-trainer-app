@@ -1,53 +1,50 @@
-## Adicionar e remover treinos na semana (Personalizar planilha)
+## Fechar o signup público — apenas convidados criam conta
 
-Estender o sistema de overrides para permitir, dentro de cada semana de cada fase, **remover** treinos do catálogo e **adicionar** treinos novos — além das edições já existentes.
+Antes de mais nada: a página `/signup` **já é fechada hoje** (mostra "Cadastro por convite" com link para `/login`, sem formulário). E o fluxo `/aceitar-convite?token=...` também já existe. O que falta é fechar o portão no **Auth** e ajustar o aceite de convite para continuar funcionando depois disso.
 
-### Modelo de dados (compatível com o existente)
+### O problema com a abordagem ingênua
+Se simplesmente desabilitarmos signups no Auth (`disable_signup = true`), a página `/aceitar-convite` para de funcionar — ela usa `supabase.auth.signUp`, que passa a ser bloqueado. Precisamos trocar esse caminho por uma criação de usuário **server-side**, que ignora a flag.
 
-Hoje: `workoutOverrides[phase][weekIdx][originalCode] = WorkoutPatch`.
+### Mudanças
 
-Adicionar duas chaves reservadas no objeto da semana (com prefixo `__` para não colidir com códigos de treino):
+**1. Desabilitar signup público** (Lovable Cloud → Auth)
+- `disable_signup: true`. Login segue normal. Já existe um fluxo admin (`admin-coaches.functions.ts`) que usa `supabaseAdmin.auth.admin.createUser` — esse continua funcionando porque é service-role.
 
-```text
-workoutOverrides[phase][weekIdx] = {
-  [originalCode]: WorkoutPatch,   // edições (já existe)
-  __removed?: string[],            // códigos originais ocultados nesta semana
-  __added?: Workout[]              // treinos extras criados pelo usuário
-}
-```
+**2. Mover a criação de conta do convite para o servidor**
+Novo `acceptInvite` em `src/lib/invites.functions.ts`:
+- Input: `{ token, password, fullName? }` (Zod, password ≥ 8).
+- Lê `coach_invites` por token (via `supabaseAdmin`); valida `status = 'pending'`, não expirado.
+- `supabaseAdmin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { full_name } })`.
+- Retorna `{ ok: true, email }` para o client. O trigger existente `handle_new_user` cuida de criar o `profile`, atribuir role `coach` e marcar o convite como `accepted`.
 
-Planos antigos continuam funcionando sem migração.
+`src/routes/aceitar-convite.tsx`:
+- Submit chama `acceptInvite` (server fn, não autenticada — é pública).
+- Em sucesso, faz `supabase.auth.signInWithPassword({ email, password })` e navega para `/dashboard`.
+- Mantém a tela de erro/expirado igual.
 
-### Mudanças de código
+**3. Endurecer o trigger `handle_new_user`** (defesa em profundidade)
+Hoje, qualquer signup vira `coach`, mesmo sem convite. Atualizar para:
+- Procurar convite pendente pelo email; se não houver, `RAISE EXCEPTION 'Cadastro permitido apenas por convite.'` — o usuário nem chega a ser criado.
+- Se houver, segue o comportamento atual (cria profile, atribui role `coach`, marca convite como `accepted`).
 
-**`src/lib/workout-overrides.ts`**
-- Atualizar `applyOverrides(workouts, weekObj)` para:
-  1. Filtrar `workouts` removendo os que estão em `__removed`.
-  2. Aplicar os patches existentes sobre os restantes.
-  3. Concatenar `__added` ao final.
-- Novos helpers: `removeWorkout`, `restoreRemovedWorkout`, `addWorkout`, `updateAddedWorkout`, `deleteAddedWorkout` — todos retornando novo `WorkoutOverrides` e fazendo cleanup de chaves vazias.
-- Manter `setOverride` / `getPatch` como estão.
+Isso garante que mesmo se alguém reabrir signup por engano, ou obtiver o service role, contas só nascem com convite válido.
 
-**`src/lib/plan-customization.functions.ts`**
-- Estender `OverridesSchema`: o objeto da semana passa a aceitar (além de `[code]: WorkoutPatch`) `__removed: z.array(z.string()).max(20).optional()` e `__added: z.array(WorkoutSchema).max(14).optional()`.
-- Definir `WorkoutSchema` (code, type, zones, sections, note) reaproveitando os schemas já presentes.
+**4. Pequeno ajuste em `/signup`**
+- Se a URL trouxer `?token=xxx`, redirecionar imediatamente para `/aceitar-convite?token=xxx` (conveniência — caso o link do email aponte por engano para `/signup`).
+- Sem token: mantém a tela atual ("Cadastro por convite", botão para `/login`). O texto já cobre o pedido do enunciado.
 
-**`src/components/planilha/PlanilhaCustomizerSheet.tsx`**
-- No grid da semana:
-  - Cada card de treino ganha um botão "Remover" (ícone trash, canto superior direito, `stopPropagation`). Para treino do catálogo → entra em `__removed`. Para treino adicionado → sai de `__added`.
-  - Após o último card, um card pontilhado **"+ Adicionar treino"** abre o `WorkoutEditorDialog` em modo "novo" com defaults (code vazio, type "Base aeróbia", zones `["Z2"]`, uma section `main` com um item single).
-  - Se houver removidos na semana, mostrar um pequeno rodapé "Removidos: COD1, COD2 — Restaurar" para devolver cada um.
-- O `WorkoutEditorDialog` ganha modo `"new" | "added" | "edit"`:
-  - `"edit"` (atual): edita patch sobre o original.
-  - `"added"`: edita o treino dentro de `__added` (substitui pelo objeto completo). Botão inferior esquerdo vira "Excluir treino".
-  - `"new"`: aplica o save adicionando o workout em `__added`.
-- Validação leve: exigir `code` não vazio antes de aplicar.
-- Aviso visual: se `patched.length > diasDisponíveis` (a `distributeWeek` solta os excedentes), mostrar badge "X treino(s) não couberam nesta semana".
+**5. Não mexer**
+- `/login`: intocado.
+- Fluxo admin de criar coach (`admin-coaches.functions.ts`): já usa service role; segue funcionando.
+- Templates de email do convite e link `/aceitar-convite`: já estão certos.
 
-**Persistência**
-- Reutiliza `savePlanWorkoutOverrides`. Sem mudanças nas 4 rotas `planilha-Xkm.tsx` — elas já chamam `applyOverrides` que agora respeita `__added`/`__removed`.
+### Arquivos
+- **Novo**: `src/lib/invites.functions.ts` (server fn `acceptInvite`).
+- **Edita**: `src/routes/aceitar-convite.tsx` (chama server fn + signIn), `src/routes/signup.tsx` (redirect se houver token).
+- **Migration**: substitui `public.handle_new_user` para exigir convite pendente.
+- **Configuração**: desabilita signup público no Auth.
 
 ### Fora de escopo
-- Reordenar treinos manualmente (a distribuição automática por dia continua igual).
-- Mudar a quantidade de dias da semana do aluno (isso vive na configuração do plano).
-- PDF/visualizações fora da planilha (o pipeline atual já consome a lista patcheada).
+- "Esqueci minha senha" / página `/reset-password` (você mencionou que não tem hoje — posso fazer em separado se quiser).
+- Login social (Google, etc.).
+- HIBP / verificação de senha vazada.

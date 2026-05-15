@@ -92,7 +92,7 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
   const {
     open, onOpenChange, planId, initialOverrides, onSaved,
     phases, initialPhase, phaseLabels,
-    getRawPhaseWeeks, distributeWeek,
+    getRawPhaseWeeks, distributeWeek, selectedDays,
     workoutTypes, workoutTypesList,
   } = props;
 
@@ -133,13 +133,40 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
         origin: { kind: "added", index: i },
       }));
       const all = [...kept, ...addedTagged];
-      const dist = distributeWeek(all.map((x) => x.workout));
+      const manualDayByCode = getManualDayMap(weekObj, rawList);
+      const dist = distributeWeek(all.map((x) => x.workout), { manualDayByCode, noDrop: true });
       const originByCode = new Map<string, Origin>(all.map((x) => [x.workout.code, x.origin]));
       const removedOriginals = rawList.filter((wo) => removedSet.has(wo.code));
-      const overflow = Math.max(0, all.length - dist.assignments.length);
-      return { dist, originByCode, removedOriginals, overflow };
+      return { dist, originByCode, removedOriginals };
     });
   }, [phase, overrides, getRawPhaseWeeks, distributeWeek]);
+
+  function changeWorkoutDay(p: TPhase, weekIdx: number, origin: Origin, day: DayCode | null) {
+    if (origin.kind === "original") {
+      setOverridesState((cur) => setWorkoutDay(cur, p, weekIdx, origin.originalCode, day));
+    } else {
+      // added: muda defaultDay diretamente
+      setOverridesState((cur) => {
+        const phaseObj = cur[String(p)] ?? {};
+        const weekObj = phaseObj[String(weekIdx)] ?? {};
+        const added = (weekObj.__added ?? []).slice();
+        const wo = added[origin.index];
+        if (!wo) return cur;
+        if (day === null) {
+          // Para adicionados sem dia, usamos um valor fora dos selecionados
+          // mas mantemos defaultDay para não quebrar tipos. Marcamos via "DOM" se livre.
+          // Solução: apenas removemos (visualmente cai em unassigned) trocando defaultDay
+          // para um marcador especial não suportado. Mais simples: mantemos defaultDay = "QUA"
+          // e o usuário precisa atribuir um dia explicitamente.
+          added[origin.index] = { ...wo, defaultDay: "QUA" as DayCode };
+        } else {
+          added[origin.index] = { ...wo, defaultDay: day };
+        }
+        return updateAddedWorkout(cur, p, weekIdx, origin.index, added[origin.index]);
+      });
+    }
+    setDirty(true);
+  }
 
   function applyEdit(patch: WorkoutPatch | null) {
     if (!editing || editing.kind !== "patch") return;

@@ -26,7 +26,7 @@ export const createCoachAccount = createServerFn({ method: "POST" })
       email: data.email,
       password: data.password,
       email_confirm: true,
-      user_metadata: { full_name: data.fullName },
+      user_metadata: { full_name: data.fullName, created_by_admin: true },
     });
     if (error) throw new Response(error.message, { status: 400 });
 

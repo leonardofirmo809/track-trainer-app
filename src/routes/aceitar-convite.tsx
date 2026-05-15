@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { acceptInvite } from "@/lib/invites.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,16 +46,27 @@ function AcceptInvitePage() {
     if (!invite) return;
     if (password.length < 8) return toast.error("Senha deve ter ao menos 8 caracteres.");
     if (password !== confirm) return toast.error("As senhas não conferem.");
+    if (!token) return;
     setSubmitting(true);
-    const { error } = await supabase.auth.signUp({
-      email: invite.email,
-      password,
-      options: { data: { full_name: invite.full_name } },
-    });
-    setSubmitting(false);
-    if (error) return toast.error(error.message);
-    toast.success("Conta criada! Bem-vindo.");
-    navigate({ to: "/dashboard" });
+    try {
+      await acceptInvite({ data: { token, password } });
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: invite.email,
+        password,
+      });
+      if (signInErr) {
+        toast.success("Conta criada! Faça login para continuar.");
+        navigate({ to: "/login" });
+        return;
+      }
+      toast.success("Conta criada! Bem-vindo.");
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      const msg = err instanceof Response ? await err.text() : err instanceof Error ? err.message : "Erro ao criar conta.";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

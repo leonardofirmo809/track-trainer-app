@@ -68,9 +68,7 @@ function Layout() {
               <span className="font-display text-lg font-bold">PaceLab</span>
             </div>
             <div className="flex-1" />
-            <SidebarTrigger className="md:hidden" aria-label="Abrir menu">
-              <Menu />
-            </SidebarTrigger>
+            <MobileMenuButton />
           </header>
           <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
             <Outlet />

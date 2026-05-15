@@ -313,6 +313,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_all_coaches: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          has_role: boolean
+          id: string
+          students_count: number
+        }[]
+      }
       get_invite_by_token: {
         Args: { _token: string }
         Returns: {
@@ -338,6 +349,7 @@ export type Database = {
         | "invite_resent"
         | "invite_accepted"
         | "coach_created_manual"
+        | "coach_role_removed"
       invite_status: "pending" | "accepted" | "revoked"
       plan_status: "ativa" | "concluida" | "arquivada"
       plan_type: "5km" | "10km" | "21km" | "42km"
@@ -478,6 +490,7 @@ export const Constants = {
         "invite_resent",
         "invite_accepted",
         "coach_created_manual",
+        "coach_role_removed",
       ],
       invite_status: ["pending", "accepted", "revoked"],
       plan_status: ["ativa", "concluida", "arquivada"],

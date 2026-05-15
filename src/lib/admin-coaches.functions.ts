@@ -54,3 +54,43 @@ export const createCoachAccount = createServerFn({ method: "POST" })
 
     return { id: created.user?.id };
   });
+
+const removeRoleSchema = z.object({ userId: z.string().uuid() });
+
+export const removeCoachRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => removeRoleSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+
+    const { data: isAdmin, error: roleErr } = await supabaseAdmin.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
+    if (roleErr) throw new Response(roleErr.message, { status: 500 });
+    if (!isAdmin) throw new Response("Forbidden", { status: 403 });
+
+    if (data.userId === userId) {
+      throw new Response("Você não pode remover seu próprio acesso.", { status: 400 });
+    }
+
+    const { data: target } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+    const targetEmail = target?.user?.email ?? null;
+
+    const { error: delErr } = await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", data.userId)
+      .eq("role", "coach");
+    if (delErr) throw new Response(delErr.message, { status: 500 });
+
+    await supabaseAdmin.from("admin_audit_log").insert({
+      event_type: "coach_role_removed",
+      target_email: targetEmail,
+      target_user_id: data.userId,
+      actor_id: userId,
+      metadata: {},
+    });
+
+    return { ok: true as const };
+  });

@@ -60,6 +60,15 @@
   --color-intensity-hard: var(--intensity-hard);
   --color-intensity-light-fg: var(--intensity-light-fg);
   --color-intensity-hard-fg: var(--intensity-hard-fg);
+  --color-intensity-low-bg: var(--intensity-low-bg);
+  --color-intensity-low-fg: var(--intensity-low-fg);
+  --color-intensity-low-border: var(--intensity-low-border);
+  --color-intensity-mod-bg: var(--intensity-mod-bg);
+  --color-intensity-mod-fg: var(--intensity-mod-fg);
+  --color-intensity-mod-border: var(--intensity-mod-border);
+  --color-intensity-high-bg: var(--intensity-high-bg);
+  --color-intensity-high-fg: var(--intensity-high-fg);
+  --color-intensity-high-border: var(--intensity-high-border);
 }
 
 :root {

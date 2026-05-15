@@ -210,12 +210,16 @@ function AdminUsersPage() {
     <TooltipProvider>
       <div className="space-y-8 max-w-6xl">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
+          <div className="min-w-[260px]">
             <h1 className="text-3xl font-display font-bold">Usuários</h1>
             <p className="text-muted-foreground">Gerencie treinadores e convites.</p>
-            <Badge variant={atLimit ? "destructive" : "secondary"} className="mt-3">
-              {activeCount} de {COACH_LIMIT} treinadores ativos
-            </Badge>
+            <div className="mt-3 space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">Treinadores: {activeCount} / {coachLimit}</span>
+                {atLimit && <Badge variant="destructive">Limite atingido</Badge>}
+              </div>
+              <Progress value={usagePct} className={atLimit ? "[&>div]:bg-destructive" : ""} />
+            </div>
           </div>
           <div className="flex gap-2">
             <Tooltip>

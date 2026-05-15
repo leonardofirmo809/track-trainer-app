@@ -176,18 +176,18 @@ function Planilha21kmPage() {
         <p className="text-muted-foreground">Monte a planilha de meia maratona com paces personalizados a partir do FTP do aluno.</p>
       </div>
 
+      <DistanceSelector current="21km" />
+
       <Card>
-        <CardHeader><CardTitle>1. Selecione o aluno</CardTitle></CardHeader>
+        <CardHeader><CardTitle>1. Atribuir a um aluno</CardTitle></CardHeader>
         <CardContent>
-          <Label htmlFor="aluno">Aluno</Label>
-          <Select value={studentId} onValueChange={setStudentId}>
-            <SelectTrigger id="aluno" className="max-w-md">
-              <SelectValue placeholder={students.isLoading ? "Carregando…" : "Selecione um aluno"} />
-            </SelectTrigger>
-            <SelectContent>
-              {students.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="aluno" className="mb-2 block">Aluno</Label>
+          <StudentPicker
+            value={studentId}
+            onChange={setStudentId}
+            distanceLabel="21km"
+            level={level}
+          />
         </CardContent>
       </Card>
 

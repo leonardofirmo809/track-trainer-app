@@ -48,8 +48,13 @@ export interface PlanilhaCustomizerSheetProps<TPhase extends number = number> {
 
   /** Catálogo bruto (sem overrides) por fase: 4 semanas de Workout[]. */
   getRawPhaseWeeks: (phase: TPhase) => WorkoutLike[][];
-  /** Distribui uma semana com tipos da planilha (5/10/21/42). */
-  distributeWeek: (workouts: WorkoutLike[]) => DistributionResult<WorkoutLike>;
+  /** Distribui uma semana com tipos da planilha (5/10/21/42). Aceita opts (manualDayByCode). */
+  distributeWeek: (
+    workouts: WorkoutLike[],
+    opts?: { manualDayByCode?: Record<string, DayCode | null | undefined>; noDrop?: boolean },
+  ) => DistributionResult<WorkoutLike>;
+  /** Dias selecionados pelo treinador (para o selector de dia). */
+  selectedDays: DayCode[];
 
   workoutTypes: TypesMap;
   workoutTypesList: string[];

@@ -109,7 +109,7 @@ function Planilha10kmPage() {
     if (!applied || validation) return null;
     const phaseWeeks = WORKOUTS_10KM[level][phase];
     const phaseOv = overrides[String(phase)] ?? {};
-    return phaseWeeks.map((wos, w) => distributeWeek(applyOverrides(wos as never, phaseOv[String(w)]) as typeof wos, weekDays, level, WORKOUT_TYPES_10KM));
+    return phaseWeeks.map((wos, w) => distributeWeek(applyOverrides(wos as never, phaseOv[String(w)]) as unknown as typeof wos, weekDays, level, WORKOUT_TYPES_10KM));
   }, [applied, level, phase, weekDays, validation, overrides]);
 
   async function persistConfig(opts: { phase?: 1 | 2 | 3 | 4 } = {}) {

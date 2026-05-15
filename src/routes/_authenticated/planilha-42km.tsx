@@ -107,7 +107,7 @@ function Planilha42kmPage() {
     if (!applied || validation) return null;
     const phaseWeeks = WORKOUTS_42KM[level][phase];
     const phaseOv = overrides[String(phase)] ?? {};
-    return phaseWeeks.map((wos, w) => distributeWeek(applyOverrides(wos as never, phaseOv[String(w)]) as typeof wos, weekDays, level, WORKOUT_TYPES_42KM));
+    return phaseWeeks.map((wos, w) => distributeWeek(applyOverrides(wos as never, phaseOv[String(w)]) as unknown as typeof wos, weekDays, level, WORKOUT_TYPES_42KM));
   }, [applied, level, phase, weekDays, validation, overrides]);
 
   async function persistConfig(opts: { phase?: Phase42 } = {}) {

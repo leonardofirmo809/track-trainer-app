@@ -229,3 +229,43 @@ export function deleteAddedWorkout(
 }
 
 export type { Item, Section, DayCode };
+
+/**
+ * Constrói o mapa code→DayCode|null para uma semana, considerando:
+ * - patches de originais (campo `day`)
+ * - workouts adicionados (campo `defaultDay`)
+ * Retorna `undefined` para códigos sem atribuição manual (= deixa auto).
+ */
+export function getManualDayMap(
+  weekObj: WeekOverride | undefined,
+  rawList: { code: string }[],
+): Record<string, DayCode | null | undefined> {
+  const out: Record<string, DayCode | null | undefined> = {};
+  if (!weekObj) return out;
+  const patches = getWeekPatches(weekObj);
+  for (const raw of rawList) {
+    const p = patches[raw.code];
+    if (p && "day" in p) out[raw.code] = p.day ?? null;
+  }
+  for (const added of getAdded(weekObj)) {
+    // Para added: defaultDay sempre vira atribuição manual
+    if (added.defaultDay) out[added.code] = added.defaultDay;
+  }
+  return out;
+}
+
+/** Atalho para mudar apenas o dia de um treino original. */
+export function setWorkoutDay(
+  overrides: WorkoutOverrides,
+  phase: number | string,
+  weekIdx: number,
+  originalCode: string,
+  day: DayCode | null,
+): WorkoutOverrides {
+  return withWeek(overrides, phase, weekIdx, (week) => {
+    const cur = (week[originalCode] as WorkoutPatch | undefined) ?? {};
+    week[originalCode] = { ...cur, day };
+    return week;
+  });
+}
+

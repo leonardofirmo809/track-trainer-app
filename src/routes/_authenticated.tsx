@@ -79,3 +79,12 @@ function Layout() {
     </SidebarProvider>
   );
 }
+
+function MobileMenuButton() {
+  const { setOpenMobile } = useSidebar();
+  return (
+    <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menu" onClick={() => setOpenMobile(true)}>
+      <Menu />
+    </Button>
+  );
+}

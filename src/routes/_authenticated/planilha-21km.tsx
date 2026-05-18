@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { PlanilhaCustomizerSheet } from "@/components/planilha/PlanilhaCustomizerSheet";
 import { DistanceSelector } from "@/components/planilha/distance-selector";
 import { StudentPicker } from "@/components/planilha/student-picker";
-import { applyOverrides, getOverridesFromPayload, type WorkoutOverrides } from "@/lib/workout-overrides";
+import { applyOverrides, getManualDayMap, getOverridesFromPayload, type WorkoutOverrides } from "@/lib/workout-overrides";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -110,7 +110,12 @@ function Planilha21kmPage() {
     if (!applied || validation) return null;
     const phaseWeeks = WORKOUTS_21KM[level][phase];
     const phaseOv = overrides[String(phase)] ?? {};
-    return phaseWeeks.map((wos, w) => distributeWeek(applyOverrides(wos as never, phaseOv[String(w)]) as unknown as typeof wos, weekDays, level, WORKOUT_TYPES_21KM));
+    return phaseWeeks.map((wos, w) => {
+      const weekOv = phaseOv[String(w)];
+      const list = applyOverrides(wos as never, weekOv) as unknown as typeof wos;
+      const manualDayByCode = getManualDayMap(weekOv, list);
+      return distributeWeek(list, weekDays, level, WORKOUT_TYPES_21KM, { manualDayByCode, noDrop: true });
+    });
   }, [applied, level, phase, weekDays, validation, overrides]);
 
   async function persistConfig(opts: { phase?: Phase21 } = {}) {

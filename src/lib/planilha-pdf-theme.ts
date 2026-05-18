@@ -167,6 +167,8 @@ export type RenderPlanilhaOpts<W extends AnyWorkout> = {
   dayFull: Record<string, string>;
   /** intense flag por tipo de treino. */
   isIntense: (workoutType: string) => boolean;
+  /** Data exibida no header como "Gerado em ...". Default: hoje. */
+  generatedAt?: string | Date | null;
 };
 
 export async function renderPlanilhaPdf<W extends AnyWorkout>(
@@ -176,6 +178,7 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
     distanceLabel, phaseTitle, phaseSubtitle,
     studentName, studentLevel, ftpSecondsPerKm, zones,
     level, daysPerWeek, weekDays, weeks, branding, dayFull, isIntense,
+    generatedAt,
   } = opts;
 
   const pdf = await PDFDocument.create();

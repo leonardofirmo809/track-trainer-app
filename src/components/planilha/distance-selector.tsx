@@ -41,7 +41,7 @@ export function DistanceSelector({ current }: { current: Distance }) {
                 {opt.title}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground leading-snug">{opt.subtitle}</p>
+            
           </Link>
         );
       })}

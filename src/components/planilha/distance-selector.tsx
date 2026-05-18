@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
 
 type Distance = "5km" | "10km" | "21km" | "42km";
 
-const OPTIONS: { id: Distance; route: "/planilha-5km" | "/planilha-10km" | "/planilha-21km" | "/planilha-42km"; title: string; subtitle: string }[] = [
-  { id: "5km", route: "/planilha-5km", title: "5 km", subtitle: "Para corredores de 20 a 30 min" },
-  { id: "10km", route: "/planilha-10km", title: "10 km", subtitle: "Para corredores de 45 a 55 min" },
-  { id: "21km", route: "/planilha-21km", title: "21 km", subtitle: "Meia maratona — 1h30 a 2h15" },
-  { id: "42km", route: "/planilha-42km", title: "42 km", subtitle: "Maratona — 3h30 a 5h" },
+const OPTIONS: { id: Distance; route: "/planilha-5km" | "/planilha-10km" | "/planilha-21km" | "/planilha-42km"; title: string }[] = [
+  { id: "5km", route: "/planilha-5km", title: "5 km" },
+  { id: "10km", route: "/planilha-10km", title: "10 km" },
+  { id: "21km", route: "/planilha-21km", title: "21 km" },
+  { id: "42km", route: "/planilha-42km", title: "42 km" },
 ];
 
 export function DistanceSelector({ current }: { current: Distance }) {
@@ -41,7 +41,7 @@ export function DistanceSelector({ current }: { current: Distance }) {
                 {opt.title}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground leading-snug">{opt.subtitle}</p>
+            
           </Link>
         );
       })}

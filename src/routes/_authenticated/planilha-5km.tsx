@@ -24,10 +24,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   WORKOUTS, WORKOUT_TYPES, PHASE_LABELS, DAY_ORDER, DAY_LABEL, DAY_FULL,
   defaultDaysFor, type DayCode, type Workout, type Item, type SectionName, type ZoneId,
 } from "@/lib/planilha-5km-data";
@@ -55,7 +51,7 @@ function Planilha5kmPage() {
   const [weekDays, setWeekDays] = useState<DayCode[]>(["TER", "QUI", "SAB"]);
   const [phase, setPhase] = useState<1 | 2 | 3 | 4>(1);
   const [applied, setApplied] = useState(false);
-  const [pendingApply, setPendingApply] = useState<null | (() => void)>(null);
+  
   const [openWorkout, setOpenWorkout] = useState<{ wo: Workout; day: DayCode } | null>(null);
   const [saving, setSaving] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -145,14 +141,7 @@ function Planilha5kmPage() {
       await persistConfig();
       toast.success("Configuração aplicada e salva.");
     };
-    // checa intensos consecutivos em qualquer semana da fase atual
-    const phaseWeeks = WORKOUTS[level][phase];
-    const anyConsecutive = phaseWeeks.some((wos) => distributeWeek(wos, weekDays, level).hasConsecutiveIntense);
-    if (anyConsecutive) {
-      setPendingApply(() => apply);
-    } else {
-      void apply();
-    }
+    void apply();
   }
 
   function changePhase(p: 1 | 2 | 3 | 4) {
@@ -384,23 +373,6 @@ function Planilha5kmPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmação intensos consecutivos */}
-      <AlertDialog open={!!pendingApply} onOpenChange={(o) => !o && setPendingApply(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Treinos intensos em dias consecutivos</AlertDialogTitle>
-            <AlertDialogDescription>
-              Atenção: treinos intensos em dias seguidos podem aumentar risco de lesão. Deseja continuar?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { const fn = pendingApply; setPendingApply(null); fn?.(); }}>
-              Continuar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {applied && (
         <div className="flex justify-end">
@@ -499,11 +471,6 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
           );
         })}
       </div>
-      {dist.hasConsecutiveIntense && (
-        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-          <AlertTriangle className="size-3" /> Há treinos intensos em dias consecutivos.
-        </p>
-      )}
     </div>
   );
 }

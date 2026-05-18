@@ -20,6 +20,7 @@ export async function generatePlanilha21kmPdf(opts: {
   currentPhase: Phase21;
   weeks: DistributionResult<Workout>[];
   branding: CoachBranding;
+  generatedAt?: string | Date | null;
 }): Promise<Blob> {
   return renderPlanilhaPdf({
     distanceLabel: "21KM",

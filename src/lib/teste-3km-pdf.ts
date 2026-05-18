@@ -181,7 +181,7 @@ export async function generateTeste3kmPdf(opts: {
   page.drawRectangle({ x: 0, y: 0, width, height: footerH, color: secondary });
   const footerLeft = `Treinador: ${branding.coachName}`;
   drawText(page, footerLeft, 32, 12, font, 9, white);
-  const gen = `Gerado em ${new Date().toLocaleDateString("pt-BR")}`;
+  const gen = `Gerado em ${new Date(testDate + "T00:00:00").toLocaleDateString("pt-BR")}`;
   drawText(page, gen, width - 32 - font.widthOfTextAtSize(gen, 9), 12, font, 9, white);
 
   const bytes = await pdf.save();

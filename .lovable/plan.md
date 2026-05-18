@@ -1,21 +1,19 @@
-## Mostrar data de criação do plano no PDF
+## PDF do Teste 3KM: usar a data do teste no "Gerado em"
 
-Hoje o PDF imprime `Gerado em ${new Date()}` (data do dia em que o PDF foi exportado). Vou trocar para a data de criação do plano (`training_plans.created_at`), conforme escolhido.
+Hoje o rodapé do PDF imprime `Gerado em ${new Date()}` (data em que o PDF foi exportado). O PDF é montado a partir do formulário em memória (antes mesmo de salvar), então não existe `created_at` confiável; a melhor referência é o `testDate` que o usuário já preenche no formulário.
 
-### Mudanças
+### Mudança
 
-1. **`src/lib/planilha-pdf-theme.ts`**
-   - Adicionar campo opcional `generatedAt?: string | Date` em `RenderPlanilhaOpts`.
-   - Em `renderPlanilhaPdf`, usar `generatedAt` (formatado em `pt-BR`) na linha "Gerado em ..."; se ausente, manter `new Date()` como fallback.
-
-2. **`src/lib/planilha-5km-pdf.ts`, `planilha-10km-pdf.ts`, `planilha-21km-pdf.ts`, `planilha-42km-pdf.ts`**
-   - Adicionar `generatedAt?: string` nas opções de `generatePlanilhaXkmPdf` e repassar para `renderPlanilhaPdf`.
-
-3. **`src/lib/planilha-5km.functions.ts`, `planilha-10km.functions.ts`, `planilha-21km.functions.ts`, `planilha-42km.functions.ts`**
-   - Incluir `created_at` no `.select(...)` da query de `training_plans` em `getPlanilhaXkmData` e retornar no `plan`.
-
-4. **`src/routes/_authenticated/planilha-5km.tsx`, `planilha-10km.tsx`, `planilha-21km.tsx`, `planilha-42km.tsx`**
-   - Em `handleExportPdf`, passar `generatedAt: dataQuery.data.plan?.created_at` para o gerador de PDF.
+**`src/lib/teste-3km-pdf.ts`** (linha ~184)
+- Trocar:
+  ```ts
+  const gen = `Gerado em ${new Date().toLocaleDateString("pt-BR")}`;
+  ```
+- Por:
+  ```ts
+  const gen = `Gerado em ${new Date(testDate + "T00:00:00").toLocaleDateString("pt-BR")}`;
+  ```
+  (reaproveita o `testDate` já recebido e formatado em pt-BR, igual ao bloco do aluno na linha 69).
 
 ### Fora de escopo
-- Layout do PDF, formato de data alternativo, exibir data em outros lugares na UI.
+- Layout do PDF, formato de data alternativo, mudança no comportamento de salvar teste.

@@ -471,11 +471,6 @@ function WeekRow({ index, dist, level, phase, weekIdx, onOpen }: {
           );
         })}
       </div>
-      {dist.hasConsecutiveIntense && (
-        <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-          <AlertTriangle className="size-3" /> Há treinos intensos em dias consecutivos.
-        </p>
-      )}
     </div>
   );
 }

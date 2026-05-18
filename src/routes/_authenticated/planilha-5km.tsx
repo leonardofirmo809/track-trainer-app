@@ -24,10 +24,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   WORKOUTS, WORKOUT_TYPES, PHASE_LABELS, DAY_ORDER, DAY_LABEL, DAY_FULL,
   defaultDaysFor, type DayCode, type Workout, type Item, type SectionName, type ZoneId,
 } from "@/lib/planilha-5km-data";

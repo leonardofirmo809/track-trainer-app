@@ -36,6 +36,7 @@ export async function generatePlanilha10kmPdf(opts: {
     weeks: opts.weeks,
     branding: opts.branding,
     dayFull: DAY_FULL,
+    generatedAt: opts.generatedAt,
     isIntense: (type) => WORKOUT_TYPES_10KM[type as keyof typeof WORKOUT_TYPES_10KM]?.intense ?? false,
   });
 }

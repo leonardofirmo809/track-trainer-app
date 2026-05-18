@@ -166,6 +166,7 @@ function Planilha5kmPage() {
         level, daysPerWeek, weekDays, currentPhase: phase,
         weeks,
         branding: branding.data ?? { logoUrl: null, primary: "#0EA5E9", secondary: "#0F172A", coachName: "Treinador" },
+        generatedAt: dataQuery.data.plan?.created_at ?? null,
       });
       const safeName = (dataQuery.data.student?.full_name ?? "aluno").replace(/[^\w\-]+/g, "-");
       downloadBlob(blob, `Planilha-5km-${safeName}-Fase${phase}.pdf`);

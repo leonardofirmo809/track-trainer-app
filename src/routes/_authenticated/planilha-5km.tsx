@@ -141,14 +141,7 @@ function Planilha5kmPage() {
       await persistConfig();
       toast.success("Configuração aplicada e salva.");
     };
-    // checa intensos consecutivos em qualquer semana da fase atual
-    const phaseWeeks = WORKOUTS[level][phase];
-    const anyConsecutive = phaseWeeks.some((wos) => distributeWeek(wos, weekDays, level).hasConsecutiveIntense);
-    if (anyConsecutive) {
-      setPendingApply(() => apply);
-    } else {
-      void apply();
-    }
+    void apply();
   }
 
   function changePhase(p: 1 | 2 | 3 | 4) {

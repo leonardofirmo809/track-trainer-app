@@ -20,6 +20,7 @@ export async function generatePlanilha21kmPdf(opts: {
   currentPhase: Phase21;
   weeks: DistributionResult<Workout>[];
   branding: CoachBranding;
+  generatedAt?: string | Date | null;
 }): Promise<Blob> {
   return renderPlanilhaPdf({
     distanceLabel: "21KM",
@@ -35,6 +36,7 @@ export async function generatePlanilha21kmPdf(opts: {
     weeks: opts.weeks,
     branding: opts.branding,
     dayFull: DAY_FULL,
+    generatedAt: opts.generatedAt,
     isIntense: (type) => WORKOUT_TYPES_21KM[type as keyof typeof WORKOUT_TYPES_21KM]?.intense ?? false,
   });
 }

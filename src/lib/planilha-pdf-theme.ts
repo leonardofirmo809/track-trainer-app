@@ -247,7 +247,8 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
     return lines;
   };
 
-  const today = new Date().toLocaleDateString("pt-BR");
+  const generatedDate = generatedAt ? new Date(generatedAt) : new Date();
+  const today = (isNaN(generatedDate.getTime()) ? new Date() : generatedDate).toLocaleDateString("pt-BR");
   const infoLine =
     `Gerado em ${today}  •  Nível ${level} (${level === 1 ? "3x" : "4x"}/sem)  •  ` +
     `Dias: ${weekDays.map((d) => d.short).join(", ")}`;

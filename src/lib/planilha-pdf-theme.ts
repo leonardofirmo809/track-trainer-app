@@ -129,14 +129,29 @@ function zoneRangeText(zone: AnyZoneId, zoneMap: Map<AnyZoneId, SavedZone>): str
 }
 
 // Descrição do item à esquerda (sem a faixa, que vai do lado direito).
-function itemLeft(it: AnyItem): { text: string; zone: AnyZoneId | null } {
+// Para intervalos, retornamos as duas zonas (on/off) para renderizar uma badge
+// colorida por bloco, no padrão da prescrição (ex.: "6× (1min [Z4] + 1min [Z1])").
+function itemLeft(it: AnyItem): {
+  text: string;
+  zone: AnyZoneId | null;
+  intervals?: {
+    reps: number;
+    on: { text: string; zone: AnyZoneId };
+    off: { text: string; zone: AnyZoneId };
+  };
+} {
   if (it.kind === "single") {
     return { text: `${it.value}${unitLabel(it.unit)}`, zone: it.zone };
   }
   if (it.kind === "intervals") {
     return {
-      text: `${it.reps}× (${it.on.value}${unitLabel(it.on.unit)} ON + ${it.off.value}${unitLabel(it.off.unit)} OFF)`,
-      zone: it.on.zone,
+      text: "",
+      zone: null,
+      intervals: {
+        reps: it.reps,
+        on: { text: `${it.on.value}${unitLabel(it.on.unit)}`, zone: it.on.zone },
+        off: { text: `${it.off.value}${unitLabel(it.off.unit)}`, zone: it.off.zone },
+      },
     };
   }
   return { text: `${it.meters}m — ${it.label}`, zone: null };
@@ -144,7 +159,7 @@ function itemLeft(it: AnyItem): { text: string; zone: AnyZoneId | null } {
 
 function itemRight(it: AnyItem, zoneMap: Map<AnyZoneId, SavedZone>): string {
   if (it.kind === "single") return zoneRangeText(it.zone, zoneMap);
-  if (it.kind === "intervals") return `ON ${it.on.zone}: ${zoneRangeText(it.on.zone, zoneMap)}`;
+  if (it.kind === "intervals") return `${it.on.zone}: ${zoneRangeText(it.on.zone, zoneMap)}`;
   return it.note ?? "";
 }
 
@@ -250,7 +265,7 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
   const generatedDate = generatedAt ? new Date(generatedAt) : new Date();
   const today = (isNaN(generatedDate.getTime()) ? new Date() : generatedDate).toLocaleDateString("pt-BR");
   const infoLine =
-    `Gerado em ${today}  •  Nível ${level} (${level === 1 ? "3x" : "4x"}/sem)  •  ` +
+    `Início em ${today}  •  Nível ${level} (${level === 1 ? "3x" : "4x"}/sem)  •  ` +
     `Dias: ${weekDays.map((d) => d.short).join(", ")}`;
 
   function drawHeader() {
@@ -390,7 +405,7 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
     wk.assignments.forEach((a) => {
       if (!a.workout) {
         ensure(20);
-        drawText(page, `${dayFull[a.day]} — OFF`, margin, y, italic, 10, mutedSoft);
+        drawText(page, `${dayFull[a.day]} — DESCANSO`, margin, y, italic, 10, mutedSoft);
         y -= 18;
         return;
       }
@@ -449,15 +464,13 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
           const left = itemLeft(it);
           const right = itemRight(it, zoneMap);
 
-          // Lado esquerdo: "5min [Z1]" com badge da zona inline
           const leftSize = 10;
           let lx = margin + 14;
-          drawText(page, left.text, lx, y, font, leftSize, ink);
-          lx += font.widthOfTextAtSize(left.text, leftSize) + 6;
 
-          if (left.zone) {
-            const paint = zonePaint(left.zone);
-            const tag = `[${left.zone}]`;
+          // Helper: desenha uma badge "[Zx]" colorida na posição corrente.
+          const drawZoneBadge = (zone: AnyZoneId) => {
+            const paint = zonePaint(zone);
+            const tag = `[${zone}]`;
             const tagW = bold.widthOfTextAtSize(tag, 9);
             const padX = 4, padY = 2;
             page.drawRectangle({
@@ -466,6 +479,32 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
             });
             drawText(page, tag, lx, y, bold, 9, paint.fg);
             lx += tagW + padX * 2 + 4;
+          };
+
+          if (left.intervals) {
+            // Ex.: "6× (1min [Z4] + 1min [Z1])" — duas badges coloridas inline.
+            const prefix = `${left.intervals.reps}× (`;
+            drawText(page, prefix, lx, y, font, leftSize, ink);
+            lx += font.widthOfTextAtSize(prefix, leftSize) + 2;
+
+            drawText(page, left.intervals.on.text, lx, y, font, leftSize, ink);
+            lx += font.widthOfTextAtSize(left.intervals.on.text, leftSize) + 6;
+            drawZoneBadge(left.intervals.on.zone);
+
+            const plus = "+ ";
+            drawText(page, plus, lx, y, font, leftSize, ink);
+            lx += font.widthOfTextAtSize(plus, leftSize) + 2;
+
+            drawText(page, left.intervals.off.text, lx, y, font, leftSize, ink);
+            lx += font.widthOfTextAtSize(left.intervals.off.text, leftSize) + 6;
+            drawZoneBadge(left.intervals.off.zone);
+
+            drawText(page, ")", lx, y, font, leftSize, ink);
+          } else {
+            // Single / test: texto + (opcional) badge da zona principal.
+            drawText(page, left.text, lx, y, font, leftSize, ink);
+            lx += font.widthOfTextAtSize(left.text, leftSize) + 6;
+            if (left.zone) drawZoneBadge(left.zone);
           }
 
           // Lado direito: range

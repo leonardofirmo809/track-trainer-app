@@ -174,3 +174,22 @@ export const savePlanCustomization = createServerFn({ method: "POST" })
     if (error) throw new Response(error.message, { status: 500 });
     return { ok: true as const };
   });
+
+export const updatePlanStartDate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      planId: z.string().uuid(),
+      // ISO yyyy-mm-dd ou null para limpar
+      startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await fetchPlanForCoach(data.planId, context.userId);
+    const { error } = await supabaseAdmin
+      .from("training_plans")
+      .update({ start_date: data.startDate, updated_at: new Date().toISOString() })
+      .eq("id", data.planId);
+    if (error) throw new Response(error.message, { status: 500 });
+    return { ok: true as const };
+  });

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PlanilhaCustomizerSheet } from "@/components/planilha/PlanilhaCustomizerSheet";
+import { PlanStartDatePicker } from "@/components/planilha/plan-start-date-picker";
 import { DistanceSelector } from "@/components/planilha/distance-selector";
 import { StudentPicker } from "@/components/planilha/student-picker";
 import { applyOverrides, getManualDayMap, getOverridesFromPayload, type WorkoutOverrides } from "@/lib/workout-overrides";
@@ -57,6 +58,7 @@ function Planilha5kmPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [overrides, setOverrides] = useState<WorkoutOverrides>({});
   const [exporting, setExporting] = useState(false);
+  const [pdfStartDate, setPdfStartDate] = useState<string | null>(null);
   const branding = useCoachBranding();
 
   const students = useQuery({
@@ -166,7 +168,7 @@ function Planilha5kmPage() {
         level, daysPerWeek, weekDays, currentPhase: phase,
         weeks,
         branding: branding.data ?? { logoUrl: null, primary: "#0EA5E9", secondary: "#0F172A", coachName: "Treinador" },
-        generatedAt: dataQuery.data.plan?.created_at ?? null,
+        generatedAt: pdfStartDate ?? (dataQuery.data.plan as { start_date?: string | null } | null)?.start_date ?? dataQuery.data.plan?.created_at ?? null,
       });
       const safeName = (dataQuery.data.student?.full_name ?? "aluno").replace(/[^\w\-]+/g, "-");
       downloadBlob(blob, `Planilha-5km-${safeName}-Fase${phase}.pdf`);
@@ -331,6 +333,13 @@ function Planilha5kmPage() {
                   <Settings2 /> Personalizar planilha
                 </Button>
               )}
+              <PlanStartDatePicker
+                planId={dataQuery.data?.plan?.id ?? null}
+                initialStartDate={(dataQuery.data?.plan as { start_date?: string | null } | null)?.start_date ?? null}
+                fallbackDate={dataQuery.data?.plan?.created_at ?? null}
+                invalidateQueryKey={["planilha-5km", studentId] as const}
+                onChange={setPdfStartDate}
+              />
               <Button onClick={handleExportPdf} disabled={exporting} size="sm">
                 <Download /> {exporting ? "Gerando…" : "Exportar PDF"}
               </Button>

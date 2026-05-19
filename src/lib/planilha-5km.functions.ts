@@ -45,7 +45,7 @@ export const getPlanilha5kmData = createServerFn({ method: "GET" })
 
     const { data: plans } = await supabaseAdmin
       .from("training_plans")
-      .select("id, payload, status, plan_type, updated_at, created_at")
+      .select("id, payload, status, plan_type, updated_at, created_at, start_date")
       .eq("student_id", data.studentId).eq("plan_type", "5km").eq("status", "ativa")
       .order("updated_at", { ascending: false }).limit(1);
     const plan = plans?.[0] ?? null;

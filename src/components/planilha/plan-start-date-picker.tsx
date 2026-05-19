@@ -82,33 +82,32 @@ export function PlanStartDatePicker({
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <Label className="text-xs uppercase text-muted-foreground">Data de início do treino</Label>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn("justify-start text-left font-normal", !date && "text-muted-foreground")}
-            disabled={!planId}
-            title={!planId ? "Salve a planilha primeiro" : undefined}
-          >
-            <CalendarIcon className="mr-2 size-4" />
-            {format(date, "dd/MM/yyyy", { locale: ptBR })}
-            {saving && <span className="ml-2 text-xs text-muted-foreground">salvando…</span>}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={handleSelect}
-            initialFocus
-            locale={ptBR}
-            className={cn("p-3 pointer-events-auto")}
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label="Data de início do treino"
+          title={!planId ? "Salve a planilha primeiro" : "Data de início do treino"}
+          className={cn("justify-start text-left font-normal", !date && "text-muted-foreground")}
+          disabled={!planId}
+        >
+          <CalendarIcon className="mr-2 size-4" />
+          Início: {format(date, "dd/MM/yyyy", { locale: ptBR })}
+          {saving && <span className="ml-2 text-xs text-muted-foreground">salvando…</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={handleSelect}
+          initialFocus
+          locale={ptBR}
+          className={cn("p-3 pointer-events-auto")}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
+

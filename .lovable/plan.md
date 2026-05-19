@@ -1,60 +1,20 @@
-## Objetivo
+## Problema
 
-1. Adicionar uma **data de início do treino** que seja escolhida pelo treinador na própria página da planilha e apareça no PDF.
-2. Remover os rótulos "ON" e "OFF" do PDF, usando no lugar a notação de **zonas de treinamento** (Z1–Z5), igual aparece na prescrição. Trocar o "OFF" dos dias sem treino por **"DESCANSO"**.
+No header do card "4. Fase e treinos" (4 planilhas: 5/10/21/42km), o `PlanStartDatePicker` é renderizado lado a lado com os botões **Personalizar planilha** e **Exportar PDF**. Como ele tem `flex-col` com `Label` em cima do `Button`, ele fica mais alto que os irmãos — o header usa `items-center` (padrão do flex), então o botão da data acaba flutuando deslocado e o conjunto parece torto.
 
-## 1. Data de início no PDF (4 planilhas: 5/10/21/42KM)
+## Correção (apenas UI, escopo mínimo)
 
-**Onde aparece**
-- Em `src/lib/planilha-pdf-theme.ts`, a linha do header hoje mostra `Gerado em DD/MM/AAAA  •  Nível ...`.
-- Vamos passar a mostrar `Início em DD/MM/AAAA  •  Nível ...`, usando a data escolhida pelo treinador.
+Atualizar `src/components/planilha/plan-start-date-picker.tsx`:
 
-**Campo na página**
-- Em cada uma das 4 rotas `src/routes/_authenticated/planilha-{5,10,21,42}km.tsx`, adicionar um input de data (shadcn DatePicker em popover) com label "Data de início do treino", próximo ao botão "Exportar PDF".
-- Valor inicial: `training_plans.start_date` se existir, senão `training_plans.created_at`, senão hoje.
-- Ao mudar a data, salvar imediatamente em `training_plans.start_date` (debounce curto) via uma server function nova, e atualizar o cache do React Query da planilha.
-- No `handleExportPdf`, passar essa data como `generatedAt` para o gerador de PDF (substitui o `created_at` atual).
+1. Remover o wrapper `flex-col` + `<Label>` acima. O botão passa a ser um único elemento da mesma altura dos irmãos (`size="sm"`, `h-8`), alinhando perfeitamente no `CardHeader`.
+2. Manter a semântica de label via `aria-label="Data de início do treino"` no `Button` e um `title` no trigger explicando o campo (mesmo padrão de tooltip nativo já usado no botão "Personalizar planilha").
+3. Prefixar o texto do botão com um rótulo curto e discreto: `Início: 19/05/2026`, para que o usuário ainda entenda do que se trata sem o label externo.
+4. O indicador "salvando…" continua dentro do próprio botão (como hoje), à direita do texto.
 
-**Server function nova**
-- `src/lib/plan-customization.functions.ts` (ou um arquivo irmão `plan-start-date.functions.ts`): `updatePlanStartDate({ planId, startDate })` protegida por `requireSupabaseAuth`, faz `update training_plans set start_date = ... where id = planId and coach_id = auth.uid()`.
-
-**Renderer**
-- `renderPlanilhaPdf` (em `planilha-pdf-theme.ts`):
-  - Trocar o texto `Gerado em ${today}` por `Início em ${startDate}`.
-  - Continuar aceitando `generatedAt`; renomear internamente para `startDate` é opcional — não precisa quebrar a assinatura pública agora.
-
-## 2. Remover ON/OFF — usar zonas como na prescrição
-
-**Intervalos** (em `src/lib/planilha-pdf-theme.ts`, função `itemLeft`, linhas 132–143):
-
-Hoje:
-```
-6× (1min ON + 1min OFF)
-```
-
-Passa a ser (zona inline, sem ON/OFF):
-```
-6× (1min Z4 + 1min Z1)
-```
-
-A zona do trecho `off` já existe em `AnyIntervals.off.zone`. Vamos exibir cada bloco com sua própria zona em formato igual ao da prescrição. A badge colorida da zona à esquerda do item passa a ser composta (ex.: `[Z4]` e `[Z1]`), na mesma linha, mantendo as cores do `ZONE_PALETTE`.
-
-A coluna da direita (`itemRight`) hoje mostra `ON Z4: pace/vel`. Passa a mostrar a faixa da zona principal sem o prefixo "ON" — apenas `Z4 — pace/vel`, mantendo o range já calculado.
-
-**Dias sem treino** (mesmo arquivo, ~linha 393):
-
-Hoje:
-```
-QUARTA-FEIRA — OFF
-```
-Passa a ser:
-```
-QUARTA-FEIRA — DESCANSO
-```
+Nada muda nos 4 arquivos de rota — eles continuam renderizando `<PlanStartDatePicker .../>` no mesmo lugar; só o componente em si fica de altura única e inline.
 
 ## Fora de escopo
 
-- PDF do Teste 3KM (já foi ajustado em turno anterior).
-- Layout geral do PDF, cores, fontes.
-- Edição de treinos / lógica de prescrição.
-- Migração de banco (a coluna `training_plans.start_date` já existe).
+- Lógica de salvar/sincronizar a data (já funciona).
+- Geração do PDF.
+- Outros pontos do layout do card.

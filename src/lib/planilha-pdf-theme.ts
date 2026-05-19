@@ -405,7 +405,7 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
     wk.assignments.forEach((a) => {
       if (!a.workout) {
         ensure(20);
-        drawText(page, `${dayFull[a.day]} — OFF`, margin, y, italic, 10, mutedSoft);
+        drawText(page, `${dayFull[a.day]} — DESCANSO`, margin, y, italic, 10, mutedSoft);
         y -= 18;
         return;
       }

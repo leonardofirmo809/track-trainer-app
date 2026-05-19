@@ -464,15 +464,13 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
           const left = itemLeft(it);
           const right = itemRight(it, zoneMap);
 
-          // Lado esquerdo: "5min [Z1]" com badge da zona inline
           const leftSize = 10;
           let lx = margin + 14;
-          drawText(page, left.text, lx, y, font, leftSize, ink);
-          lx += font.widthOfTextAtSize(left.text, leftSize) + 6;
 
-          if (left.zone) {
-            const paint = zonePaint(left.zone);
-            const tag = `[${left.zone}]`;
+          // Helper: desenha uma badge "[Zx]" colorida na posição corrente.
+          const drawZoneBadge = (zone: AnyZoneId) => {
+            const paint = zonePaint(zone);
+            const tag = `[${zone}]`;
             const tagW = bold.widthOfTextAtSize(tag, 9);
             const padX = 4, padY = 2;
             page.drawRectangle({
@@ -481,6 +479,32 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
             });
             drawText(page, tag, lx, y, bold, 9, paint.fg);
             lx += tagW + padX * 2 + 4;
+          };
+
+          if (left.intervals) {
+            // Ex.: "6× (1min [Z4] + 1min [Z1])" — duas badges coloridas inline.
+            const prefix = `${left.intervals.reps}× (`;
+            drawText(page, prefix, lx, y, font, leftSize, ink);
+            lx += font.widthOfTextAtSize(prefix, leftSize) + 2;
+
+            drawText(page, left.intervals.on.text, lx, y, font, leftSize, ink);
+            lx += font.widthOfTextAtSize(left.intervals.on.text, leftSize) + 6;
+            drawZoneBadge(left.intervals.on.zone);
+
+            const plus = "+ ";
+            drawText(page, plus, lx, y, font, leftSize, ink);
+            lx += font.widthOfTextAtSize(plus, leftSize) + 2;
+
+            drawText(page, left.intervals.off.text, lx, y, font, leftSize, ink);
+            lx += font.widthOfTextAtSize(left.intervals.off.text, leftSize) + 6;
+            drawZoneBadge(left.intervals.off.zone);
+
+            drawText(page, ")", lx, y, font, leftSize, ink);
+          } else {
+            // Single / test: texto + (opcional) badge da zona principal.
+            drawText(page, left.text, lx, y, font, leftSize, ink);
+            lx += font.widthOfTextAtSize(left.text, leftSize) + 6;
+            if (left.zone) drawZoneBadge(left.zone);
           }
 
           // Lado direito: range

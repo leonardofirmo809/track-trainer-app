@@ -129,14 +129,29 @@ function zoneRangeText(zone: AnyZoneId, zoneMap: Map<AnyZoneId, SavedZone>): str
 }
 
 // Descrição do item à esquerda (sem a faixa, que vai do lado direito).
-function itemLeft(it: AnyItem): { text: string; zone: AnyZoneId | null } {
+// Para intervalos, retornamos as duas zonas (on/off) para renderizar uma badge
+// colorida por bloco, no padrão da prescrição (ex.: "6× (1min [Z4] + 1min [Z1])").
+function itemLeft(it: AnyItem): {
+  text: string;
+  zone: AnyZoneId | null;
+  intervals?: {
+    reps: number;
+    on: { text: string; zone: AnyZoneId };
+    off: { text: string; zone: AnyZoneId };
+  };
+} {
   if (it.kind === "single") {
     return { text: `${it.value}${unitLabel(it.unit)}`, zone: it.zone };
   }
   if (it.kind === "intervals") {
     return {
-      text: `${it.reps}× (${it.on.value}${unitLabel(it.on.unit)} ON + ${it.off.value}${unitLabel(it.off.unit)} OFF)`,
-      zone: it.on.zone,
+      text: "",
+      zone: null,
+      intervals: {
+        reps: it.reps,
+        on: { text: `${it.on.value}${unitLabel(it.on.unit)}`, zone: it.on.zone },
+        off: { text: `${it.off.value}${unitLabel(it.off.unit)}`, zone: it.off.zone },
+      },
     };
   }
   return { text: `${it.meters}m — ${it.label}`, zone: null };
@@ -144,7 +159,7 @@ function itemLeft(it: AnyItem): { text: string; zone: AnyZoneId | null } {
 
 function itemRight(it: AnyItem, zoneMap: Map<AnyZoneId, SavedZone>): string {
   if (it.kind === "single") return zoneRangeText(it.zone, zoneMap);
-  if (it.kind === "intervals") return `ON ${it.on.zone}: ${zoneRangeText(it.on.zone, zoneMap)}`;
+  if (it.kind === "intervals") return `${it.on.zone}: ${zoneRangeText(it.on.zone, zoneMap)}`;
   return it.note ?? "";
 }
 

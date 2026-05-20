@@ -91,7 +91,7 @@ function Planilha10kmPage() {
       const lv: 1 | 2 = p.level === 1 || p.level === 2 ? p.level : 1;
       const allowed = allowedDayCounts10km(lv);
       const validDays = Array.isArray(p.weekDays) && allowed.includes(p.weekDays.length) ? p.weekDays : [];
-      const ph: 1 | 2 | 3 | 4 = lv === 1 ? 1 : ((p.currentPhase ?? 1) as 1 | 2 | 3 | 4);
+      const ph: 1 | 2 | 3 | 4 = (p.currentPhase ?? 1) as 1 | 2 | 3 | 4;
       setLevel(lv);
       setWeekDays(validDays);
       setPhase(ph);
@@ -261,7 +261,6 @@ function Planilha10kmPage() {
                 setLevel(lv);
                 setWeekDays([]);
                 setApplied(false);
-                if (lv === 1) setPhase(1);
               }}>
                 <TabsList>
                   <TabsTrigger value="1">Nível 1 (3x/sem)</TabsTrigger>
@@ -339,44 +338,29 @@ function Planilha10kmPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {level === 1 ? (
-              <div className="space-y-6">
-                <p className="text-sm text-muted-foreground">{PHASE_LABELS_10KM[1].subtitle} — ciclo único de 4 semanas</p>
-                {weeks.map((wk, idx) => (
-                  <WeekRow key={idx} index={idx + 1} dist={wk}
-                    level={level} phase={1} weekIdx={idx} statsLookup={statsLookup}
-                    onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
-                ))}
-                <PhaseChartsBlock
-                  weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
-                  level={level} phase={1} statsLookup={statsLookup}
-                />
-              </div>
-            ) : (
-              <Tabs value={String(phase)} onValueChange={(v) => changePhase(Number(v) as 1 | 2 | 3 | 4)}>
-                <TabsList>
-                  {[1, 2, 3, 4].map((p) => (
-                    <TabsTrigger key={p} value={String(p)}>Plano {p}</TabsTrigger>
-                  ))}
-                </TabsList>
+            <Tabs value={String(phase)} onValueChange={(v) => changePhase(Number(v) as 1 | 2 | 3 | 4)}>
+              <TabsList>
                 {[1, 2, 3, 4].map((p) => (
-                  <TabsContent key={p} value={String(p)} className="space-y-6">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{PHASE_LABELS_10KM[p as 1 | 2 | 3 | 4].subtitle}</p>
-                    </div>
-                    {weeks.map((wk, idx) => (
-                      <WeekRow key={idx} index={idx + 1} dist={wk}
-                        level={level} phase={p as 1 | 2 | 3 | 4} weekIdx={idx} statsLookup={statsLookup}
-                        onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
-                    ))}
-                    <PhaseChartsBlock
-                      weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
-                      level={level} phase={p as 1 | 2 | 3 | 4} statsLookup={statsLookup}
-                    />
-                  </TabsContent>
+                  <TabsTrigger key={p} value={String(p)}>Plano {p}</TabsTrigger>
                 ))}
-              </Tabs>
-            )}
+              </TabsList>
+              {[1, 2, 3, 4].map((p) => (
+                <TabsContent key={p} value={String(p)} className="space-y-6">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{PHASE_LABELS_10KM[p as 1 | 2 | 3 | 4].subtitle}</p>
+                  </div>
+                  {weeks.map((wk, idx) => (
+                    <WeekRow key={idx} index={idx + 1} dist={wk}
+                      level={level} phase={p as 1 | 2 | 3 | 4} weekIdx={idx} statsLookup={statsLookup}
+                      onOpen={(wo, day) => setOpenWorkout({ wo, day })} />
+                  ))}
+                  <PhaseChartsBlock
+                    weeksWorkouts={weeks.map((wk) => wk.assignments.map((a) => a.workout).filter((w): w is Workout => !!w))}
+                    level={level} phase={p as 1 | 2 | 3 | 4} statsLookup={statsLookup}
+                  />
+                </TabsContent>
+              ))}
+            </Tabs>
           </CardContent>
         </Card>
       )}

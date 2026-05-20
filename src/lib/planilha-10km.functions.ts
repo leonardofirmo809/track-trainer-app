@@ -11,7 +11,7 @@ const configSchema = z.object({
   weekDays: z.array(DAY).min(3).max(5),
   currentPhase: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
 }).refine((v) => {
-  if (v.level === 1) return v.weekDays.length === 3 && v.currentPhase === 1;
+  if (v.level === 1) return v.weekDays.length === 3;
   return v.weekDays.length === 4 || v.weekDays.length === 5;
 }, { message: "Configuração inválida para o nível selecionado." });
 
@@ -64,7 +64,7 @@ export const savePlanilha10kmConfig = createServerFn({ method: "POST" })
     const payload = {
       level: data.level,
       weekDays: data.weekDays,
-      currentPhase: data.level === 1 ? 1 : data.currentPhase,
+      currentPhase: data.currentPhase,
     };
 
     const { data: existing } = await supabaseAdmin

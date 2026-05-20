@@ -431,8 +431,21 @@ function SessionEditorSheet() {
   const handleSave = () => {
     if (editorTarget) {
       updateSession(editorTarget.weekIndex, editorTarget.day, draft);
-      if (alsoSaveLibrary) saveToLibrary(draft);
-      toast.success(alsoSaveLibrary ? "Aplicado e salvo na biblioteca" : "Aplicado ao dia");
+      const movedDay = targetDay ?? editorTarget.day;
+      const movedWeek = targetWeekIndex ?? editorTarget.weekIndex;
+      const isMoving = movedDay !== editorTarget.day || movedWeek !== editorTarget.weekIndex;
+      if (isMoving) {
+        const from = { weekIndex: editorTarget.weekIndex, day: editorTarget.day };
+        const to = { weekIndex: movedWeek, day: movedDay };
+        const occupied = prescription.weeks[movedWeek]?.days[movedDay];
+        if (occupied) swapSessions(from, to);
+        else moveSession(from, to);
+        if (alsoSaveLibrary) saveToLibrary(draft);
+        toast.success(`Treino movido para ${DAY_LABELS[movedDay]}, semana ${movedWeek + 1}`);
+      } else {
+        if (alsoSaveLibrary) saveToLibrary(draft);
+        toast.success(alsoSaveLibrary ? "Aplicado e salvo na biblioteca" : "Aplicado ao dia");
+      }
     } else {
       saveToLibrary(draft);
       toast.success("Salvo na biblioteca");

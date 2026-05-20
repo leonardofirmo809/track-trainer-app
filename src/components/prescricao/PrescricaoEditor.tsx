@@ -461,6 +461,38 @@ function SessionEditorSheet() {
           <SheetDescription>Edite qualquer campo livremente. Auto-recalcula resumo da semana ao salvar.</SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto pr-2 space-y-4 mt-4">
+          {editorTarget && (
+            <div className="grid grid-cols-2 gap-3 rounded-md border bg-muted/30 p-3">
+              <div>
+                <Label>Semana</Label>
+                <Select
+                  value={String(targetWeekIndex ?? editorTarget.weekIndex)}
+                  onValueChange={(v) => setTargetWeekIndex(parseInt(v, 10))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {prescription.weeks.map((w, i) => (
+                      <SelectItem key={i} value={String(i)}>Semana {w.weekNumber}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Dia da semana</Label>
+                <Select
+                  value={targetDay ?? editorTarget.day}
+                  onValueChange={(v) => setTargetDay(v as DayOfWeek)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DAYS_OF_WEEK.map((d) => (
+                      <SelectItem key={d} value={d}>{DAY_LABELS[d]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Código</Label><Input value={draft.code} onChange={(e) => update({ code: e.target.value })} /></div>
             <div><Label>Nome</Label><Input value={draft.name} onChange={(e) => update({ name: e.target.value })} /></div>

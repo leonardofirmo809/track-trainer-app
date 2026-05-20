@@ -58,6 +58,13 @@ function MinhaMarca() {
     if (!user) return;
     setSaving(true);
     try {
+      // Se removeu a logo (logoUrl null) mas havia uma antes, limpa o storage também.
+      if (!logoUrl && branding.data?.logoUrl) {
+        const { data: files } = await supabase.storage.from("coach-branding").list(user.id);
+        if (files && files.length > 0) {
+          await supabase.storage.from("coach-branding").remove(files.map((f) => `${user.id}/${f.name}`));
+        }
+      }
       const { error } = await supabase
         .from("profiles")
         .update({ brand_logo_url: logoUrl, brand_primary_color: primary, brand_secondary_color: secondary })
@@ -71,6 +78,12 @@ function MinhaMarca() {
       setSaving(false);
     }
   }
+
+  function handleRemoveLogo() {
+    setLogoUrl(null);
+    toast.info("Logo removida. Clique em Salvar para confirmar.");
+  }
+
 
   return (
     <div className="max-w-5xl space-y-6">

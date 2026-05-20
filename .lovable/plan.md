@@ -1,16 +1,35 @@
-## Diagnóstico
+## Problema
 
-A UI da Planilha 10km já permite qualquer número de dias (`validateWeekDays10km` só exige ≥1), mas o `configSchema` em `src/lib/planilha-10km.functions.ts` ainda exige **exatamente 3 dias para N1** e **4 ou 5 dias para N2**. Quando o usuário troca de plano com uma contagem fora dessa regra (ex.: 3 dias em N2, ou 6+ dias), `changePhase` → `persistConfig` chama o server e dispara o erro `"Configuração inválida para o nível selecionado."`.
+No sheet "Personalizar treino do dia" (`SessionEditorSheet` em `src/components/prescricao/PrescricaoEditor.tsx`), quando o treinador edita um treino existente, todos os campos são editáveis — exceto o **dia da semana**, que fica fixo no dia original (`editorTarget.day`). A única forma de mover é via drag-and-drop no grid.
 
 ## Mudança
 
-Arquivo único: **`src/lib/planilha-10km.functions.ts`**
+Arquivo único: **`src/components/prescricao/PrescricaoEditor.tsx`** — `SessionEditorSheet`.
 
-- Trocar `weekDays: z.array(DAY).min(3).max(5)` por `weekDays: z.array(DAY).min(1).max(7)`.
-- Remover o `.refine(...)` que amarrava contagem ao `level` (a UI já trata sugestão suave via `softDayCountMessage10km`).
+1. **Adicionar estado local de destino** quando `editorTarget` está presente:
+   - `targetDay: DayOfWeek` (inicia com `editorTarget.day`)
+   - `targetWeekIndex: number` (inicia com `editorTarget.weekIndex`)
+   - Resetar no mesmo `useEffect` que reseta o `draft`.
 
-Resultado: o schema do servidor passa a refletir o que a UI permite, eliminando o erro ao trocar de plano.
+2. **Adicionar 2 campos no formulário** (logo abaixo do título, só quando `editorTarget` existe, antes da grid Código/Nome):
+   - **Select "Semana"** com opções `Semana 1..N` (N = `store.prescription.weeks.length`).
+   - **Select "Dia da semana"** com as 7 opções usando `DAYS_OF_WEEK` + `DAY_LABELS`.
+
+3. **Ajustar `handleSave`** quando `editorTarget` existe:
+   - Se `targetWeekIndex === editorTarget.weekIndex && targetDay === editorTarget.day` → comportamento atual (`updateSession`).
+   - Senão:
+     - Chamar `updateSession(editorTarget.weekIndex, editorTarget.day, draft)` para salvar as edições no slot atual.
+     - Verificar se o destino está ocupado lendo `store.prescription.weeks[targetWeekIndex]?.days[targetDay]`:
+       - Ocupado → `swapSessions({ weekIndex: editorTarget.weekIndex, day: editorTarget.day }, { weekIndex: targetWeekIndex, day: targetDay })`.
+       - Vazio → `moveSession(...)` com mesmos argumentos.
+     - Toast: `"Treino movido para {DAY_LABELS[targetDay]}, semana {targetWeekIndex+1}"`.
+   - Manter o checkbox "Salvar também na biblioteca" como hoje.
+
+4. Acessar `store.prescription.weeks` via `useTrainingStore()` no componente (já é o padrão usado em outros lugares).
 
 ## Fora de escopo
 
-UI, distribuição, PDF, banco, RLS, outras planilhas.
+- Drag-and-drop atual continua funcionando.
+- `SessionLibrarySheet` (já permite escolher dia ao adicionar).
+- PDF, banco, distribuição, outras planilhas.
+- Validação de regras de "dias permitidos por nível" — o usuário já pode arrastar para qualquer dia hoje.

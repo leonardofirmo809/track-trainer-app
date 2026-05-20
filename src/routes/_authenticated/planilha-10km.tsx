@@ -261,7 +261,6 @@ function Planilha10kmPage() {
                 setLevel(lv);
                 setWeekDays([]);
                 setApplied(false);
-                if (lv === 1) setPhase(1);
               }}>
                 <TabsList>
                   <TabsTrigger value="1">Nível 1 (3x/sem)</TabsTrigger>

@@ -98,18 +98,21 @@ function MinhaMarca() {
           <CardContent className="space-y-5">
             <div>
               <Label>Logo</Label>
-              <div className="mt-2 flex items-center gap-4">
-                <div className="size-24 rounded-lg border bg-muted/40 grid place-items-center overflow-hidden">
-                  {logoUrl ? <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" /> : <ImageIcon className="size-8 text-muted-foreground" />}
+              <div className="mt-2 flex items-start gap-4">
+                <div className="space-y-1">
+                  {logoUrl && <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Logo atual</p>}
+                  <div className="size-24 rounded-lg border bg-muted/40 grid place-items-center overflow-hidden">
+                    {logoUrl ? <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" /> : <ImageIcon className="size-8 text-muted-foreground" />}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
+                <div className="flex-1 space-y-2">
+                  <div className="flex flex-col gap-2 max-w-xs">
                     <Button type="button" variant="outline" disabled={uploading} onClick={() => fileRef.current?.click()}>
                       {logoUrl ? <RefreshCw /> : <Upload />} {uploading ? "Enviando..." : logoUrl ? "Trocar logo" : "Enviar logo"}
                     </Button>
                     {logoUrl && (
-                      <Button type="button" variant="outline" className="text-destructive hover:text-destructive" onClick={handleRemoveLogo}>
-                        <Trash2 /> Remover
+                      <Button type="button" variant="destructive" onClick={handleRemoveLogo}>
+                        <Trash2 /> Remover logo
                       </Button>
                     )}
                   </div>

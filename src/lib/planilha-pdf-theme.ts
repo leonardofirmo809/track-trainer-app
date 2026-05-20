@@ -289,6 +289,7 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
       const scale = maxH / logo.height;
       const lw = logo.width * scale;
       page.drawImage(logo, { x: leftX, y: A4.h - 28 - maxH, width: lw, height: maxH });
+      leftX += lw + 12;
     }
 
     // Nome do aluno em destaque
@@ -302,6 +303,7 @@ export async function renderPlanilhaPdf<W extends AnyWorkout>(
 
     // Linha de info
     drawText(page, truncate(infoLine, font, 9.5, nameMaxW), leftX, A4.h - 72, font, 9.5, white);
+
 
     y = A4.h - headerH - 22;
   }

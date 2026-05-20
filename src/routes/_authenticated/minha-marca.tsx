@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, Save, Image as ImageIcon } from "lucide-react";
+import { Upload, Save, Image as ImageIcon, Trash2, RefreshCw } from "lucide-react";
+
 
 export const Route = createFileRoute("/_authenticated/minha-marca")({ component: MinhaMarca });
 
@@ -57,6 +58,13 @@ function MinhaMarca() {
     if (!user) return;
     setSaving(true);
     try {
+      // Se removeu a logo (logoUrl null) mas havia uma antes, limpa o storage também.
+      if (!logoUrl && branding.data?.logoUrl) {
+        const { data: files } = await supabase.storage.from("coach-branding").list(user.id);
+        if (files && files.length > 0) {
+          await supabase.storage.from("coach-branding").remove(files.map((f) => `${user.id}/${f.name}`));
+        }
+      }
       const { error } = await supabase
         .from("profiles")
         .update({ brand_logo_url: logoUrl, brand_primary_color: primary, brand_secondary_color: secondary })
@@ -70,6 +78,12 @@ function MinhaMarca() {
       setSaving(false);
     }
   }
+
+  function handleRemoveLogo() {
+    setLogoUrl(null);
+    toast.info("Logo removida. Clique em Salvar para confirmar.");
+  }
+
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -89,15 +103,23 @@ function MinhaMarca() {
                   {logoUrl ? <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" /> : <ImageIcon className="size-8 text-muted-foreground" />}
                 </div>
                 <div className="space-y-2">
-                  <Button type="button" variant="outline" disabled={uploading} onClick={() => fileRef.current?.click()}>
-                    <Upload /> {uploading ? "Enviando..." : "Enviar logo"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                      {logoUrl ? <RefreshCw /> : <Upload />} {uploading ? "Enviando..." : logoUrl ? "Trocar logo" : "Enviar logo"}
+                    </Button>
+                    {logoUrl && (
+                      <Button type="button" variant="outline" className="text-destructive hover:text-destructive" onClick={handleRemoveLogo}>
+                        <Trash2 /> Remover
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">PNG ou JPG, até 2MB. Fundo transparente recomendado.</p>
                   <input
                     ref={fileRef} type="file" accept="image/png,image/jpeg" className="hidden"
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ""; }}
                   />
                 </div>
+
               </div>
             </div>
 

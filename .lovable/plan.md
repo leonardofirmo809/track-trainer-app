@@ -1,34 +1,25 @@
-## Problemas
+## Problema
 
-1. **Página Minha marca**: o botão "Enviar logo" sempre substitui (upsert), mas não há UI para **remover** a logo, nem botão claro de **trocar** com preview. Hoje o usuário consegue só re-enviar; não consegue voltar para "sem logo".
-2. **PDF**: em `planilha-pdf-theme.ts > drawHeader()`, quando há logo, ela é desenhada em `x = margin` (mesma posição esquerda) e o **nome do aluno também é desenhado em `leftX = margin`** logo abaixo, mas o `leftX` nunca é deslocado para depois da logo — então logo e nome do aluno se sobrepõem visualmente no header.
+Na tela **Minha marca**, o botão de remover a logo já existe no código, mas usa `variant="outline"` apenas com texto vermelho. Quando ele aparece ao lado do botão "Trocar logo" (também outline), ele se confunde visualmente e passa despercebido — por isso parece que não está lá.
 
-## Correção
+Além disso, o bloco da logo está pequeno (avatar 96px + dois botões lado a lado), o que aperta os botões e pode esconder o "Remover" se a logo ainda não tiver carregado no estado local.
 
-### 1. `src/routes/_authenticated/minha-marca.tsx` — UI de gerenciar logo
+## O que vou mudar (somente UI em `src/routes/_authenticated/minha-marca.tsx`)
 
-- Ao lado do botão **Enviar logo** (quando `logoUrl` existe), adicionar:
-  - Botão **Trocar logo** (variant `outline`) que abre o file picker (mesmo input).
-  - Botão **Remover logo** (variant `destructive` ghost / outline destrutivo) que:
-    - Limpa o estado local: `setLogoUrl(null)`.
-    - Mostra toast "Logo removida. Clique em Salvar para confirmar."
-    - O `handleSave` existente já faz `update({ brand_logo_url: logoUrl, ... })`, então salvar com `null` persiste a remoção.
-  - Opcional (recomendado): no `handleSave`, quando `logoUrl` ficar `null` e havia uma logo antes, também remover o arquivo do bucket `coach-branding` via `supabase.storage.from("coach-branding").remove([...])` para não deixar lixo. Listar `${user.id}/` e remover tudo é o mais simples e seguro.
-- Quando não há logo, manter apenas **Enviar logo** como hoje.
-- Texto de ajuda continua igual.
+1. **Destacar o botão Remover**
+   - Trocar de `variant="outline"` para `variant="destructive"` para ficar vermelho sólido e inconfundível.
+   - Manter o ícone `Trash2` e o texto "Remover logo".
 
-### 2. `src/lib/planilha-pdf-theme.ts` — corrigir sobreposição no header do PDF
+2. **Reorganizar os botões em coluna** quando há logo
+   - Empilhar "Trocar logo" e "Remover logo" verticalmente (`flex-col`) com largura total, em vez de `flex-wrap` lado a lado. Isso garante que ambos apareçam mesmo em telas estreitas e cria hierarquia clara.
 
-Em `drawHeader()` (linhas ~285-297):
+3. **Adicionar um rótulo visual no preview da logo**
+   - Acima do avatar 96×96, mostrar um pequeno texto "Logo atual" quando `logoUrl` estiver presente, para deixar claro que há uma logo carregada e que o botão vermelho abaixo serve para removê-la.
 
-- Após desenhar a logo, **avançar `leftX`** para `margin + lw + 12` (gap de 12px), de modo que o nome do aluno, o subtítulo e a info line passem a ser desenhados à direita da logo, não por cima.
-- Recalcular `nameMaxW` usando o novo `leftX` para que o texto seja truncado corretamente e nunca invada a área do FTP no canto direito.
-- Manter a logo verticalmente alinhada com o bloco de texto (sem alterar `maxH = 36` nem a posição Y atual).
-
-Resultado: logo à esquerda, bloco texto (nome do aluno + subtítulo + info) à direita da logo, FTP no canto direito — sem sobreposição.
+4. **Garantir que o botão aparece logo após upload**
+   - Já funciona via `setLogoUrl(url)` em `handleUpload`. Sem mudança de lógica.
 
 ## Fora de escopo
 
-- Mudar tamanho máximo da logo (2MB), formatos aceitos ou layout geral da página Minha marca.
-- Mudanças no header do PDF além da correção de posicionamento (cores, fontes, FTP, etc.).
-- Outros PDFs além do header compartilhado em `planilha-pdf-theme.ts` (esse arquivo já é usado por 5/10/21/42km).
+- Nada muda em PDF, storage, banco, ou na lógica de salvar.
+- Cores da marca, preview do PDF e demais seções permanecem iguais.

@@ -175,36 +175,44 @@ function simulado10km(code: string, slot: 1|2|3|4|5): Workout10km {
   ], "Simulado / Prova de 10km!");
 }
 
-// ============= NÍVEL 1 — 1 plano único × 4 semanas (3 slots) =============
-const PLAN_LEVEL_1_WEEKS: PhaseWeeks10km = [
-  // Semana 1
-  [
-    progressivo("T01", 1, 40, 5),
-    corridaRapida("T02", 2, 4, 2, 2),
-    longaoTempo("T03", 3, 25),
-  ],
-  // Semana 2
-  [
-    progressivo("T04", 1, 38, 8),
-    corridaRapida("T05", 2, 5, 1, 2),
-    longaoTempo("T06", 3, 30),
-  ],
-  // Semana 3
-  [
-    progressivo("T07", 1, 40, 10),
-    corridaRapida("T08", 2, 6, 2, 2),
-    longaoTempo("T09", 3, 35),
-  ],
-  // Semana 4 — Slot 2 = Teste 3km
-  [
-    tempoRun("T10", 1, 15),
-    teste3km("T11", 2, 1),
-    longaoTempo("T12", 3, 40),
-  ],
+// ============= NÍVEL 1 — 4 planos × 4 semanas (3 slots/semana) =============
+
+// Plano 1 — Preparação Geral (adaptação aeróbia)
+const N1_P1: PhaseWeeks10km = [
+  [ progressivo("T01", 1, 35, 5),  corridaRapida("T02", 2, 4, 1, 2), longaoTempo("T03", 3, 25) ],
+  [ progressivo("T04", 1, 38, 6),  corridaRapida("T05", 2, 5, 1, 2), longaoTempo("T06", 3, 30) ],
+  [ progressivo("T07", 1, 40, 8),  corridaRapida("T08", 2, 5, 2, 2), longaoTempo("T09", 3, 35) ],
+  [ progressivo("T10", 1, 45, 10), corridaRapida("T11", 2, 6, 2, 2), longaoTempo("T12", 3, 40) ],
 ];
-export const LEVEL_1_10KM: PhasesByLevel10km = {
-  1: PLAN_LEVEL_1_WEEKS, 2: PLAN_LEVEL_1_WEEKS, 3: PLAN_LEVEL_1_WEEKS, 4: PLAN_LEVEL_1_WEEKS,
-};
+
+// Plano 2 — Preparação Específica (introdução de força/intervalado leve)
+const N1_P2: PhaseWeeks10km = [
+  [ progressivo("T01", 1, 40, 8),         subidasSec("T02", 2, 8, 30, 90),         longaoTempo("T03", 3, 35) ],
+  [ subidasMin("T04", 1, 6, 1, 2),        intervaladoModerado("T05", 2, 3, 5, 3),  longaoTempo("T06", 3, 40) ],
+  [ progressivo("T07", 1, 45, 10),        intervaladoModerado("T08", 2, 4, 6, 3),  longaoTempo("T09", 3, 45) ],
+  [ subidasMin("T10", 1, 8, 1, 2),        intervaladoModerado("T11", 2, 4, 8, 3),  longaoTempo("T12", 3, 50) ],
+];
+
+// Plano 3 — Específico Avançado (qualidade)
+const N1_P3: PhaseWeeks10km = [
+  [ tempoRun("T01", 1, 12),  intervaladoLongo("T02", 2, 3, 3, 3), longaoTempo("T03", 3, 40) ],
+  [ tempoRun("T04", 1, 15),  intervaladoLongo("T05", 2, 4, 3, 3), longaoTempo("T06", 3, 45) ],
+  [ tempoRun("T07", 1, 18),  intervaladoLongo("T08", 2, 4, 4, 3), longaoTempo("T09", 3, 50) ],
+  // Semana 4 — Slot 2 = Teste 3km (ritual de reavaliação)
+  [ tempoRun("T10", 1, 20),  teste3km("T11", 2, 1),               longaoTempo("T12", 3, 55) ],
+];
+
+// Plano 4 — Polimento / Prova (taper + simulado)
+const N1_P4: PhaseWeeks10km = [
+  [ tempoRun("T01", 1, 18),                intervaladoLongo("T02", 2, 3, 4, 3), longaoTempo("T03", 3, 50) ],
+  // Semana 2 — Slot 3 = Simulado 5km
+  [ corridaRapida("T04", 1, 6, 2, 2),      regenerativo("T05", 2, 30),          simulado5km("T06", 3) ],
+  [ intervaladoLongo("T07", 1, 3, 3, 3),   regenerativo("T08", 2, 30),          progressivo("T09", 3, 40, 8) ],
+  // Semana da prova
+  [ corridaRapida("T10", 1, 4, 1, 2),      regenerativo("T11", 2, 25, "Regenerativo curto pré-prova"), simulado10km("T12", 3) ],
+];
+
+export const LEVEL_1_10KM: PhasesByLevel10km = { 1: N1_P1, 2: N1_P2, 3: N1_P3, 4: N1_P4 };
 
 // ============= NÍVEL 2 — 4 planos × 4 semanas (4 slots) =============
 

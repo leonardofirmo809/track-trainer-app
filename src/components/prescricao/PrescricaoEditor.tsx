@@ -387,9 +387,11 @@ function SessionLibrarySheet() {
 
 /* ---------- SessionEditorSheet ---------- */
 function SessionEditorSheet() {
-  const { editorOpen, editorMode, editorSession, editorTarget, closeEditor, updateSession, saveToLibrary } = useTrainingStore();
+  const { editorOpen, editorMode, editorSession, editorTarget, closeEditor, updateSession, saveToLibrary, moveSession, swapSessions, prescription } = useTrainingStore();
   const [draft, setDraft] = useState<TrainingSession | null>(null);
   const [alsoSaveLibrary, setAlsoSaveLibrary] = useState(false);
+  const [targetDay, setTargetDay] = useState<DayOfWeek | null>(null);
+  const [targetWeekIndex, setTargetWeekIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!editorOpen) { setDraft(null); return; }
@@ -410,6 +412,8 @@ function SessionEditorSheet() {
       });
     }
     setAlsoSaveLibrary(false);
+    setTargetDay(editorTarget?.day ?? null);
+    setTargetWeekIndex(editorTarget?.weekIndex ?? null);
   }, [editorOpen, editorSession, editorTarget]);
 
   if (!draft) return <Sheet open={editorOpen} onOpenChange={(o) => !o && closeEditor()}><SheetContent /></Sheet>;
@@ -427,8 +431,21 @@ function SessionEditorSheet() {
   const handleSave = () => {
     if (editorTarget) {
       updateSession(editorTarget.weekIndex, editorTarget.day, draft);
-      if (alsoSaveLibrary) saveToLibrary(draft);
-      toast.success(alsoSaveLibrary ? "Aplicado e salvo na biblioteca" : "Aplicado ao dia");
+      const movedDay = targetDay ?? editorTarget.day;
+      const movedWeek = targetWeekIndex ?? editorTarget.weekIndex;
+      const isMoving = movedDay !== editorTarget.day || movedWeek !== editorTarget.weekIndex;
+      if (isMoving) {
+        const from = { weekIndex: editorTarget.weekIndex, day: editorTarget.day };
+        const to = { weekIndex: movedWeek, day: movedDay };
+        const occupied = prescription.weeks[movedWeek]?.days[movedDay];
+        if (occupied) swapSessions(from, to);
+        else moveSession(from, to);
+        if (alsoSaveLibrary) saveToLibrary(draft);
+        toast.success(`Treino movido para ${DAY_LABELS[movedDay]}, semana ${movedWeek + 1}`);
+      } else {
+        if (alsoSaveLibrary) saveToLibrary(draft);
+        toast.success(alsoSaveLibrary ? "Aplicado e salvo na biblioteca" : "Aplicado ao dia");
+      }
     } else {
       saveToLibrary(draft);
       toast.success("Salvo na biblioteca");
@@ -444,6 +461,38 @@ function SessionEditorSheet() {
           <SheetDescription>Edite qualquer campo livremente. Auto-recalcula resumo da semana ao salvar.</SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto pr-2 space-y-4 mt-4">
+          {editorTarget && (
+            <div className="grid grid-cols-2 gap-3 rounded-md border bg-muted/30 p-3">
+              <div>
+                <Label>Semana</Label>
+                <Select
+                  value={String(targetWeekIndex ?? editorTarget.weekIndex)}
+                  onValueChange={(v) => setTargetWeekIndex(parseInt(v, 10))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {prescription.weeks.map((w, i) => (
+                      <SelectItem key={i} value={String(i)}>Semana {w.weekNumber}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Dia da semana</Label>
+                <Select
+                  value={targetDay ?? editorTarget.day}
+                  onValueChange={(v) => setTargetDay(v as DayOfWeek)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DAYS_OF_WEEK.map((d) => (
+                      <SelectItem key={d} value={d}>{DAY_LABELS[d]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Código</Label><Input value={draft.code} onChange={(e) => update({ code: e.target.value })} /></div>
             <div><Label>Nome</Label><Input value={draft.name} onChange={(e) => update({ name: e.target.value })} /></div>

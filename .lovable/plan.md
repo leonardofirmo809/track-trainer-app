@@ -1,20 +1,34 @@
-## Problema
+## Problemas
 
-No header do card "4. Fase e treinos" (4 planilhas: 5/10/21/42km), o `PlanStartDatePicker` é renderizado lado a lado com os botões **Personalizar planilha** e **Exportar PDF**. Como ele tem `flex-col` com `Label` em cima do `Button`, ele fica mais alto que os irmãos — o header usa `items-center` (padrão do flex), então o botão da data acaba flutuando deslocado e o conjunto parece torto.
+1. **Página Minha marca**: o botão "Enviar logo" sempre substitui (upsert), mas não há UI para **remover** a logo, nem botão claro de **trocar** com preview. Hoje o usuário consegue só re-enviar; não consegue voltar para "sem logo".
+2. **PDF**: em `planilha-pdf-theme.ts > drawHeader()`, quando há logo, ela é desenhada em `x = margin` (mesma posição esquerda) e o **nome do aluno também é desenhado em `leftX = margin`** logo abaixo, mas o `leftX` nunca é deslocado para depois da logo — então logo e nome do aluno se sobrepõem visualmente no header.
 
-## Correção (apenas UI, escopo mínimo)
+## Correção
 
-Atualizar `src/components/planilha/plan-start-date-picker.tsx`:
+### 1. `src/routes/_authenticated/minha-marca.tsx` — UI de gerenciar logo
 
-1. Remover o wrapper `flex-col` + `<Label>` acima. O botão passa a ser um único elemento da mesma altura dos irmãos (`size="sm"`, `h-8`), alinhando perfeitamente no `CardHeader`.
-2. Manter a semântica de label via `aria-label="Data de início do treino"` no `Button` e um `title` no trigger explicando o campo (mesmo padrão de tooltip nativo já usado no botão "Personalizar planilha").
-3. Prefixar o texto do botão com um rótulo curto e discreto: `Início: 19/05/2026`, para que o usuário ainda entenda do que se trata sem o label externo.
-4. O indicador "salvando…" continua dentro do próprio botão (como hoje), à direita do texto.
+- Ao lado do botão **Enviar logo** (quando `logoUrl` existe), adicionar:
+  - Botão **Trocar logo** (variant `outline`) que abre o file picker (mesmo input).
+  - Botão **Remover logo** (variant `destructive` ghost / outline destrutivo) que:
+    - Limpa o estado local: `setLogoUrl(null)`.
+    - Mostra toast "Logo removida. Clique em Salvar para confirmar."
+    - O `handleSave` existente já faz `update({ brand_logo_url: logoUrl, ... })`, então salvar com `null` persiste a remoção.
+  - Opcional (recomendado): no `handleSave`, quando `logoUrl` ficar `null` e havia uma logo antes, também remover o arquivo do bucket `coach-branding` via `supabase.storage.from("coach-branding").remove([...])` para não deixar lixo. Listar `${user.id}/` e remover tudo é o mais simples e seguro.
+- Quando não há logo, manter apenas **Enviar logo** como hoje.
+- Texto de ajuda continua igual.
 
-Nada muda nos 4 arquivos de rota — eles continuam renderizando `<PlanStartDatePicker .../>` no mesmo lugar; só o componente em si fica de altura única e inline.
+### 2. `src/lib/planilha-pdf-theme.ts` — corrigir sobreposição no header do PDF
+
+Em `drawHeader()` (linhas ~285-297):
+
+- Após desenhar a logo, **avançar `leftX`** para `margin + lw + 12` (gap de 12px), de modo que o nome do aluno, o subtítulo e a info line passem a ser desenhados à direita da logo, não por cima.
+- Recalcular `nameMaxW` usando o novo `leftX` para que o texto seja truncado corretamente e nunca invada a área do FTP no canto direito.
+- Manter a logo verticalmente alinhada com o bloco de texto (sem alterar `maxH = 36` nem a posição Y atual).
+
+Resultado: logo à esquerda, bloco texto (nome do aluno + subtítulo + info) à direita da logo, FTP no canto direito — sem sobreposição.
 
 ## Fora de escopo
 
-- Lógica de salvar/sincronizar a data (já funciona).
-- Geração do PDF.
-- Outros pontos do layout do card.
+- Mudar tamanho máximo da logo (2MB), formatos aceitos ou layout geral da página Minha marca.
+- Mudanças no header do PDF além da correção de posicionamento (cores, fontes, FTP, etc.).
+- Outros PDFs além do header compartilhado em `planilha-pdf-theme.ts` (esse arquivo já é usado por 5/10/21/42km).

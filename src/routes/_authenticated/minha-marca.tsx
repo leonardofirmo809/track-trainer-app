@@ -103,15 +103,23 @@ function MinhaMarca() {
                   {logoUrl ? <img src={logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" /> : <ImageIcon className="size-8 text-muted-foreground" />}
                 </div>
                 <div className="space-y-2">
-                  <Button type="button" variant="outline" disabled={uploading} onClick={() => fileRef.current?.click()}>
-                    <Upload /> {uploading ? "Enviando..." : "Enviar logo"}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                      {logoUrl ? <RefreshCw /> : <Upload />} {uploading ? "Enviando..." : logoUrl ? "Trocar logo" : "Enviar logo"}
+                    </Button>
+                    {logoUrl && (
+                      <Button type="button" variant="outline" className="text-destructive hover:text-destructive" onClick={handleRemoveLogo}>
+                        <Trash2 /> Remover
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">PNG ou JPG, até 2MB. Fundo transparente recomendado.</p>
                   <input
                     ref={fileRef} type="file" accept="image/png,image/jpeg" className="hidden"
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ""; }}
                   />
                 </div>
+
               </div>
             </div>
 

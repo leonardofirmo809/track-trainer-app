@@ -91,7 +91,7 @@ function Planilha10kmPage() {
       const lv: 1 | 2 = p.level === 1 || p.level === 2 ? p.level : 1;
       const allowed = allowedDayCounts10km(lv);
       const validDays = Array.isArray(p.weekDays) && allowed.includes(p.weekDays.length) ? p.weekDays : [];
-      const ph: 1 | 2 | 3 | 4 = lv === 1 ? 1 : ((p.currentPhase ?? 1) as 1 | 2 | 3 | 4);
+      const ph: 1 | 2 | 3 | 4 = (p.currentPhase ?? 1) as 1 | 2 | 3 | 4;
       setLevel(lv);
       setWeekDays(validDays);
       setPhase(ph);

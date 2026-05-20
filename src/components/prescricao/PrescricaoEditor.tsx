@@ -387,9 +387,11 @@ function SessionLibrarySheet() {
 
 /* ---------- SessionEditorSheet ---------- */
 function SessionEditorSheet() {
-  const { editorOpen, editorMode, editorSession, editorTarget, closeEditor, updateSession, saveToLibrary } = useTrainingStore();
+  const { editorOpen, editorMode, editorSession, editorTarget, closeEditor, updateSession, saveToLibrary, moveSession, swapSessions, prescription } = useTrainingStore();
   const [draft, setDraft] = useState<TrainingSession | null>(null);
   const [alsoSaveLibrary, setAlsoSaveLibrary] = useState(false);
+  const [targetDay, setTargetDay] = useState<DayOfWeek | null>(null);
+  const [targetWeekIndex, setTargetWeekIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!editorOpen) { setDraft(null); return; }
@@ -410,6 +412,8 @@ function SessionEditorSheet() {
       });
     }
     setAlsoSaveLibrary(false);
+    setTargetDay(editorTarget?.day ?? null);
+    setTargetWeekIndex(editorTarget?.weekIndex ?? null);
   }, [editorOpen, editorSession, editorTarget]);
 
   if (!draft) return <Sheet open={editorOpen} onOpenChange={(o) => !o && closeEditor()}><SheetContent /></Sheet>;

@@ -64,7 +64,7 @@ export const savePlanilha10kmConfig = createServerFn({ method: "POST" })
     const payload = {
       level: data.level,
       weekDays: data.weekDays,
-      currentPhase: data.level === 1 ? 1 : data.currentPhase,
+      currentPhase: data.currentPhase,
     };
 
     const { data: existing } = await supabaseAdmin

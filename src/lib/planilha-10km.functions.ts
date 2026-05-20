@@ -8,12 +8,9 @@ const DAY = z.enum(["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"]);
 const configSchema = z.object({
   studentId: z.string().uuid(),
   level: z.union([z.literal(1), z.literal(2)]),
-  weekDays: z.array(DAY).min(3).max(5),
+  weekDays: z.array(DAY).min(1).max(7),
   currentPhase: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
-}).refine((v) => {
-  if (v.level === 1) return v.weekDays.length === 3;
-  return v.weekDays.length === 4 || v.weekDays.length === 5;
-}, { message: "Configuração inválida para o nível selecionado." });
+});
 
 async function assertCanAccessStudent(userId: string, studentId: string) {
   const { data: student, error } = await supabaseAdmin

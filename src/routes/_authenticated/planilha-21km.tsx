@@ -89,7 +89,7 @@ function Planilha21kmPage() {
     if (plan?.payload) {
       const p = plan.payload as { level: 1 | 2; weekDays: DayCode[]; currentPhase: Phase21 };
       const lv: 1 | 2 = p.level === 1 || p.level === 2 ? p.level : 1;
-      const validDays = Array.isArray(p.weekDays) && p.weekDays.length === 4 ? p.weekDays : [];
+      const validDays = Array.isArray(p.weekDays) && p.weekDays.length >= 1 ? p.weekDays : [];
       const ph: Phase21 = ([1,2,3,4,5] as Phase21[]).includes(p.currentPhase) ? p.currentPhase : 1;
       setLevel(lv);
       setWeekDays(validDays);

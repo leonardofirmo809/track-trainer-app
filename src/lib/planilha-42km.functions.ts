@@ -8,7 +8,7 @@ const DAY = z.enum(["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"]);
 const configSchema = z.object({
   studentId: z.string().uuid(),
   level: z.union([z.literal(1), z.literal(2)]),
-  weekDays: z.array(DAY).length(4),
+  weekDays: z.array(DAY).min(1).max(7),
   currentPhase: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
 });
 

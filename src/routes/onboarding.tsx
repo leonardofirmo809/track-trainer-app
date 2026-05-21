@@ -91,7 +91,7 @@ function OnboardingPage() {
             <div className="size-9 rounded-xl bg-primary grid place-items-center">
               <Activity className="size-5 text-primary-foreground" />
             </div>
-            <span className="font-display text-xl font-bold">PaceLab</span>
+            <span className="font-display text-xl font-bold">8020Pace</span>
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">

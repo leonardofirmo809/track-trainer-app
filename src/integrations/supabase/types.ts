@@ -360,6 +360,13 @@ export type Database = {
           status: Database["public"]["Enums"]["invite_status"]
         }[]
       }
+      get_students_last_activity: {
+        Args: never
+        Returns: {
+          last_test_at: string
+          student_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

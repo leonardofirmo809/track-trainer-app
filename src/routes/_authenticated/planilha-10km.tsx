@@ -28,7 +28,7 @@ import {
   type DayCode, type Workout10km as Workout, type Item, type SectionName, type ZoneId,
 } from "@/lib/planilha-10km-data";
 import { distributeWeek, type DistributionResult } from "@/lib/planilha-5km-distribute";
-import { validateWeekDays10km, allowedDayCounts10km } from "@/lib/planilha-10km-distribute";
+import { validateWeekDays10km } from "@/lib/planilha-10km-distribute";
 import { getPlanilha10kmData, savePlanilha10kmConfig } from "@/lib/planilha-10km.functions";
 import { formatMmss } from "@/lib/teste-3km";
 
@@ -89,7 +89,6 @@ function Planilha10kmPage() {
     if (plan?.payload) {
       const p = plan.payload as { level: 1 | 2; weekDays: DayCode[]; currentPhase: 1 | 2 | 3 | 4 };
       const lv: 1 | 2 = p.level === 1 || p.level === 2 ? p.level : 1;
-      const allowed = allowedDayCounts10km(lv);
       const validDays = Array.isArray(p.weekDays) && p.weekDays.length >= 1 ? p.weekDays : [];
       const ph: 1 | 2 | 3 | 4 = (p.currentPhase ?? 1) as 1 | 2 | 3 | 4;
       setLevel(lv);

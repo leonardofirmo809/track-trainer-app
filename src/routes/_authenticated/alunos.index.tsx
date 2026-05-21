@@ -41,7 +41,10 @@ function AlunosList() {
   const studentsQ = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("students").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("students")
+        .select("id, full_name, email, target_distance, level, created_at")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -49,11 +52,14 @@ function AlunosList() {
 
   const lastQ = useQuery({
     queryKey: ["students-last-test"],
+    staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("tests").select("student_id, created_at").order("created_at", { ascending: false });
+      const { data, error } = await supabase.rpc("get_students_last_activity");
       if (error) throw error;
       const map = new Map<string, string>();
-      for (const t of data ?? []) if (!map.has(t.student_id)) map.set(t.student_id, t.created_at);
+      for (const r of (data ?? []) as { student_id: string; last_test_at: string }[]) {
+        map.set(r.student_id, r.last_test_at);
+      }
       return map;
     },
   });

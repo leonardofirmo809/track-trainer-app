@@ -1,72 +1,64 @@
-## Problema
+## Diagnóstico
 
-Hoje, depois de gerar a planilha, dá pra mexer nos checkboxes de dias da UI, mas em alguns casos a alteração é bloqueada:
+Analisei as áreas indicadas (listagem de alunos + navegação geral) e encontrei 5 causas concretas de lentidão. Nada disso é problema de infraestrutura — é código que pode ser otimizado.
 
-- **Planilha 21km e 42km**: o servidor exige exatamente 4 dias (`z.array(DAY).length(4)`). Qualquer tentativa de salvar com 3, 5 ou 6 dias retorna erro de validação.
-- **Planilha 10km, 21km e 42km**: ao reabrir um plano já salvo, o carregamento descarta `weekDays` se a contagem não bater com `allowedDayCounts*` / `=== 4`, e os checkboxes voltam zerados — passando a impressão de que a planilha "trava" a quantidade de dias.
-- **Planilha 5km**: já está livre (`min(1).max(7)` no servidor, sem guarda no load).
+### 1. Tela "Carregando…" em cheio a cada navegação
+`src/routes/_authenticated.tsx` faz duas consultas (`profiles` + `user_roles`) toda vez que o `user` muda e bloqueia **toda a tela** com "Carregando…" enquanto isso. Sem cache, então em qualquer reload completo o app fica ~300–800 ms preto antes de renderizar.
 
-A intenção (já refletida nos textos "Você pode escolher quantos quiser" e em `suggestedDayCount*`) é que a contagem fixa seja apenas **sugestão**, não regra.
+### 2. Listagem de alunos puxa TODOS os testes só para mostrar "última atividade"
+Em `alunos.index.tsx`:
+- `select("*")` em `students` (traz colunas grandes como `notes`, `injury_history`).
+- `lastQ` faz `select("student_id, created_at") from tests` **sem filtro e sem limite** — conforme você cria mais avaliações, isso vira o gargalo principal da página.
 
-## Mudança
+### 3. Sem `staleTime` global → tudo refaz no foco/navegação
+O `QueryClient` é criado vazio em `src/router.tsx`. Cada vez que você troca de aba ou volta para a página, todas as queries refazem do zero. Isso explica o "piorou nos últimos dias": à medida que dados crescem, o custo do refetch automático cresce junto.
 
-Tudo é ajuste de validação/carregamento. Sem mudança de UI nem de distribuição.
+### 4. Queries duplicadas com chaves diferentes
+- `["students-list"]` em `teste-3km.tsx` vs `["students"]` em `alunos.index.tsx` → dois fetches do mesmo dado.
+- `useRoles` (hook próprio com `useState`) vs query inline de role em `_authenticated.tsx` → dois fetches de `user_roles` do mesmo usuário.
 
-### 1. `src/lib/planilha-21km.functions.ts` e `src/lib/planilha-42km.functions.ts`
+### 5. Font Google bloqueante
+`Plus Jakarta Sans` é carregado por `<link rel="stylesheet">` síncrono no root, atrasando o primeiro paint em conexões piores.
 
-Trocar no schema de save:
+---
 
-```ts
-weekDays: z.array(DAY).length(4),
-```
+## O que vou fazer
 
-por:
+### Passo 1 — `QueryClient` com defaults sensatos (impacto alto, mudança pequena)
+Em `src/router.tsx`, criar o cliente com:
+- `staleTime: 60_000` (1 min) — dados ficam "frescos" por 1 minuto, sem refetch ao re-navegar.
+- `gcTime: 5 * 60_000`
+- `refetchOnWindowFocus: false`
+- `retry: 1`
 
-```ts
-weekDays: z.array(DAY).min(1).max(7),
-```
+Resultado: voltar para uma página visitada nos últimos 60 s é instantâneo.
 
-(igual ao que já existe em `planilha-5km.functions.ts` e `planilha-10km.functions.ts`).
+### Passo 2 — Reescrever guard do `_authenticated.tsx`
+- Trocar `useState/useEffect` por `useQuery` com `queryKey: ["auth-guard", user.id]` e `staleTime: 5 min`.
+- Ao invés de bloquear a tela inteira com "Carregando…", renderizar o layout imediatamente e só redirecionar para `/onboarding` quando a query resolver (`needsOnboarding === true`). Enquanto carrega, exibir o app normalmente (a verificação roda em background; redirect só dispara se realmente precisar).
+- Consolidar com `useRoles` para evitar a 2ª chamada a `user_roles`.
 
-### 2. `src/routes/_authenticated/planilha-21km.tsx` e `planilha-42km.tsx`
+### Passo 3 — Listagem de alunos enxuta
+Em `src/routes/_authenticated/alunos.index.tsx`:
+- Trocar `select("*")` por `select("id, full_name, email, target_distance, level, created_at")`.
+- Substituir a query `lastQ` (que puxa todos os testes) por uma RPC nova `get_students_last_activity()` que retorna `{ student_id, last_test_at }` agregado no Postgres (1 linha por aluno, não 1 por teste). Vou criar a migração com a função `STABLE SECURITY DEFINER` filtrando por `coach_id = auth.uid()` para respeitar RLS.
+- Adicionar `staleTime: 30_000` específico nessa query.
 
-Na função de carregar plano salvo, trocar:
+### Passo 4 — Desduplicar `students-list`
+Padronizar `queryKey: ["students"]` com mesma função de fetch em `teste-3km.tsx` (e em qualquer outro lugar com lista de alunos) para reusar cache.
 
-```ts
-const validDays = Array.isArray(p.weekDays) && p.weekDays.length === 4 ? p.weekDays : [];
-```
+### Passo 5 — Font Google não-bloqueante
+Em `__root.tsx`, trocar o `<link rel="stylesheet">` do Google Fonts por padrão `preload`+`onload` (ou `media="print" onload="this.media='all'"`) para não bloquear o primeiro paint. O `display=swap` já está presente.
 
-por:
+---
 
-```ts
-const validDays = Array.isArray(p.weekDays) && p.weekDays.length >= 1 ? p.weekDays : [];
-```
+## Fora de escopo (não vou mexer agora)
+- Geração de planilhas, PDFs, prescrição, telas admin.
+- Schema de tabelas existentes (só adiciono a função `get_students_last_activity`).
+- Mudança de instância Lovable Cloud — sua carga atual é claramente resolvível por código primeiro.
 
-### 3. `src/routes/_authenticated/planilha-10km.tsx`
-
-Trocar:
-
-```ts
-const validDays = Array.isArray(p.weekDays) && allowed.includes(p.weekDays.length) ? p.weekDays : [];
-```
-
-por:
-
-```ts
-const validDays = Array.isArray(p.weekDays) && p.weekDays.length >= 1 ? p.weekDays : [];
-```
-
-(remove a dependência de `allowedDayCounts10km`, que está obsoleta na lógica nova.)
-
-## Resultado
-
-- O treinador pode marcar/desmarcar livremente qualquer quantidade de dias (1 a 7) após gerar a planilha, em qualquer das 4 distâncias (5/10/21/42 km).
-- Recarregar um plano preserva a seleção exata de dias salva, qualquer que seja a contagem.
-- As mensagens suaves de "Sugestão: X dias" continuam aparecendo quando a contagem difere da recomendação (sem bloquear).
-
-## Fora de escopo
-
-- UI dos checkboxes (já permite toggle livre).
-- Distribuição/realocação de treinos extras (já tratada pela bandeja "Treinos sem dia" no `PlanilhaCustomizerSheet`).
-- Editor de treino por aluno (`PrescricaoEditor`).
-- PDF, stats, banco.
+## Resultado esperado
+- Navegação entre páginas já visitadas: instantânea (cache).
+- Primeiro load de `/alunos`: 1 query leve em vez de 2 queries pesadas.
+- Sem flash de "Carregando…" branco entre páginas autenticadas.
+- Listagem de alunos não degrada conforme volume de testes cresce.

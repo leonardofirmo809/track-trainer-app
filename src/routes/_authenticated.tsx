@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, Navigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Activity, Menu } from "lucide-react";
 import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -13,8 +14,6 @@ export const Route = createFileRoute("/_authenticated")({ component: Layout });
 function Layout() {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const [profileLoading, setProfileLoading] = useState(true);
-  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     return window.innerWidth >= 1024;
@@ -27,28 +26,28 @@ function Layout() {
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
-  useEffect(() => {
-    if (!user) { setProfileLoading(false); return; }
-    let cancelled = false;
-    setProfileLoading(true);
-    (async () => {
+  const guardQ = useQuery({
+    queryKey: ["auth-guard", user?.id],
+    enabled: !!user,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
+    queryFn: async () => {
       const [{ data: profile }, { data: roleRow }] = await Promise.all([
-        supabase.from("profiles").select("onboarding_completed, full_name").eq("id", user.id).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle(),
+        supabase.from("profiles").select("onboarding_completed, full_name").eq("id", user!.id).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", user!.id).eq("role", "admin").maybeSingle(),
       ]);
-      if (cancelled) return;
       const isAdmin = !!roleRow;
       const incomplete = !profile?.onboarding_completed || !profile?.full_name;
-      setNeedsOnboarding(!isAdmin && incomplete);
-      setProfileLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [user]);
+      return { needsOnboarding: !isAdmin && incomplete };
+    },
+  });
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Carregando…</div>;
   if (!user) return <Navigate to="/login" />;
-  if (profileLoading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Carregando…</div>;
-  if (needsOnboarding && location.pathname !== "/onboarding") return <Navigate to="/onboarding" />;
+  // Non-blocking guard: only redirect if we have a confirmed answer; render app meanwhile.
+  if (guardQ.data?.needsOnboarding && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" />;
+  }
 
   return (
     <SidebarProvider

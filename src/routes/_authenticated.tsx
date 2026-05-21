@@ -65,7 +65,7 @@ function Layout() {
               <div className="size-8 rounded-lg bg-primary grid place-items-center">
                 <Activity className="size-4 text-primary-foreground" />
               </div>
-              <span className="font-display text-lg font-bold">PaceLab</span>
+              <span className="font-display text-lg font-bold">8020Pace</span>
             </div>
             <div className="flex-1" />
             <MobileMenuButton />

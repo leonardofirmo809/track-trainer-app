@@ -31,13 +31,13 @@ function LoginPage() {
       <div className="hidden lg:flex flex-col justify-between p-12 bg-sidebar text-sidebar-foreground">
         <div className="flex items-center gap-2">
           <div className="size-9 rounded-xl bg-primary grid place-items-center"><Activity className="size-5 text-primary-foreground" /></div>
-          <span className="font-display text-xl font-bold">PaceLab</span>
+          <span className="font-display text-xl font-bold">8020Pace</span>
         </div>
         <div>
           <h1 className="text-4xl font-bold leading-tight">Prescrição inteligente para corredores.</h1>
           <p className="mt-4 text-sidebar-foreground/70 max-w-md">Gerencie seus alunos, registre testes e monte planilhas de 5KM, 10KM, 21KM e 42KM em um só lugar.</p>
         </div>
-        <p className="text-xs text-sidebar-foreground/50">© {new Date().getFullYear()} PaceLab</p>
+        <p className="text-xs text-sidebar-foreground/50">© {new Date().getFullYear()} 8020Pace</p>
       </div>
       <div className="flex items-center justify-center p-6">
         <Card className="w-full max-w-md">

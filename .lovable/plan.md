@@ -1,105 +1,71 @@
-# Área do Corredor (Self-Service) — Plano
+## Dashboard completo do corredor
 
-Implementação de um terceiro papel `runner` com cadastro aberto, onboarding em wizard e dashboard próprio, reusando 100% do motor de planilhas, zonas, editor e PDF existentes. Sem billing nesta fase.
+Criar uma experiência dedicada sob `/corredor/*`, reusando 100% do motor de planilhas (`planilha-{10,21,42}km.tsx`, distribuição, zonas, editor, PDF). Sem novo backend além de pequenos ajustes de branding no PDF.
 
----
+### 1. Novas rotas (todas sob `_authenticated/`)
 
-## 1. Banco de dados (3 migrations)
+```
+src/routes/_authenticated/
+  corredor.index.tsx          → /corredor   (reescrita: dashboard completo)
+  corredor.planilha.tsx       → /corredor/planilha   (planilha do próprio runner)
+  corredor.avaliacao.tsx      → /corredor/avaliacao  (zonas + histórico + refazer)
+  corredor.planilha.nova.tsx  → /corredor/planilha/nova (reabre wizard)
+```
 
-**Migration A — enum (isolada, obrigatório):**
-- `ALTER TYPE app_role ADD VALUE 'runner';`
+O guard de `_authenticated.tsx` já restringe runner a `/corredor/*`, `/planilha-*`, `/teste-3km`. Ajuste: runner deve usar **somente** `/corredor/*` (remover `/planilha-*` e `/teste-3km` da allow-list; expor essas funcionalidades dentro das rotas `/corredor/*`).
 
-**Migration B — schema:**
-- `students.user_id uuid NULL REFERENCES auth.users(id) ON DELETE CASCADE`, índice em `user_id`.
-- `students.coach_id` → nullable.
-- CHECK: `coach_id IS NOT NULL OR user_id IS NOT NULL`.
-- `profiles` ganha: `goal_distance text`, `goal_level int`, `race_date date`, `runner_onboarding_completed bool default false`.
-- Atualizar `handle_new_user`:
-  - Lê `raw_user_meta_data->>'signup_type'`.
-  - Se `runner`: cria profile, atribui role `runner`, **pula** o check de limite de coaches e o check de convite. Não cria registro em `students` (criado depois pelo wizard).
-  - Se ausente: mantém regra atual (invite-only para coach).
-- Guard de limite de 4 coaches: só conta/aplica quando role = `coach`.
+### 2. `/corredor` — Dashboard (reescrita do arquivo existente)
 
-**Migration C — RLS:**
-- `students`: políticas adicionais
-  - SELECT/UPDATE quando `user_id = auth.uid()`.
-  - INSERT do próprio registro permitido a `runner` com `user_id = auth.uid()` e `coach_id IS NULL`.
-- `training_plans` e `tests`: política adicional permitindo acesso quando o `student` vinculado tem `user_id = auth.uid()` (SELECT/INSERT/UPDATE/DELETE com `EXISTS (...)`). Manter policies de coach/admin intactas.
-- `profiles`: garantir que runner pode SELECT/UPDATE próprio perfil (já deve existir via `id = auth.uid()`).
-- RPC `get_all_coaches` / listagem de alunos do coach: garantir filtro `coach_id IS NOT NULL` para não vazar runners.
+Substitui o card simples atual por:
 
----
+- **Header**: saudação + objetivo (10/21/42 + Nível) + data da prova + contagem regressiva (dias e semanas).
+- **Card "Plano atual"** (4 mini-cards de Plano 1–4): mostra qual está ativo, link "Abrir Plano X" → `/corredor/planilha?plano=X`.
+- **Card "Resumo de volume/intensidade"** da fase ativa: reusa `PhaseChartsBlock` (volume km/semana + barras Z1–Z5) já existente nos arquivos `planilha-*`. Extraio o bloco para componente compartilhado `src/components/planilha/PhaseChartsBlock.tsx` (move, não duplica).
+- **Ações rápidas**: Editar planilha · Exportar PDF · Refazer avaliação · Nova planilha.
+- **Empty state**: se sem onboarding → redirect para `/corredor/onboarding` (já existe).
 
-## 2. Auth e cadastro
+### 3. `/corredor/planilha` — Editor da própria planilha
 
-- Nova rota pública `/cadastro-corredor` (nome, email, senha). Faz `supabase.auth.signUp` com `options.data = { signup_type: 'runner', full_name }`.
-- `/signup` mantém comportamento atual (invite-only). Adicionar link visível "Sou corredor — criar conta" → `/cadastro-corredor` em `/login` e `/signup`.
-- Reset de senha: reusar fluxo existente.
+Em vez de duplicar 678 linhas de `planilha-10km.tsx`, faço refator mínimo:
 
-**Redirect pós-login** (centralizar em `_authenticated/route.tsx` guard + `index.tsx`):
-- `admin`/`coach` → `/dashboard` (atual).
-- `runner` sem onboarding → `/corredor/onboarding`.
-- `runner` com onboarding → `/corredor`.
-- Bloquear cruzamento: runner não acessa `/dashboard`, `/alunos`, `/admin`, `/planilha-*`, `/teste-3km`, `/minha-marca`; coach/admin não acessam `/corredor/*`. Implementar no `beforeLoad`/guard com base em `useRoles`/query.
+- Extrair o corpo das três páginas `planilha-{10,21,42}km.tsx` para um componente compartilhado `PlanilhaWorkspace` (que aceita `studentId` e `distance` como props), mantendo as rotas de coach como wrappers que renderizam `<PlanilhaWorkspace studentId={pickedId} distance="10km" allowStudentPicker />`.
+- Em `/corredor/planilha`: descobre `studentId` do runner via `getRunnerOverview` (já existe) e `goal_distance` do profile, renderiza `<PlanilhaWorkspace studentId={myStudentId} distance={goal} allowStudentPicker={false} />`.
+- Diferenças visuais runner: sem `StudentPicker`, sem `DistanceSelector` (objetivo é fixo), sem breadcrumb coach; mostra link "Mudar objetivo → Nova planilha".
+- Param `?plano=1..4` ativa a tab inicial da fase.
 
----
+> Risco contido: o refator extrai o JSX 1:1 sem mudar lógica. Os arquivos `planilha-{10,21,42}km.tsx` continuam funcionando para coach.
 
-## 3. Onboarding `/corredor/onboarding` (wizard 4 passos)
+### 4. `/corredor/avaliacao`
 
-State local, nada persiste até confirmar.
+- Mostra zonas atuais (Z1–Z5, mesmo card do existente).
+- Lista histórico de testes (`tests` do próprio student, mais recente primeiro).
+- Botão "Refazer teste" → wizard inline reusa o passo 3 do onboarding (`teste-3km.ts` + UI). Ao salvar, regenera zonas mas **não** recria planilha (apenas grava `tests`); avisa "Para aplicar à planilha, crie uma Nova planilha".
 
-1. **Objetivo**: cards 10/21/42km + `race_date` opcional.
-2. **Nível**: dois cards (N1/N2) com descrições; sem teste classificatório.
-3. **Avaliação**: reusa `src/lib/teste-3km.ts` e correlatos. Tipos de teste: 3km, 5km, 10km, Cooper (12min), 2400m. Cada um com instrução. Calcula FTP `min:sec` e mostra zonas Z1–Z5 (De=mais rápido, Até=mais lento) + km/h esteira — reusar exatamente o componente de zonas atual.
-4. **Dias da semana**: reusar componente de slots ordenados existente (`PlanilhaCustomizerSheet` / distribute helpers); quantidade definida pela combinação distância/nível. Manter alerta de dias consecutivos de alta intensidade.
+### 5. `/corredor/planilha/nova`
 
-**Confirmar**: cria `students` (`user_id=auth.uid()`, `coach_id=NULL`, `full_name=profile.full_name`, `target_distance`, `level`), salva teste em `tests`, chama a mesma server fn de geração do coach (`planilha-{10,21,42}km.functions.ts`) para criar `training_plans`, marca `runner_onboarding_completed=true`, redireciona para `/corredor`.
+- Reabre o wizard de `/corredor/onboarding` pulando para os passos 1 (objetivo), 2 (nível), 3 (teste — pré-preenchido com último, opção "usar último" ou "refazer"), 4 (dias).
+- Ao confirmar: arquiva `training_plans` ativos do student (`status='arquivada'`) e chama `completeRunnerOnboarding` (ou função análoga `regenerateRunnerPlan`) que cria novo plano.
+- Pequeno ajuste em `runner.functions.ts`: nova fn `regenerateRunnerPlan` que arquiva ativos e insere novo (sem mexer no profile se distância igual).
 
-Adaptar as server fns de geração para aceitar planos sem `coach_id` (passar `coach_id` como nullable em insert) — ou criar wrappers `*-runner.functions.ts` que chamam os mesmos `distribute`/`data` puros e fazem o insert com `user_id`. **Preferência: tornar as functions existentes coach-id-opcional**, derivando o owner do `student` (se `user_id` presente, gravar `coach_id=NULL`).
+### 6. PDF — branding do runner
 
----
+Em `useCoachBranding` (ou wrapper local), quando `coach_id` é null usar `profile.full_name` do runner como `coachName` e logo padrão (sem logo). Ajuste isolado no hook ou no call site dentro de `PlanilhaWorkspace`.
 
-## 4. Dashboard do corredor
+### 7. Sidebar/Nav
 
-Rotas novas sob layout `src/routes/_corredor/route.tsx` (gate `runner`, redirect outros papéis):
-- `/corredor` — visão geral: header com objetivo+contagem regressiva, navegação 5 Planilhas × 4 semanas, gráficos de volume e intensidade (reuso dos componentes atuais), editor completo embutido.
-- `/corredor/avaliacao` — refazer teste, ver zonas e histórico.
-- `/corredor/planilha/nova` — reabre wizard (passos 1, 2, 4; passo 3 pré-preenchido com opção de refazer). Arquiva plano anterior (`status='arquivada'`).
+- `app-sidebar.tsx` já filtra por role. Para runner, adicionar itens: Visão geral (`/corredor`), Minha planilha (`/corredor/planilha`), Avaliação (`/corredor/avaliacao`), Nova planilha (`/corredor/planilha/nova`). Remover Planilhas/Alunos/Dashboard quando `isRunner && !isCoach && !isAdmin`.
+- `MobileBottomNav`: variante runner com 4 itens (Home, Planilha, Avaliação, Perfil).
 
-**Editor**: reusar `PrescricaoEditor`/`PrescricaoEditorSheet`, `training-store.ts` (Zustand+undo), `QuickSwapPopover`, `session-library.ts`. Regra de imutabilidade da biblioteca (cópia custom com novo UUID) já é do store — não tocar.
+### 8. Fora de escopo
 
-**PDF**: reusar `useGeneratePDF` / `planilha-*-pdf.ts`. Quando `coach_id` null, o cabeçalho do PDF usa `profile.full_name` (corredor) no lugar do treinador; ocultar branding de coach.
+- Pagamento, multi-coach, vínculo runner↔coach, alterações em fluxos de coach/admin, novas migrations (schema já está pronto).
 
-Layout: novo `AppSidebar` simplificado para runner (Visão geral, Avaliação, Nova planilha, Sair) ou variante condicional do sidebar atual baseada no role. Bottom nav mobile equivalente. Mesma paleta verde/Plus Jakarta Sans.
+### Ordem de execução
 
----
-
-## 5. Detalhes técnicos
-
-- `useRoles` já retorna roles; adicionar helper `isRunner`. Atualizar `_authenticated.tsx` guard para roteamento por papel.
-- `src/routes/index.tsx` e `/login` pós-auth: roteador por role.
-- Listagem de alunos do coach (`alunos.index.tsx`) e RPC `get_students_last_activity`: garantir `WHERE coach_id IS NOT NULL` (ou filtro por coach_id do auth user) para não retornar registros de runners.
-- Server fns de planilha: tornar `coach_id` opcional na assinatura; default = `coach_id` do student ou NULL. Quando criar via runner, `coach_id=NULL`.
-- Types regenerados após migration aprovada antes de escrever código que usa `runner_onboarding_completed`, etc.
-
----
-
-## 6. Fora de escopo
-
-- Pagamentos / billing / paywall.
-- Vínculo de runner a um coach existente.
-- Alterações nos fluxos de coach/admin (convites, limite de 4, branding, auditoria, gestão de alunos).
-- Reimplementar motor, zonas, editor ou PDF.
-
----
-
-## 7. Ordem de execução
-
-1. Migration A (enum runner).
-2. Migration B (schema + handle_new_user + guard de licença).
-3. Migration C (RLS de students/training_plans/tests).
-4. Página `/cadastro-corredor` + ajuste de redirect por role.
-5. Wizard `/corredor/onboarding` (reuso de componentes de zonas e dias).
-6. Layout `_corredor` + dashboard + editor + PDF.
-7. Ajustes em listagens do coach para excluir runners.
-8. Testes manuais dos 8 critérios de aceite.
+1. Extrair `PlanilhaWorkspace` (refator dos 3 `planilha-*km.tsx`).
+2. Extrair `PhaseChartsBlock` para componente compartilhado.
+3. Reescrever `/corredor` (dashboard completo).
+4. Criar `/corredor/planilha`, `/corredor/avaliacao`, `/corredor/planilha/nova`.
+5. Ajustar sidebar/bottom-nav para runner.
+6. Ajustar branding PDF quando `coach_id` null.
+7. Apertar guard: runner restrito a `/corredor/*`.

@@ -14,6 +14,7 @@ import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as CadastroCorredorRouteImport } from './routes/cadastro-corredor'
 import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
@@ -58,6 +59,11 @@ const NovaSenhaRoute = NovaSenhaRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastroCorredorRoute = CadastroCorredorRouteImport.update({
+  id: '/cadastro-corredor',
+  path: '/cadastro-corredor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AceitarConviteRoute = AceitarConviteRouteImport.update({
@@ -174,6 +180,7 @@ const AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aceitar-convite': typeof AceitarConviteRoute
+  '/cadastro-corredor': typeof CadastroCorredorRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/onboarding': typeof OnboardingRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aceitar-convite': typeof AceitarConviteRoute
+  '/cadastro-corredor': typeof CadastroCorredorRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/onboarding': typeof OnboardingRoute
@@ -227,6 +235,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/aceitar-convite': typeof AceitarConviteRoute
+  '/cadastro-corredor': typeof CadastroCorredorRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/onboarding': typeof OnboardingRoute
@@ -255,6 +264,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/aceitar-convite'
+    | '/cadastro-corredor'
     | '/login'
     | '/nova-senha'
     | '/onboarding'
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/aceitar-convite'
+    | '/cadastro-corredor'
     | '/login'
     | '/nova-senha'
     | '/onboarding'
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/aceitar-convite'
+    | '/cadastro-corredor'
     | '/login'
     | '/nova-senha'
     | '/onboarding'
@@ -335,6 +347,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AceitarConviteRoute: typeof AceitarConviteRoute
+  CadastroCorredorRoute: typeof CadastroCorredorRoute
   LoginRoute: typeof LoginRoute
   NovaSenhaRoute: typeof NovaSenhaRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -377,6 +390,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadastro-corredor': {
+      id: '/cadastro-corredor'
+      path: '/cadastro-corredor'
+      fullPath: '/cadastro-corredor'
+      preLoaderRoute: typeof CadastroCorredorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/aceitar-convite': {
@@ -593,6 +613,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AceitarConviteRoute: AceitarConviteRoute,
+  CadastroCorredorRoute: CadastroCorredorRoute,
   LoginRoute: LoginRoute,
   NovaSenhaRoute: NovaSenhaRoute,
   OnboardingRoute: OnboardingRoute,
@@ -602,3 +623,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

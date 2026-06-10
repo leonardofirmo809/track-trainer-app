@@ -50,8 +50,8 @@ export const getRunnerOverview = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .maybeSingle();
 
-    let activePlan: { id: string; plan_type: string; payload: unknown; created_at: string; start_date: string | null } | null = null;
-    let lastTest: { id: string; test_date: string; pace_seconds_per_km: number; metadata: unknown; test_type: string } | null = null;
+    let activePlan: { id: string; plan_type: string; payload: Json; created_at: string; start_date: string | null } | null = null;
+    let lastTest: { id: string; test_date: string; pace_seconds_per_km: number | null; metadata: Json; test_type: string } | null = null;
     if (student) {
       const { data: plans } = await supabaseAdmin
         .from("training_plans")

@@ -31,5 +31,5 @@ export function useRoles() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  return { roles, isAdmin: roles.includes("admin"), loading };
+  return { roles, isAdmin: roles.includes("admin"), isCoach: roles.includes("coach"), isRunner: roles.includes("runner"), loading };
 }

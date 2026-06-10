@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, Users, Timer, Route as RouteIcon, LogOut, Shield, ClipboardList, ScrollText, Palette, Settings, Target, RefreshCw } from "lucide-react";
+import { Activity, LayoutDashboard, Users, Timer, Route as RouteIcon, LogOut, Shield, ClipboardList, ScrollText, Palette, Settings, Target, RefreshCw, BookOpen } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
@@ -16,6 +16,7 @@ const mainCoach = [
 ];
 const mainRunner = [
   { title: "Visão geral", url: "/corredor", icon: LayoutDashboard },
+  { title: "Minha planilha", url: "/corredor/planilha", icon: BookOpen },
   { title: "Minha avaliação", url: "/corredor/avaliacao", icon: Target },
   { title: "Nova planilha", url: "/corredor/planilha/nova", icon: RefreshCw },
 ];

@@ -74,7 +74,7 @@ function LoginPage() {
                 Acesso por convite (treinador). <Link to="/signup" className="text-primary font-medium hover:underline">Saiba mais</Link>
               </p>
               <p className="text-sm text-center pt-2 border-t">
-                Sou corredor — <Link to="/cadastro-corredor" className="text-primary font-semibold hover:underline">criar conta</Link>
+                Ainda não tem conta? <Link to="/cadastro" className="text-primary font-semibold hover:underline">Criar conta</Link>
               </p>
             </form>
           </CardContent>

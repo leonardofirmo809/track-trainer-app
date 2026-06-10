@@ -12,7 +12,7 @@ const coachItems = [
 
 const runnerItems = [
   { title: "Início", url: "/corredor", icon: Home, match: (p: string) => p === "/corredor" },
-  { title: "Planilha", url: "/planilha-10km", icon: ClipboardList, match: (p: string) => p.startsWith("/planilha-") },
+  { title: "Planilha", url: "/corredor/planilha", icon: ClipboardList, match: (p: string) => p === "/corredor/planilha" || p.startsWith("/planilha-") },
   { title: "Avaliação", url: "/corredor/avaliacao", icon: Target, match: (p: string) => p === "/corredor/avaliacao" },
   { title: "Nova", url: "/corredor/planilha/nova", icon: RefreshCw, match: (p: string) => p === "/corredor/planilha/nova" },
 ];

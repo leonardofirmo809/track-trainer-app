@@ -56,9 +56,14 @@ function Layout() {
   if (guardQ.data?.needsRunnerOnboarding && !location.pathname.startsWith("/corredor/onboarding")) {
     return <Navigate to="/corredor/onboarding" />;
   }
-  // Block runner from accessing coach/admin routes
+  // Block runner from accessing coach/admin-only routes
   if (guardQ.data?.isRunner) {
-    const allowed = location.pathname.startsWith("/corredor");
+    const p = location.pathname;
+    const allowed =
+      p.startsWith("/corredor") ||
+      p.startsWith("/planilha-") ||
+      p === "/teste-3km" ||
+      p.startsWith("/teste-3km/");
     if (!allowed) return <Navigate to="/corredor" />;
   }
 

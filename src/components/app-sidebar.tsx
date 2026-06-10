@@ -9,12 +9,15 @@ import { useAuth } from "@/lib/auth-context";
 import { useRoles } from "@/lib/use-role";
 import { Button } from "./ui/button";
 
-const main = [
+const mainCoach = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Alunos", url: "/alunos", icon: Users },
   { title: "Minha marca", url: "/minha-marca", icon: Palette },
 ];
-const planos = [
+const mainRunner = [
+  { title: "Visão geral", url: "/corredor", icon: LayoutDashboard },
+];
+const planosCoach = [
   { title: "Teste de 3KM", url: "/teste-3km", icon: Timer },
   { title: "Planilha 5KM", url: "/planilha-5km", icon: RouteIcon },
   { title: "Planilha 10KM", url: "/planilha-10km", icon: RouteIcon },
@@ -30,9 +33,11 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { user, signOut } = useAuth();
-  const { isAdmin } = useRoles();
+  const { isAdmin, isRunner } = useRoles();
   const isActive = (u: string) => path === u || path.startsWith(u + "/");
   const initials = (user?.user_metadata?.full_name || user?.email || "?").slice(0, 2).toUpperCase();
+  const main = isRunner ? mainRunner : mainCoach;
+  const planos = isRunner ? [] : planosCoach;
 
   return (
     <Sidebar collapsible="icon">

@@ -56,8 +56,13 @@ async function fetchPlanForCoach(planId: string, userId: string) {
   if (error) throw new Response(error.message, { status: 500 });
   if (!plan) throw new Response("Plano não encontrado", { status: 404 });
   if (plan.coach_id !== userId) {
-    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
-    if (!isAdmin) throw new Response("Forbidden", { status: 403 });
+    // Runner ownership: allow if the linked student belongs to this user
+    const { data: student } = await supabaseAdmin
+      .from("students").select("user_id").eq("id", plan.student_id).maybeSingle();
+    if (student?.user_id !== userId) {
+      const { data: isAdmin } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
+      if (!isAdmin) throw new Response("Forbidden", { status: 403 });
+    }
   }
   return plan;
 }

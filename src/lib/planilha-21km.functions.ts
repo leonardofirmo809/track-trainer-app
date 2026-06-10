@@ -14,10 +14,10 @@ const configSchema = z.object({
 
 async function assertCanAccessStudent(userId: string, studentId: string) {
   const { data: student, error } = await supabaseAdmin
-    .from("students").select("id, coach_id").eq("id", studentId).maybeSingle();
+    .from("students").select("id, coach_id, user_id").eq("id", studentId).maybeSingle();
   if (error) throw new Response(error.message, { status: 500 });
   if (!student) throw new Response("Aluno não encontrado", { status: 404 });
-  if (student.coach_id !== userId) {
+  if (student.coach_id !== userId && student.user_id !== userId) {
     const { data: adminCheck } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
     if (!adminCheck) throw new Response("Forbidden", { status: 403 });
   }

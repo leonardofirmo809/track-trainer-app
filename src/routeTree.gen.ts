@@ -15,6 +15,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CadastroCorredorRouteImport } from './routes/cadastro-corredor'
+import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AceitarConviteRouteImport } from './routes/aceitar-convite'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
@@ -37,6 +38,7 @@ import { Route as AuthenticatedAdminTreinadoresRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminConfiguracoesRouteImport } from './routes/_authenticated/admin.configuracoes'
 import { Route as AuthenticatedAdminAuditoriaRouteImport } from './routes/_authenticated/admin.auditoria'
 import { Route as AuthenticatedAdminAlunosRouteImport } from './routes/_authenticated/admin.alunos'
+import { Route as AuthenticatedCorredorPlanilhaIndexRouteImport } from './routes/_authenticated/corredor.planilha.index'
 import { Route as AuthenticatedCorredorPlanilhaNovaRouteImport } from './routes/_authenticated/corredor.planilha.nova'
 import { Route as AuthenticatedAlunosStudentIdPrescricaoPlanIdRouteImport } from './routes/_authenticated/alunos.$studentId.prescricao.$planId'
 
@@ -68,6 +70,11 @@ const LoginRoute = LoginRouteImport.update({
 const CadastroCorredorRoute = CadastroCorredorRouteImport.update({
   id: '/cadastro-corredor',
   path: '/cadastro-corredor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastroRoute = CadastroRouteImport.update({
+  id: '/cadastro',
+  path: '/cadastro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AceitarConviteRoute = AceitarConviteRouteImport.update({
@@ -192,6 +199,12 @@ const AuthenticatedAdminAlunosRoute =
     path: '/alunos',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedCorredorPlanilhaIndexRoute =
+  AuthenticatedCorredorPlanilhaIndexRouteImport.update({
+    id: '/corredor/planilha/',
+    path: '/corredor/planilha/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCorredorPlanilhaNovaRoute =
   AuthenticatedCorredorPlanilhaNovaRouteImport.update({
     id: '/corredor/planilha/nova',
@@ -208,6 +221,7 @@ const AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aceitar-convite': typeof AceitarConviteRoute
+  '/cadastro': typeof CadastroRoute
   '/cadastro-corredor': typeof CadastroCorredorRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
@@ -234,11 +248,13 @@ export interface FileRoutesByFullPath {
   '/alunos/': typeof AuthenticatedAlunosIndexRoute
   '/corredor/': typeof AuthenticatedCorredorIndexRoute
   '/corredor/planilha/nova': typeof AuthenticatedCorredorPlanilhaNovaRoute
+  '/corredor/planilha/': typeof AuthenticatedCorredorPlanilhaIndexRoute
   '/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aceitar-convite': typeof AceitarConviteRoute
+  '/cadastro': typeof CadastroRoute
   '/cadastro-corredor': typeof CadastroCorredorRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
@@ -264,6 +280,7 @@ export interface FileRoutesByTo {
   '/alunos': typeof AuthenticatedAlunosIndexRoute
   '/corredor': typeof AuthenticatedCorredorIndexRoute
   '/corredor/planilha/nova': typeof AuthenticatedCorredorPlanilhaNovaRoute
+  '/corredor/planilha': typeof AuthenticatedCorredorPlanilhaIndexRoute
   '/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
 }
 export interface FileRoutesById {
@@ -271,6 +288,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/aceitar-convite': typeof AceitarConviteRoute
+  '/cadastro': typeof CadastroRoute
   '/cadastro-corredor': typeof CadastroCorredorRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
@@ -297,6 +315,7 @@ export interface FileRoutesById {
   '/_authenticated/alunos/': typeof AuthenticatedAlunosIndexRoute
   '/_authenticated/corredor/': typeof AuthenticatedCorredorIndexRoute
   '/_authenticated/corredor/planilha/nova': typeof AuthenticatedCorredorPlanilhaNovaRoute
+  '/_authenticated/corredor/planilha/': typeof AuthenticatedCorredorPlanilhaIndexRoute
   '/_authenticated/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
 }
 export interface FileRouteTypes {
@@ -304,6 +323,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/aceitar-convite'
+    | '/cadastro'
     | '/cadastro-corredor'
     | '/login'
     | '/nova-senha'
@@ -330,11 +350,13 @@ export interface FileRouteTypes {
     | '/alunos/'
     | '/corredor/'
     | '/corredor/planilha/nova'
+    | '/corredor/planilha/'
     | '/alunos/$studentId/prescricao/$planId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/aceitar-convite'
+    | '/cadastro'
     | '/cadastro-corredor'
     | '/login'
     | '/nova-senha'
@@ -360,12 +382,14 @@ export interface FileRouteTypes {
     | '/alunos'
     | '/corredor'
     | '/corredor/planilha/nova'
+    | '/corredor/planilha'
     | '/alunos/$studentId/prescricao/$planId'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/aceitar-convite'
+    | '/cadastro'
     | '/cadastro-corredor'
     | '/login'
     | '/nova-senha'
@@ -392,6 +416,7 @@ export interface FileRouteTypes {
     | '/_authenticated/alunos/'
     | '/_authenticated/corredor/'
     | '/_authenticated/corredor/planilha/nova'
+    | '/_authenticated/corredor/planilha/'
     | '/_authenticated/alunos/$studentId/prescricao/$planId'
   fileRoutesById: FileRoutesById
 }
@@ -399,6 +424,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AceitarConviteRoute: typeof AceitarConviteRoute
+  CadastroRoute: typeof CadastroRoute
   CadastroCorredorRoute: typeof CadastroCorredorRoute
   LoginRoute: typeof LoginRoute
   NovaSenhaRoute: typeof NovaSenhaRoute
@@ -449,6 +475,13 @@ declare module '@tanstack/react-router' {
       path: '/cadastro-corredor'
       fullPath: '/cadastro-corredor'
       preLoaderRoute: typeof CadastroCorredorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadastro': {
+      id: '/cadastro'
+      path: '/cadastro'
+      fullPath: '/cadastro'
+      preLoaderRoute: typeof CadastroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/aceitar-convite': {
@@ -605,6 +638,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAlunosRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/corredor/planilha/': {
+      id: '/_authenticated/corredor/planilha/'
+      path: '/corredor/planilha'
+      fullPath: '/corredor/planilha/'
+      preLoaderRoute: typeof AuthenticatedCorredorPlanilhaIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/corredor/planilha/nova': {
       id: '/_authenticated/corredor/planilha/nova'
       path: '/corredor/planilha/nova'
@@ -672,6 +712,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAlunosIndexRoute: typeof AuthenticatedAlunosIndexRoute
   AuthenticatedCorredorIndexRoute: typeof AuthenticatedCorredorIndexRoute
   AuthenticatedCorredorPlanilhaNovaRoute: typeof AuthenticatedCorredorPlanilhaNovaRoute
+  AuthenticatedCorredorPlanilhaIndexRoute: typeof AuthenticatedCorredorPlanilhaIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -692,6 +733,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCorredorIndexRoute: AuthenticatedCorredorIndexRoute,
   AuthenticatedCorredorPlanilhaNovaRoute:
     AuthenticatedCorredorPlanilhaNovaRoute,
+  AuthenticatedCorredorPlanilhaIndexRoute:
+    AuthenticatedCorredorPlanilhaIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -702,6 +745,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AceitarConviteRoute: AceitarConviteRoute,
+  CadastroRoute: CadastroRoute,
   CadastroCorredorRoute: CadastroCorredorRoute,
   LoginRoute: LoginRoute,
   NovaSenhaRoute: NovaSenhaRoute,

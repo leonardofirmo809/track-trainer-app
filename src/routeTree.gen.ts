@@ -28,6 +28,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAlunosIndexRouteImport } from './routes/_authenticated/alunos.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as AuthenticatedCorredorOnboardingRouteImport } from './routes/_authenticated/corredor.onboarding'
 import { Route as AuthenticatedAlunosNovoRouteImport } from './routes/_authenticated/alunos.novo'
 import { Route as AuthenticatedAlunosStudentIdRouteImport } from './routes/_authenticated/alunos.$studentId'
 import { Route as AuthenticatedAdminTreinadoresRouteImport } from './routes/_authenticated/admin.treinadores'
@@ -135,6 +136,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedCorredorOnboardingRoute =
+  AuthenticatedCorredorOnboardingRouteImport.update({
+    id: '/corredor/onboarding',
+    path: '/corredor/onboarding',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAlunosNovoRoute = AuthenticatedAlunosNovoRouteImport.update({
   id: '/alunos/novo',
   path: '/alunos/novo',
@@ -200,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRouteWithChildren
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
+  '/corredor/onboarding': typeof AuthenticatedCorredorOnboardingRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/alunos/': typeof AuthenticatedAlunosIndexRoute
   '/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
@@ -226,6 +234,7 @@ export interface FileRoutesByTo {
   '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRouteWithChildren
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
+  '/corredor/onboarding': typeof AuthenticatedCorredorOnboardingRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/alunos': typeof AuthenticatedAlunosIndexRoute
   '/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
@@ -255,6 +264,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
   '/_authenticated/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRouteWithChildren
   '/_authenticated/alunos/novo': typeof AuthenticatedAlunosNovoRoute
+  '/_authenticated/corredor/onboarding': typeof AuthenticatedCorredorOnboardingRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/alunos/': typeof AuthenticatedAlunosIndexRoute
   '/_authenticated/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/admin/treinadores'
     | '/alunos/$studentId'
     | '/alunos/novo'
+    | '/corredor/onboarding'
     | '/admin/'
     | '/alunos/'
     | '/alunos/$studentId/prescricao/$planId'
@@ -310,6 +321,7 @@ export interface FileRouteTypes {
     | '/admin/treinadores'
     | '/alunos/$studentId'
     | '/alunos/novo'
+    | '/corredor/onboarding'
     | '/admin'
     | '/alunos'
     | '/alunos/$studentId/prescricao/$planId'
@@ -338,6 +350,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/treinadores'
     | '/_authenticated/alunos/$studentId'
     | '/_authenticated/alunos/novo'
+    | '/_authenticated/corredor/onboarding'
     | '/_authenticated/admin/'
     | '/_authenticated/alunos/'
     | '/_authenticated/alunos/$studentId/prescricao/$planId'
@@ -490,6 +503,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/corredor/onboarding': {
+      id: '/_authenticated/corredor/onboarding'
+      path: '/corredor/onboarding'
+      fullPath: '/corredor/onboarding'
+      preLoaderRoute: typeof AuthenticatedCorredorOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/alunos/novo': {
       id: '/_authenticated/alunos/novo'
       path: '/alunos/novo'
@@ -587,6 +607,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTeste3kmRoute: typeof AuthenticatedTeste3kmRoute
   AuthenticatedAlunosStudentIdRoute: typeof AuthenticatedAlunosStudentIdRouteWithChildren
   AuthenticatedAlunosNovoRoute: typeof AuthenticatedAlunosNovoRoute
+  AuthenticatedCorredorOnboardingRoute: typeof AuthenticatedCorredorOnboardingRoute
   AuthenticatedAlunosIndexRoute: typeof AuthenticatedAlunosIndexRoute
 }
 
@@ -602,6 +623,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAlunosStudentIdRoute:
     AuthenticatedAlunosStudentIdRouteWithChildren,
   AuthenticatedAlunosNovoRoute: AuthenticatedAlunosNovoRoute,
+  AuthenticatedCorredorOnboardingRoute: AuthenticatedCorredorOnboardingRoute,
   AuthenticatedAlunosIndexRoute: AuthenticatedAlunosIndexRoute,
 }
 
@@ -623,3 +645,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

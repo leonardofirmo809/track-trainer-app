@@ -1,64 +1,105 @@
-## Diagnóstico
+# Área do Corredor (Self-Service) — Plano
 
-Analisei as áreas indicadas (listagem de alunos + navegação geral) e encontrei 5 causas concretas de lentidão. Nada disso é problema de infraestrutura — é código que pode ser otimizado.
-
-### 1. Tela "Carregando…" em cheio a cada navegação
-`src/routes/_authenticated.tsx` faz duas consultas (`profiles` + `user_roles`) toda vez que o `user` muda e bloqueia **toda a tela** com "Carregando…" enquanto isso. Sem cache, então em qualquer reload completo o app fica ~300–800 ms preto antes de renderizar.
-
-### 2. Listagem de alunos puxa TODOS os testes só para mostrar "última atividade"
-Em `alunos.index.tsx`:
-- `select("*")` em `students` (traz colunas grandes como `notes`, `injury_history`).
-- `lastQ` faz `select("student_id, created_at") from tests` **sem filtro e sem limite** — conforme você cria mais avaliações, isso vira o gargalo principal da página.
-
-### 3. Sem `staleTime` global → tudo refaz no foco/navegação
-O `QueryClient` é criado vazio em `src/router.tsx`. Cada vez que você troca de aba ou volta para a página, todas as queries refazem do zero. Isso explica o "piorou nos últimos dias": à medida que dados crescem, o custo do refetch automático cresce junto.
-
-### 4. Queries duplicadas com chaves diferentes
-- `["students-list"]` em `teste-3km.tsx` vs `["students"]` em `alunos.index.tsx` → dois fetches do mesmo dado.
-- `useRoles` (hook próprio com `useState`) vs query inline de role em `_authenticated.tsx` → dois fetches de `user_roles` do mesmo usuário.
-
-### 5. Font Google bloqueante
-`Plus Jakarta Sans` é carregado por `<link rel="stylesheet">` síncrono no root, atrasando o primeiro paint em conexões piores.
+Implementação de um terceiro papel `runner` com cadastro aberto, onboarding em wizard e dashboard próprio, reusando 100% do motor de planilhas, zonas, editor e PDF existentes. Sem billing nesta fase.
 
 ---
 
-## O que vou fazer
+## 1. Banco de dados (3 migrations)
 
-### Passo 1 — `QueryClient` com defaults sensatos (impacto alto, mudança pequena)
-Em `src/router.tsx`, criar o cliente com:
-- `staleTime: 60_000` (1 min) — dados ficam "frescos" por 1 minuto, sem refetch ao re-navegar.
-- `gcTime: 5 * 60_000`
-- `refetchOnWindowFocus: false`
-- `retry: 1`
+**Migration A — enum (isolada, obrigatório):**
+- `ALTER TYPE app_role ADD VALUE 'runner';`
 
-Resultado: voltar para uma página visitada nos últimos 60 s é instantâneo.
+**Migration B — schema:**
+- `students.user_id uuid NULL REFERENCES auth.users(id) ON DELETE CASCADE`, índice em `user_id`.
+- `students.coach_id` → nullable.
+- CHECK: `coach_id IS NOT NULL OR user_id IS NOT NULL`.
+- `profiles` ganha: `goal_distance text`, `goal_level int`, `race_date date`, `runner_onboarding_completed bool default false`.
+- Atualizar `handle_new_user`:
+  - Lê `raw_user_meta_data->>'signup_type'`.
+  - Se `runner`: cria profile, atribui role `runner`, **pula** o check de limite de coaches e o check de convite. Não cria registro em `students` (criado depois pelo wizard).
+  - Se ausente: mantém regra atual (invite-only para coach).
+- Guard de limite de 4 coaches: só conta/aplica quando role = `coach`.
 
-### Passo 2 — Reescrever guard do `_authenticated.tsx`
-- Trocar `useState/useEffect` por `useQuery` com `queryKey: ["auth-guard", user.id]` e `staleTime: 5 min`.
-- Ao invés de bloquear a tela inteira com "Carregando…", renderizar o layout imediatamente e só redirecionar para `/onboarding` quando a query resolver (`needsOnboarding === true`). Enquanto carrega, exibir o app normalmente (a verificação roda em background; redirect só dispara se realmente precisar).
-- Consolidar com `useRoles` para evitar a 2ª chamada a `user_roles`.
-
-### Passo 3 — Listagem de alunos enxuta
-Em `src/routes/_authenticated/alunos.index.tsx`:
-- Trocar `select("*")` por `select("id, full_name, email, target_distance, level, created_at")`.
-- Substituir a query `lastQ` (que puxa todos os testes) por uma RPC nova `get_students_last_activity()` que retorna `{ student_id, last_test_at }` agregado no Postgres (1 linha por aluno, não 1 por teste). Vou criar a migração com a função `STABLE SECURITY DEFINER` filtrando por `coach_id = auth.uid()` para respeitar RLS.
-- Adicionar `staleTime: 30_000` específico nessa query.
-
-### Passo 4 — Desduplicar `students-list`
-Padronizar `queryKey: ["students"]` com mesma função de fetch em `teste-3km.tsx` (e em qualquer outro lugar com lista de alunos) para reusar cache.
-
-### Passo 5 — Font Google não-bloqueante
-Em `__root.tsx`, trocar o `<link rel="stylesheet">` do Google Fonts por padrão `preload`+`onload` (ou `media="print" onload="this.media='all'"`) para não bloquear o primeiro paint. O `display=swap` já está presente.
+**Migration C — RLS:**
+- `students`: políticas adicionais
+  - SELECT/UPDATE quando `user_id = auth.uid()`.
+  - INSERT do próprio registro permitido a `runner` com `user_id = auth.uid()` e `coach_id IS NULL`.
+- `training_plans` e `tests`: política adicional permitindo acesso quando o `student` vinculado tem `user_id = auth.uid()` (SELECT/INSERT/UPDATE/DELETE com `EXISTS (...)`). Manter policies de coach/admin intactas.
+- `profiles`: garantir que runner pode SELECT/UPDATE próprio perfil (já deve existir via `id = auth.uid()`).
+- RPC `get_all_coaches` / listagem de alunos do coach: garantir filtro `coach_id IS NOT NULL` para não vazar runners.
 
 ---
 
-## Fora de escopo (não vou mexer agora)
-- Geração de planilhas, PDFs, prescrição, telas admin.
-- Schema de tabelas existentes (só adiciono a função `get_students_last_activity`).
-- Mudança de instância Lovable Cloud — sua carga atual é claramente resolvível por código primeiro.
+## 2. Auth e cadastro
 
-## Resultado esperado
-- Navegação entre páginas já visitadas: instantânea (cache).
-- Primeiro load de `/alunos`: 1 query leve em vez de 2 queries pesadas.
-- Sem flash de "Carregando…" branco entre páginas autenticadas.
-- Listagem de alunos não degrada conforme volume de testes cresce.
+- Nova rota pública `/cadastro-corredor` (nome, email, senha). Faz `supabase.auth.signUp` com `options.data = { signup_type: 'runner', full_name }`.
+- `/signup` mantém comportamento atual (invite-only). Adicionar link visível "Sou corredor — criar conta" → `/cadastro-corredor` em `/login` e `/signup`.
+- Reset de senha: reusar fluxo existente.
+
+**Redirect pós-login** (centralizar em `_authenticated/route.tsx` guard + `index.tsx`):
+- `admin`/`coach` → `/dashboard` (atual).
+- `runner` sem onboarding → `/corredor/onboarding`.
+- `runner` com onboarding → `/corredor`.
+- Bloquear cruzamento: runner não acessa `/dashboard`, `/alunos`, `/admin`, `/planilha-*`, `/teste-3km`, `/minha-marca`; coach/admin não acessam `/corredor/*`. Implementar no `beforeLoad`/guard com base em `useRoles`/query.
+
+---
+
+## 3. Onboarding `/corredor/onboarding` (wizard 4 passos)
+
+State local, nada persiste até confirmar.
+
+1. **Objetivo**: cards 10/21/42km + `race_date` opcional.
+2. **Nível**: dois cards (N1/N2) com descrições; sem teste classificatório.
+3. **Avaliação**: reusa `src/lib/teste-3km.ts` e correlatos. Tipos de teste: 3km, 5km, 10km, Cooper (12min), 2400m. Cada um com instrução. Calcula FTP `min:sec` e mostra zonas Z1–Z5 (De=mais rápido, Até=mais lento) + km/h esteira — reusar exatamente o componente de zonas atual.
+4. **Dias da semana**: reusar componente de slots ordenados existente (`PlanilhaCustomizerSheet` / distribute helpers); quantidade definida pela combinação distância/nível. Manter alerta de dias consecutivos de alta intensidade.
+
+**Confirmar**: cria `students` (`user_id=auth.uid()`, `coach_id=NULL`, `full_name=profile.full_name`, `target_distance`, `level`), salva teste em `tests`, chama a mesma server fn de geração do coach (`planilha-{10,21,42}km.functions.ts`) para criar `training_plans`, marca `runner_onboarding_completed=true`, redireciona para `/corredor`.
+
+Adaptar as server fns de geração para aceitar planos sem `coach_id` (passar `coach_id` como nullable em insert) — ou criar wrappers `*-runner.functions.ts` que chamam os mesmos `distribute`/`data` puros e fazem o insert com `user_id`. **Preferência: tornar as functions existentes coach-id-opcional**, derivando o owner do `student` (se `user_id` presente, gravar `coach_id=NULL`).
+
+---
+
+## 4. Dashboard do corredor
+
+Rotas novas sob layout `src/routes/_corredor/route.tsx` (gate `runner`, redirect outros papéis):
+- `/corredor` — visão geral: header com objetivo+contagem regressiva, navegação 5 Planilhas × 4 semanas, gráficos de volume e intensidade (reuso dos componentes atuais), editor completo embutido.
+- `/corredor/avaliacao` — refazer teste, ver zonas e histórico.
+- `/corredor/planilha/nova` — reabre wizard (passos 1, 2, 4; passo 3 pré-preenchido com opção de refazer). Arquiva plano anterior (`status='arquivada'`).
+
+**Editor**: reusar `PrescricaoEditor`/`PrescricaoEditorSheet`, `training-store.ts` (Zustand+undo), `QuickSwapPopover`, `session-library.ts`. Regra de imutabilidade da biblioteca (cópia custom com novo UUID) já é do store — não tocar.
+
+**PDF**: reusar `useGeneratePDF` / `planilha-*-pdf.ts`. Quando `coach_id` null, o cabeçalho do PDF usa `profile.full_name` (corredor) no lugar do treinador; ocultar branding de coach.
+
+Layout: novo `AppSidebar` simplificado para runner (Visão geral, Avaliação, Nova planilha, Sair) ou variante condicional do sidebar atual baseada no role. Bottom nav mobile equivalente. Mesma paleta verde/Plus Jakarta Sans.
+
+---
+
+## 5. Detalhes técnicos
+
+- `useRoles` já retorna roles; adicionar helper `isRunner`. Atualizar `_authenticated.tsx` guard para roteamento por papel.
+- `src/routes/index.tsx` e `/login` pós-auth: roteador por role.
+- Listagem de alunos do coach (`alunos.index.tsx`) e RPC `get_students_last_activity`: garantir `WHERE coach_id IS NOT NULL` (ou filtro por coach_id do auth user) para não retornar registros de runners.
+- Server fns de planilha: tornar `coach_id` opcional na assinatura; default = `coach_id` do student ou NULL. Quando criar via runner, `coach_id=NULL`.
+- Types regenerados após migration aprovada antes de escrever código que usa `runner_onboarding_completed`, etc.
+
+---
+
+## 6. Fora de escopo
+
+- Pagamentos / billing / paywall.
+- Vínculo de runner a um coach existente.
+- Alterações nos fluxos de coach/admin (convites, limite de 4, branding, auditoria, gestão de alunos).
+- Reimplementar motor, zonas, editor ou PDF.
+
+---
+
+## 7. Ordem de execução
+
+1. Migration A (enum runner).
+2. Migration B (schema + handle_new_user + guard de licença).
+3. Migration C (RLS de students/training_plans/tests).
+4. Página `/cadastro-corredor` + ajuste de redirect por role.
+5. Wizard `/corredor/onboarding` (reuso de componentes de zonas e dias).
+6. Layout `_corredor` + dashboard + editor + PDF.
+7. Ajustes em listagens do coach para excluir runners.
+8. Testes manuais dos 8 critérios de aceite.

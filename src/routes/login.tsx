@@ -19,11 +19,22 @@ function LoginPage() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: signIn, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { setLoading(false); return toast.error(error.message); }
+    // Role-based redirect
+    const uid = signIn.user?.id;
+    let dest = "/dashboard";
+    if (uid) {
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", uid);
+      const list = (roles ?? []).map((r) => r.role as string);
+      if (list.includes("runner")) {
+        const { data: prof } = await supabase.from("profiles").select("runner_onboarding_completed").eq("id", uid).maybeSingle();
+        dest = prof?.runner_onboarding_completed ? "/corredor" : "/corredor/onboarding";
+      }
+    }
     setLoading(false);
-    if (error) return toast.error(error.message);
     toast.success("Bem-vindo de volta!");
-    navigate({ to: "/dashboard" });
+    navigate({ to: dest });
   };
 
   return (

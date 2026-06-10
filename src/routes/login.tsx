@@ -19,11 +19,22 @@ function LoginPage() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: signIn, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { setLoading(false); return toast.error(error.message); }
+    // Role-based redirect
+    const uid = signIn.user?.id;
+    let dest = "/dashboard";
+    if (uid) {
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", uid);
+      const list = (roles ?? []).map((r) => r.role as string);
+      if (list.includes("runner")) {
+        const { data: prof } = await supabase.from("profiles").select("runner_onboarding_completed").eq("id", uid).maybeSingle();
+        dest = prof?.runner_onboarding_completed ? "/corredor" : "/corredor/onboarding";
+      }
+    }
     setLoading(false);
-    if (error) return toast.error(error.message);
     toast.success("Bem-vindo de volta!");
-    navigate({ to: "/dashboard" });
+    navigate({ to: dest });
   };
 
   return (
@@ -60,7 +71,10 @@ function LoginPage() {
                 <Link to="/recuperar-senha" className="text-sm text-primary hover:underline">Esqueci minha senha</Link>
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                Acesso por convite. <Link to="/signup" className="text-primary font-medium hover:underline">Saiba mais</Link>
+                Acesso por convite (treinador). <Link to="/signup" className="text-primary font-medium hover:underline">Saiba mais</Link>
+              </p>
+              <p className="text-sm text-center pt-2 border-t">
+                Sou corredor — <Link to="/cadastro-corredor" className="text-primary font-semibold hover:underline">criar conta</Link>
               </p>
             </form>
           </CardContent>

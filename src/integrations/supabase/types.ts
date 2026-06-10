@@ -110,8 +110,12 @@ export type Database = {
           brand_secondary_color: string | null
           created_at: string
           full_name: string | null
+          goal_distance: string | null
+          goal_level: number | null
           id: string
           onboarding_completed: boolean
+          race_date: string | null
+          runner_onboarding_completed: boolean
           specialty: string | null
           updated_at: string
         }
@@ -123,8 +127,12 @@ export type Database = {
           brand_secondary_color?: string | null
           created_at?: string
           full_name?: string | null
+          goal_distance?: string | null
+          goal_level?: number | null
           id: string
           onboarding_completed?: boolean
+          race_date?: string | null
+          runner_onboarding_completed?: boolean
           specialty?: string | null
           updated_at?: string
         }
@@ -136,8 +144,12 @@ export type Database = {
           brand_secondary_color?: string | null
           created_at?: string
           full_name?: string | null
+          goal_distance?: string | null
+          goal_level?: number | null
           id?: string
           onboarding_completed?: boolean
+          race_date?: string | null
+          runner_onboarding_completed?: boolean
           specialty?: string | null
           updated_at?: string
         }
@@ -146,7 +158,7 @@ export type Database = {
       students: {
         Row: {
           birth_date: string | null
-          coach_id: string
+          coach_id: string | null
           created_at: string
           email: string | null
           full_name: string
@@ -159,10 +171,11 @@ export type Database = {
           phone: string | null
           target_distance: Database["public"]["Enums"]["target_distance"] | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           birth_date?: string | null
-          coach_id: string
+          coach_id?: string | null
           created_at?: string
           email?: string | null
           full_name: string
@@ -177,10 +190,11 @@ export type Database = {
             | Database["public"]["Enums"]["target_distance"]
             | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           birth_date?: string | null
-          coach_id?: string
+          coach_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string
@@ -195,6 +209,7 @@ export type Database = {
             | Database["public"]["Enums"]["target_distance"]
             | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -208,7 +223,7 @@ export type Database = {
       }
       tests: {
         Row: {
-          coach_id: string
+          coach_id: string | null
           created_at: string
           duration_seconds: number | null
           id: string
@@ -220,7 +235,7 @@ export type Database = {
           test_type: Database["public"]["Enums"]["test_type"]
         }
         Insert: {
-          coach_id: string
+          coach_id?: string | null
           created_at?: string
           duration_seconds?: number | null
           id?: string
@@ -232,7 +247,7 @@ export type Database = {
           test_type?: Database["public"]["Enums"]["test_type"]
         }
         Update: {
-          coach_id?: string
+          coach_id?: string | null
           created_at?: string
           duration_seconds?: number | null
           id?: string
@@ -262,7 +277,7 @@ export type Database = {
       }
       training_plans: {
         Row: {
-          coach_id: string
+          coach_id: string | null
           created_at: string
           end_date: string | null
           id: string
@@ -274,7 +289,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          coach_id: string
+          coach_id?: string | null
           created_at?: string
           end_date?: string | null
           id?: string
@@ -286,7 +301,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          coach_id?: string
+          coach_id?: string | null
           created_at?: string
           end_date?: string | null
           id?: string
@@ -376,7 +391,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "coach"
+      app_role: "admin" | "coach" | "runner"
       audit_event:
         | "invite_created"
         | "invite_revoked"
@@ -517,7 +532,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "coach"],
+      app_role: ["admin", "coach", "runner"],
       audit_event: [
         "invite_created",
         "invite_revoked",

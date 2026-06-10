@@ -38,16 +38,16 @@ export const saveTeste3km = createServerFn({ method: "POST" })
     // Lookup do aluno respeitando RLS (coach só vê os seus, admin vê todos)
     const { data: student, error: sErr } = await supabase
       .from("students")
-      .select("id, coach_id")
+      .select("id, coach_id, user_id")
       .eq("id", data.studentId)
       .maybeSingle();
     if (sErr) throw new Response(sErr.message, { status: 500 });
     if (!student) throw new Response("Aluno não encontrado ou sem permissão", { status: 403 });
 
-    // Verifica se quem chama é admin OU é o coach do aluno
     const isOwnCoach = student.coach_id === userId;
+    const isOwnRunner = student.user_id === userId;
     let isAdmin = false;
-    if (!isOwnCoach) {
+    if (!isOwnCoach && !isOwnRunner) {
       const { data: adminCheck } = await supabaseAdmin.rpc("has_role", {
         _user_id: userId,
         _role: "admin",

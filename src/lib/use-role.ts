@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
-export type AppRole = "admin" | "coach";
+export type AppRole = "admin" | "coach" | "runner";
 
 export function useRoles() {
   const { user } = useAuth();
@@ -31,5 +31,5 @@ export function useRoles() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  return { roles, isAdmin: roles.includes("admin"), loading };
+  return { roles, isAdmin: roles.includes("admin"), isCoach: roles.includes("coach"), isRunner: roles.includes("runner"), loading };
 }

@@ -32,21 +32,39 @@ function Layout() {
     staleTime: 5 * 60_000,
     gcTime: 10 * 60_000,
     queryFn: async () => {
-      const [{ data: profile }, { data: roleRow }] = await Promise.all([
-        supabase.from("profiles").select("onboarding_completed, full_name").eq("id", user!.id).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", user!.id).eq("role", "admin").maybeSingle(),
+      const [{ data: profile }, { data: roles }] = await Promise.all([
+        supabase.from("profiles").select("onboarding_completed, full_name, runner_onboarding_completed").eq("id", user!.id).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", user!.id),
       ]);
-      const isAdmin = !!roleRow;
+      const roleList = (roles ?? []).map((r) => r.role as string);
+      const isAdmin = roleList.includes("admin");
+      const isRunner = roleList.includes("runner");
       const incomplete = !profile?.onboarding_completed || !profile?.full_name;
-      return { needsOnboarding: !isAdmin && incomplete };
+      return {
+        isRunner,
+        needsOnboarding: !isAdmin && !isRunner && incomplete,
+        needsRunnerOnboarding: isRunner && !profile?.runner_onboarding_completed,
+      };
     },
   });
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Carregando…</div>;
   if (!user) return <Navigate to="/login" />;
-  // Non-blocking guard: only redirect if we have a confirmed answer; render app meanwhile.
   if (guardQ.data?.needsOnboarding && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" />;
+  }
+  if (guardQ.data?.needsRunnerOnboarding && !location.pathname.startsWith("/corredor/onboarding")) {
+    return <Navigate to="/corredor/onboarding" />;
+  }
+  // Block runner from accessing coach/admin-only routes
+  if (guardQ.data?.isRunner) {
+    const p = location.pathname;
+    const allowed =
+      p.startsWith("/corredor") ||
+      p.startsWith("/planilha-") ||
+      p === "/teste-3km" ||
+      p.startsWith("/teste-3km/");
+    if (!allowed) return <Navigate to="/corredor" />;
   }
 
   return (

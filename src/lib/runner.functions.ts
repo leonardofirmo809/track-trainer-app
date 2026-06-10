@@ -48,7 +48,60 @@ export const getRunnerOverview = createServerFn({ method: "GET" })
       .select("id, full_name, level, target_distance")
       .eq("user_id", userId)
       .maybeSingle();
-    return { profile, student };
+
+    let activePlan: { id: string; plan_type: string; payload: unknown; created_at: string; start_date: string | null } | null = null;
+    let lastTest: { id: string; test_date: string; pace_seconds_per_km: number; metadata: unknown; test_type: string } | null = null;
+    if (student) {
+      const { data: plans } = await supabaseAdmin
+        .from("training_plans")
+        .select("id, plan_type, payload, created_at, start_date")
+        .eq("student_id", student.id).eq("status", "ativa")
+        .order("updated_at", { ascending: false }).limit(1);
+      activePlan = plans?.[0] ?? null;
+      const { data: tests } = await supabaseAdmin
+        .from("tests")
+        .select("id, test_date, pace_seconds_per_km, metadata, test_type")
+        .eq("student_id", student.id)
+        .order("test_date", { ascending: false }).limit(1);
+      lastTest = tests?.[0] ?? null;
+    }
+    return { profile, student, activePlan, lastTest };
+  });
+
+export const getRunnerTestsHistory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { data: student } = await supabaseAdmin
+      .from("students").select("id").eq("user_id", userId).maybeSingle();
+    if (!student) return { tests: [] };
+    const { data: tests } = await supabaseAdmin
+      .from("tests")
+      .select("id, test_date, pace_seconds_per_km, metadata, test_type, duration_seconds")
+      .eq("student_id", student.id)
+      .order("test_date", { ascending: false });
+    return { tests: tests ?? [] };
+  });
+
+export const archiveRunnerActivePlans = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { data: student } = await supabaseAdmin
+      .from("students").select("id").eq("user_id", userId).maybeSingle();
+    if (!student) return { archived: 0 };
+    const { data, error } = await supabaseAdmin
+      .from("training_plans")
+      .update({ status: "arquivada", updated_at: new Date().toISOString() })
+      .eq("student_id", student.id).eq("status", "ativa")
+      .select("id");
+    if (error) throw new Response(error.message, { status: 500 });
+    // Also clear onboarding flag so /corredor/onboarding wizard runs again
+    await supabaseAdmin
+      .from("profiles")
+      .update({ runner_onboarding_completed: false })
+      .eq("id", userId);
+    return { archived: data?.length ?? 0 };
   });
 
 export const completeRunnerOnboarding = createServerFn({ method: "POST" })

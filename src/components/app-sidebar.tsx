@@ -64,20 +64,22 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Prescrição</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {planos.map((i) => (
-                <SidebarMenuItem key={i.url}>
-                  <SidebarMenuButton asChild isActive={isActive(i.url)} tooltip={i.title} className={activeCls}>
-                    <Link to={i.url}><i.icon /><span>{i.title}</span></Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {planos.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Prescrição</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {planos.map((i) => (
+                  <SidebarMenuItem key={i.url}>
+                    <SidebarMenuButton asChild isActive={isActive(i.url)} tooltip={i.title} className={activeCls}>
+                      <Link to={i.url}><i.icon /><span>{i.title}</span></Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         {isAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel>Administração</SidebarGroupLabel>

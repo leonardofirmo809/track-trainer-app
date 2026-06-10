@@ -71,7 +71,10 @@ function LoginPage() {
                 <Link to="/recuperar-senha" className="text-sm text-primary hover:underline">Esqueci minha senha</Link>
               </div>
               <p className="text-xs text-muted-foreground text-center">
-                Acesso por convite. <Link to="/signup" className="text-primary font-medium hover:underline">Saiba mais</Link>
+                Acesso por convite (treinador). <Link to="/signup" className="text-primary font-medium hover:underline">Saiba mais</Link>
+              </p>
+              <p className="text-sm text-center pt-2 border-t">
+                Sou corredor — <Link to="/cadastro-corredor" className="text-primary font-semibold hover:underline">criar conta</Link>
               </p>
             </form>
           </CardContent>

@@ -35,6 +35,8 @@ function OnboardingPage() {
 
   useEffect(() => {
     if (!user) return;
+    // Garante que o guarda releia o estado real ao chegar aqui
+    queryClient.invalidateQueries({ queryKey: ["auth-guard"] });
     (async () => {
       const { data } = await supabase
         .from("profiles")
@@ -45,14 +47,10 @@ function OnboardingPage() {
         if (data.full_name) setFullName(data.full_name);
         if (data.specialty) setSpecialty(data.specialty);
         if (data.bio) setBio(data.bio);
-        if (data.onboarding_completed) {
-          navigate({ to: "/dashboard" });
-          return;
-        }
       }
       setChecked(true);
     })();
-  }, [user, navigate]);
+  }, [user, queryClient]);
 
   if (authLoading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Carregando…</div>;
   if (!user) return <Navigate to="/login" />;

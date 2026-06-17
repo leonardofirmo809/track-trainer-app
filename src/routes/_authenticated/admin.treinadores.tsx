@@ -529,6 +529,23 @@ function AdminUsersPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog open={!!rejectTarget} onOpenChange={(v) => { if (!v) { setRejectTarget(null); setRejectNotes(""); } }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Recusar solicitação de {rejectTarget?.full_name}?</DialogTitle>
+              <DialogDescription>Você pode adicionar uma nota explicando o motivo — ela será exibida ao usuário ao tentar entrar.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="rnotes">Motivo (opcional)</Label>
+              <Textarea id="rnotes" value={rejectNotes} onChange={(e) => setRejectNotes(e.target.value)} placeholder="Ex.: Solicitação não atende aos requisitos." />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setRejectTarget(null); setRejectNotes(""); }} disabled={actioning}>Cancelar</Button>
+              <Button variant="destructive" onClick={confirmReject} disabled={actioning}>{actioning ? "Recusando…" : "Recusar"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );

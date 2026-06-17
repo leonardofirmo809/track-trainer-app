@@ -25,6 +25,7 @@ function OnboardingPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [fullName, setFullName] = useState("");
   const [specialty, setSpecialty] = useState<string>("10km");

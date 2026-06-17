@@ -220,6 +220,35 @@ function AdminUsersPage() {
     }
   };
 
+  const approveApp = async (app: CoachApplication) => {
+    setActioning(true);
+    const { error } = await supabase.rpc("approve_coach_application", { _application_id: app.id });
+    setActioning(false);
+    if (error) return toast.error(error.message);
+    toast.success(`${app.full_name} aprovado como treinador.`);
+    load();
+  };
+
+  const confirmReject = async () => {
+    if (!rejectTarget) return;
+    setActioning(true);
+    const { error } = await supabase.rpc("reject_coach_application", {
+      _application_id: rejectTarget.id,
+      _notes: rejectNotes.trim() || null,
+    });
+    setActioning(false);
+    if (error) return toast.error(error.message);
+    toast.success("Solicitação recusada.");
+    setRejectTarget(null); setRejectNotes("");
+    load();
+  };
+
+  const appStatusBadge = (s: CoachApplication["status"]) => {
+    if (s === "pending") return <Badge variant="secondary">Pendente</Badge>;
+    if (s === "approved") return <Badge>Aprovado</Badge>;
+    return <Badge variant="outline">Recusado</Badge>;
+  };
+
   const inviteStatusBadge = (s: Invite["status"]) => {
     if (s === "pending") return <Badge variant="secondary">Pendente</Badge>;
     if (s === "accepted") return <Badge>Aceito</Badge>;

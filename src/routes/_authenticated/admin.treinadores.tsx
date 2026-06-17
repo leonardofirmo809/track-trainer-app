@@ -96,16 +96,26 @@ function AdminUsersPage() {
   const [removeTarget, setRemoveTarget] = useState<Coach | null>(null);
   const [removing, setRemoving] = useState(false);
 
+  const [removeTarget, setRemoveTarget] = useState<Coach | null>(null);
+  const [removing, setRemoving] = useState(false);
+
+  const [applications, setApplications] = useState<CoachApplication[]>([]);
+  const [rejectTarget, setRejectTarget] = useState<CoachApplication | null>(null);
+  const [rejectNotes, setRejectNotes] = useState("");
+  const [actioning, setActioning] = useState(false);
+
   const load = async () => {
     setLoading(true);
-    const [coachRes, inviteRes, settingRes] = await Promise.all([
+    const [coachRes, inviteRes, settingRes, appsRes] = await Promise.all([
       supabase.rpc("get_all_coaches"),
       supabase.from("coach_invites").select("*").order("created_at", { ascending: false }),
       supabase.from("app_settings").select("value").eq("key", "max_coaches").maybeSingle(),
+      supabase.from("coach_applications").select("*").order("created_at", { ascending: false }),
     ]);
     if (coachRes.error) toast.error(coachRes.error.message);
     setCoaches((coachRes.data ?? []) as Coach[]);
     setInvites((inviteRes.data ?? []) as Invite[]);
+    setApplications((appsRes.data ?? []) as CoachApplication[]);
     const parsed = parseInt(settingRes.data?.value ?? "", 10);
     setCoachLimit(Number.isFinite(parsed) && parsed > 0 ? parsed : 4);
     setLoading(false);

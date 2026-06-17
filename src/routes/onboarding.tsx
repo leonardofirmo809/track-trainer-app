@@ -24,7 +24,6 @@ const bioSchema = z.string().trim().max(280, "Máximo 280 caracteres");
 function OnboardingPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [fullName, setFullName] = useState("");

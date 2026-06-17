@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Activity, LayoutDashboard, Users, Timer, Route as RouteIcon, LogOut, Shield, ClipboardList, ScrollText, Palette, Settings, Target, RefreshCw, BookOpen } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,

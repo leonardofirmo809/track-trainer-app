@@ -51,6 +51,17 @@ interface Student {
   created_at: string;
 }
 
+interface CoachApplication {
+  id: string;
+  user_id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  status: "pending" | "approved" | "rejected";
+  notes: string | null;
+  created_at: string;
+}
+
 function generateToken() {
   const a = crypto.randomUUID().replace(/-/g, "");
   const b = crypto.randomUUID().replace(/-/g, "");

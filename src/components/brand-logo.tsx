@@ -11,14 +11,16 @@ type Props = {
 export function BrandLogo({ className, size = 32, showWordmark = false, wordmarkClassName }: Props) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <img
-        src={mark.url}
-        alt="8020Pace"
-        width={size}
-        height={size}
-        className="shrink-0 object-contain"
-        style={{ width: size, height: size }}
-      />
+      <div className="shrink-0 rounded-full bg-white p-[2px] shadow-sm">
+        <img
+          src={mark.url}
+          alt="8020Pace"
+          width={size}
+          height={size}
+          className="object-contain"
+          style={{ width: size, height: size }}
+        />
+      </div>
       {showWordmark && (
         <span className={cn("font-display font-bold tracking-tight", wordmarkClassName)}>
           <span className="text-foreground">8020</span>

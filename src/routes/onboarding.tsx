@@ -79,7 +79,7 @@ function OnboardingPage() {
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Perfil configurado!");
-    router.invalidate();
+    await queryClient.invalidateQueries({ queryKey: ["auth-guard"] });
     navigate({ to: "/dashboard" });
   };
 

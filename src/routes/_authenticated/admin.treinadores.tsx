@@ -234,7 +234,7 @@ function AdminUsersPage() {
     setActioning(true);
     const { error } = await supabase.rpc("reject_coach_application", {
       _application_id: rejectTarget.id,
-      _notes: rejectNotes.trim() || null,
+      _notes: rejectNotes.trim() || undefined,
     });
     setActioning(false);
     if (error) return toast.error(error.message);

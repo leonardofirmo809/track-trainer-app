@@ -29,8 +29,8 @@ function Layout() {
   const guardQ = useQuery({
     queryKey: ["auth-guard", user?.id],
     enabled: !!user,
-    staleTime: 5 * 60_000,
-    gcTime: 10 * 60_000,
+    staleTime: 0,
+    gcTime: 60_000,
     queryFn: async () => {
       const [{ data: profile }, { data: roles }] = await Promise.all([
         supabase.from("profiles").select("onboarding_completed, full_name, runner_onboarding_completed").eq("id", user!.id).maybeSingle(),

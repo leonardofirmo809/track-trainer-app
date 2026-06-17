@@ -1,60 +1,51 @@
-## Dashboard do corredor — visualização orientada ao consumo
 
-Mantém a estética atual (mesmos tokens, cards, tipografia do coach) e **reorganiza a hierarquia** do `/corredor` para responder à pergunta principal do corredor: "o que eu treino hoje?". A área do coach continua intocada.
+# Status de isolamento entre treinadores
 
-### Mudanças (apenas em `src/routes/_authenticated/corredor.index.tsx` + um helper novo)
+## TL;DR
+Sim, o isolamento entre treinadores **está implementado e ativo** no banco. Cada treinador só enxerga os próprios alunos, testes e planilhas — garantido por Row Level Security (RLS) no banco, não apenas no frontend (o que é o padrão correto). Há, porém, **3 pontos operacionais** que você precisa decidir antes de liberar o novo treinador, e **1 verificação** que recomendo fazer em produção.
 
-Nova ordem visual da página:
+---
 
-1. **Header compacto** (1 linha): nome + badge objetivo/nível + contagem regressiva inline (X semanas · Y dias). Remove o bloco grande gradiente atual; vira faixa enxuta.
-2. **HERO — Treino de hoje** (novo, principal foco)
-   - Card grande no topo com:
-     - Etiqueta do dia (ex.: "Quarta · 11/06")
-     - Nome do treino (ex.: "Intervalado 5×1000m Z4")
-     - Linha de paces/zonas-alvo extraídas das zonas do último teste
-     - Estrutura resumida (aquecimento → série → volta à calma) com duração total estimada
-     - CTA primário "Ver detalhes na planilha" → `/planilha-{goal}` na semana/dia corretos
-     - Botão secundário "Marcar como concluído" (apenas visual nesta iteração — fora de escopo persistir)
-   - Estados:
-     - **Rest day**: card "Descanso hoje" + sugestão "alongar / mobilidade"
-     - **Sem plano**: CTA "Gerar minha planilha" → `/corredor/onboarding`
-3. **Esta semana** (mini-card horizontal)
-   - 7 chips (SEG–DOM) mostrando código do treino ou "—" em rest. Dia atual destacado. Clique em qualquer chip → abre planilha no dia.
-4. **Próximo treino** (1 linha pequena): "Próximo: Sexta · Longão Z2 12km".
-5. **Cards secundários** (grid 2-col em desktop, stack mobile, recolhidos visualmente):
-   - Plano atual (Plano X de 4 · semana Y de 4) com link "Ver os 4 planos" → abre acordeão inline com os 4 mini-cards (hoje fica sempre visível ocupando muito espaço).
-   - Suas zonas (mesmo card de zonas atual, mais compacto — 5 chips em vez de cards).
-6. **Rodapé**: ações "Refazer avaliação" e "Nova planilha" como links discretos (não mais botões grandes — já estão na sidebar).
+## O que já está garantido
 
-Remove da página: bloco "Como funciona" (move para tooltip ou só onboarding) e o bloco grande "Quick actions" duplicado (CTAs migram pro hero).
+### Separação de papéis
+- Existem 3 papéis: `admin`, `coach`, `runner`, armazenados em tabela própria (`user_roles`) — não dá para um usuário "se autopromover" a admin pelo frontend.
+- Função `has_role()` é `security definer` (padrão correto, sem recursão de policy).
 
-### Helper novo: `src/lib/runner-today.ts`
+### Isolamento por treinador (RLS ativo)
+- **students**: cada treinador só lê/edita/apaga linhas onde `coach_id = seu próprio id`.
+- **tests**: idem — `coach_id = auth.uid()`.
+- **training_plans**: idem.
+- **profiles**: cada usuário só vê o próprio perfil.
+- **Admin** enxerga tudo (correto para suporte).
+- **Runner** (corredor self-service) só vê o próprio aluno/testes/planos.
 
-Função pura que recebe `activePlan.payload`, `activePlan.start_date`, `weekDays`, `currentPhase` e devolve:
+Ou seja: mesmo que o novo treinador descubra o ID de um aluno de outro treinador e tente puxar via API, o Postgres bloqueia.
 
-```ts
-{
-  todayDate: Date,
-  todayDayKey: DayOfWeek,   // SEG..DOM
-  weekNumber: number,       // 1..4 dentro da fase
-  todaySession: TrainingSession | null,    // null = rest day
-  nextSession: { dayKey, date, session } | null,
-  weekChips: Array<{ dayKey, date, session: TrainingSession | null, isToday: boolean }>,
-}
-```
+### Cadastro controlado
+- Treinador novo só consegue criar conta via **convite** (`coach_invites`) emitido por admin — signup aberto está bloqueado no trigger `handle_new_user`.
+- Existe um **teto de treinadores** configurável (`app_settings.max_coaches`, hoje = **4**).
+- Corredor self-service usa fluxo separado (`signup_type = 'runner'`) e nunca recebe papel de coach.
 
-Usa `planPayloadToWeeks()` (já existe) para extrair as 4 semanas da fase atual e calcula o dia atual a partir de `start_date` (se ausente, usa created_at).
+### Auditoria
+- Tabela `admin_audit_log` registra criação/revogação/aceite de convites.
 
-### Fora de escopo
+---
 
-- Não toca em rotas/arquivos do coach (`planilha-*km.tsx`, `dashboard.tsx`, `alunos*`).
-- Não muda paleta nem tipografia (mesma estética).
-- Não muda sidebar/bottom-nav (já variantes runner).
-- Sem migrations, sem novo backend (reusa `getRunnerOverview`).
-- Sem persistir "concluído" agora — apenas UI.
+## O que precisa de decisão sua antes de liberar o cliente novo
 
-### Ordem de execução
+1. **Aumentar `max_coaches`?** Hoje está em 4. Se o novo treinador é o 4º, ele entra; se for o 5º, o cadastro vai falhar com "Limite de treinadores atingido".
+2. **Convite já foi enviado?** O fluxo exige: admin entra no painel → cria convite com o e-mail dele → ele recebe o link → cria a conta. Sem isso, o signup é recusado.
+3. **Branding/white-label do novo treinador**: o bucket `coach-branding` é público (logos). Se ele subir logo, fica visível por URL — ok para logo, mas confirme que é esse o comportamento esperado.
 
-1. Criar `src/lib/runner-today.ts` com a função pura + tipos.
-2. Reescrever `corredor.index.tsx` com a nova hierarquia (header enxuto → hero hoje → semana → próximo → secundários).
-3. Verificar visualmente nos 3 estados: sem plano, rest day, dia com treino.
+## O que recomendo verificar (rápido) antes de entregar
+
+- **Teste de fumaça de isolamento em produção** (15 min): logar como o novo treinador, confirmar que listagens de alunos/testes/planilhas voltam vazias, criar 1 aluno-teste, e logar como você (outro treinador) para confirmar que esse aluno **não aparece**. RLS está certo no código, mas vale o teste real com o ambiente publicado.
+- **Recuperação de senha**: confirmar que o e-mail de "esqueci a senha" está chegando (config de e-mail do auth) — é o tipo de coisa que só descobre quando o cliente precisa.
+
+## Fora do escopo desta auditoria
+Não cobri: cobrança/billing, limites de uso por treinador, retenção/exclusão de dados quando um treinador sai, exportação LGPD. Se algum desses for crítico para essa venda, me diga e eu planejo separado.
+
+---
+
+**Quer que eu prossiga com algo?** Por exemplo: (a) aumentar o `max_coaches`, (b) gerar o convite do novo treinador, (c) montar um checklist executável de teste de isolamento em produção, ou (d) só confirmar e seguir.

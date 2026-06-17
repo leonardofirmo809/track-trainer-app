@@ -17,7 +17,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Copy, KeyRound, Plus, RefreshCw, ShieldOff, Trash2, UserPlus, Users } from "lucide-react";
+import { Check, Copy, KeyRound, Plus, RefreshCw, ShieldOff, Trash2, UserPlus, Users, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/admin/treinadores")({ component: AdminUsersPage });
 

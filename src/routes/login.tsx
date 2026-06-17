@@ -41,8 +41,10 @@ function LoginPage() {
     <div className="min-h-screen grid lg:grid-cols-2">
       <div className="hidden lg:flex flex-col justify-between p-12 bg-sidebar text-sidebar-foreground">
         <div className="flex items-center gap-2">
-          <div className="size-9 rounded-xl bg-primary grid place-items-center"><Activity className="size-5 text-primary-foreground" /></div>
-          <span className="font-display text-xl font-bold">8020Pace</span>
+          <BrandLogo size={40} />
+          <span className="font-display text-xl font-bold tracking-tight">
+            <span>8020</span><span className="text-[oklch(0.78_0.18_45)]"> Pace</span>
+          </span>
         </div>
         <div>
           <h1 className="text-4xl font-bold leading-tight">Prescrição inteligente para corredores.</h1>

@@ -96,8 +96,6 @@ function AdminUsersPage() {
   const [removeTarget, setRemoveTarget] = useState<Coach | null>(null);
   const [removing, setRemoving] = useState(false);
 
-  const [removeTarget, setRemoveTarget] = useState<Coach | null>(null);
-  const [removing, setRemoving] = useState(false);
 
   const [applications, setApplications] = useState<CoachApplication[]>([]);
   const [rejectTarget, setRejectTarget] = useState<CoachApplication | null>(null);

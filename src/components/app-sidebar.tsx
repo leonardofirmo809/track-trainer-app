@@ -46,10 +46,12 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-2 px-2 py-1">
-          <div className="size-8 rounded-lg bg-primary grid place-items-center shrink-0">
-            <Activity className="size-4 text-primary-foreground" />
-          </div>
-          {!collapsed && <span className="font-display text-lg font-bold">8020Pace</span>}
+          <BrandLogo size={32} />
+          {!collapsed && (
+            <span className="font-display text-lg font-bold tracking-tight">
+              <span>8020</span><span className="text-[oklch(0.78_0.18_45)]"> Pace</span>
+            </span>
+          )}
         </div>
       </SidebarHeader>
       <SidebarContent>

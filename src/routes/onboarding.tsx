@@ -1,5 +1,6 @@
-import { createFileRoute, Navigate, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -23,7 +24,7 @@ const bioSchema = z.string().trim().max(280, "Máximo 280 caracteres");
 function OnboardingPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [fullName, setFullName] = useState("");
   const [specialty, setSpecialty] = useState<string>("10km");
@@ -33,6 +34,8 @@ function OnboardingPage() {
 
   useEffect(() => {
     if (!user) return;
+    // Garante que o guarda releia o estado real ao chegar aqui
+    queryClient.invalidateQueries({ queryKey: ["auth-guard"] });
     (async () => {
       const { data } = await supabase
         .from("profiles")
@@ -43,14 +46,10 @@ function OnboardingPage() {
         if (data.full_name) setFullName(data.full_name);
         if (data.specialty) setSpecialty(data.specialty);
         if (data.bio) setBio(data.bio);
-        if (data.onboarding_completed) {
-          navigate({ to: "/dashboard" });
-          return;
-        }
       }
       setChecked(true);
     })();
-  }, [user, navigate]);
+  }, [user, queryClient]);
 
   if (authLoading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Carregando…</div>;
   if (!user) return <Navigate to="/login" />;
@@ -79,7 +78,7 @@ function OnboardingPage() {
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Perfil configurado!");
-    router.invalidate();
+    await queryClient.invalidateQueries({ queryKey: ["auth-guard"] });
     navigate({ to: "/dashboard" });
   };
 

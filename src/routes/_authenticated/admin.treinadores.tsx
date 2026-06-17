@@ -386,6 +386,55 @@ function AdminUsersPage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="solicitacoes" className="mt-4">
+            <Card>
+              <CardContent className="pt-6">
+                {loading ? <p className="text-muted-foreground">Carregando…</p> : applications.length === 0 ? (
+                  <p className="text-muted-foreground">Nenhuma solicitação de cadastro.</p>
+                ) : (
+                  <div className="-mx-2 sm:mx-0 overflow-x-auto"><Table className="min-w-[720px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Telefone</TableHead>
+                        <TableHead>Recebida em</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {applications.map((a) => (
+                        <TableRow key={a.id}>
+                          <TableCell className="font-medium">{a.full_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{a.email}</TableCell>
+                          <TableCell>{a.phone ?? "—"}</TableCell>
+                          <TableCell>{new Date(a.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                          <TableCell>{appStatusBadge(a.status)}</TableCell>
+                          <TableCell className="text-right space-x-1">
+                            {a.status === "pending" && (
+                              <>
+                                <Button size="sm" onClick={() => approveApp(a)} disabled={actioning}>
+                                  <Check className="size-4 mr-1" /> Aprovar
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => setRejectTarget(a)} disabled={actioning}>
+                                  <X className="size-4 mr-1" /> Recusar
+                                </Button>
+                              </>
+                            )}
+                            {a.status === "rejected" && a.notes && (
+                              <span className="text-xs text-muted-foreground italic">{a.notes}</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table></div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="convites" className="mt-4">
             <Card>
               <CardContent className="pt-6">

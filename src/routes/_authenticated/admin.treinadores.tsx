@@ -333,6 +333,12 @@ function AdminUsersPage() {
         <Tabs defaultValue="treinadores">
           <TabsList>
             <TabsTrigger value="treinadores">Treinadores</TabsTrigger>
+            <TabsTrigger value="solicitacoes">
+              Solicitações
+              {applications.filter((a) => a.status === "pending").length > 0 && (
+                <Badge variant="secondary" className="ml-2">{applications.filter((a) => a.status === "pending").length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="convites">Convites</TabsTrigger>
           </TabsList>
 

@@ -62,6 +62,48 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_applications: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["coach_application_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["coach_application_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["coach_application_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       coach_invites: {
         Row: {
           accepted_at: string | null
@@ -114,6 +156,7 @@ export type Database = {
           goal_level: number | null
           id: string
           onboarding_completed: boolean
+          phone: string | null
           race_date: string | null
           runner_onboarding_completed: boolean
           specialty: string | null
@@ -131,6 +174,7 @@ export type Database = {
           goal_level?: number | null
           id: string
           onboarding_completed?: boolean
+          phone?: string | null
           race_date?: string | null
           runner_onboarding_completed?: boolean
           specialty?: string | null
@@ -148,6 +192,7 @@ export type Database = {
           goal_level?: number | null
           id?: string
           onboarding_completed?: boolean
+          phone?: string | null
           race_date?: string | null
           runner_onboarding_completed?: boolean
           specialty?: string | null
@@ -355,6 +400,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_coach_application: {
+        Args: { _application_id: string }
+        Returns: undefined
+      }
       get_all_coaches: {
         Args: never
         Returns: {
@@ -389,6 +438,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      reject_coach_application: {
+        Args: { _application_id: string; _notes?: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "coach" | "runner"
@@ -399,6 +452,7 @@ export type Database = {
         | "invite_accepted"
         | "coach_created_manual"
         | "coach_role_removed"
+      coach_application_status: "pending" | "approved" | "rejected"
       invite_status: "pending" | "accepted" | "revoked"
       plan_status: "ativa" | "concluida" | "arquivada"
       plan_type: "5km" | "10km" | "21km" | "42km"
@@ -541,6 +595,7 @@ export const Constants = {
         "coach_created_manual",
         "coach_role_removed",
       ],
+      coach_application_status: ["pending", "approved", "rejected"],
       invite_status: ["pending", "accepted", "revoked"],
       plan_status: ["ativa", "concluida", "arquivada"],
       plan_type: ["5km", "10km", "21km", "42km"],

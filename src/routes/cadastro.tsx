@@ -64,9 +64,14 @@ function SignupChooser() {
             <CardContent className="space-y-3">
               <div className="flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
                 <Mail className="size-4 mt-0.5 shrink-0" />
-                <p>O acesso de treinador é por convite. Solicite ao administrador e use o link enviado por e-mail.</p>
+                <p>Seu cadastro será analisado pela nossa equipe e liberado em até 24h.</p>
               </div>
-              <Button asChild variant="outline" className="w-full">
+              <Button asChild className="w-full">
+                <Link to="/cadastro-treinador">
+                  Criar conta de treinador <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="ghost" className="w-full text-xs">
                 <Link to="/signup">Tenho um convite</Link>
               </Button>
             </CardContent>

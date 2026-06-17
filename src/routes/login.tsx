@@ -21,12 +21,28 @@ function LoginPage() {
     setLoading(true);
     const { data: signIn, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { setLoading(false); return toast.error(error.message); }
-    // Role-based redirect
     const uid = signIn.user?.id;
     let dest = "/dashboard";
     if (uid) {
       const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", uid);
       const list = (roles ?? []).map((r) => r.role as string);
+      if (list.length === 0) {
+        const { data: app } = await supabase
+          .from("coach_applications")
+          .select("status, notes")
+          .eq("user_id", uid)
+          .maybeSingle();
+        if (app?.status === "pending") {
+          await supabase.auth.signOut();
+          setLoading(false);
+          return toast.info("Sua solicitação de treinador ainda está em análise. Você receberá um e-mail assim que for aprovada.");
+        }
+        if (app?.status === "rejected") {
+          await supabase.auth.signOut();
+          setLoading(false);
+          return toast.error(app.notes ? `Cadastro recusado: ${app.notes}` : "Sua solicitação de treinador foi recusada.");
+        }
+      }
       if (list.includes("runner")) {
         const { data: prof } = await supabase.from("profiles").select("runner_onboarding_completed").eq("id", uid).maybeSingle();
         dest = prof?.runner_onboarding_completed ? "/corredor" : "/corredor/onboarding";

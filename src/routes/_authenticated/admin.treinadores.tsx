@@ -17,7 +17,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Copy, KeyRound, Plus, RefreshCw, ShieldOff, Trash2, UserPlus, Users } from "lucide-react";
+import { Check, Copy, KeyRound, Plus, RefreshCw, ShieldOff, Trash2, UserPlus, Users, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/admin/treinadores")({ component: AdminUsersPage });
 
@@ -47,6 +48,17 @@ interface Student {
   full_name: string;
   email: string | null;
   level: string | null;
+  created_at: string;
+}
+
+interface CoachApplication {
+  id: string;
+  user_id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  status: "pending" | "approved" | "rejected";
+  notes: string | null;
   created_at: string;
 }
 
@@ -84,16 +96,24 @@ function AdminUsersPage() {
   const [removeTarget, setRemoveTarget] = useState<Coach | null>(null);
   const [removing, setRemoving] = useState(false);
 
+
+  const [applications, setApplications] = useState<CoachApplication[]>([]);
+  const [rejectTarget, setRejectTarget] = useState<CoachApplication | null>(null);
+  const [rejectNotes, setRejectNotes] = useState("");
+  const [actioning, setActioning] = useState(false);
+
   const load = async () => {
     setLoading(true);
-    const [coachRes, inviteRes, settingRes] = await Promise.all([
+    const [coachRes, inviteRes, settingRes, appsRes] = await Promise.all([
       supabase.rpc("get_all_coaches"),
       supabase.from("coach_invites").select("*").order("created_at", { ascending: false }),
       supabase.from("app_settings").select("value").eq("key", "max_coaches").maybeSingle(),
+      supabase.from("coach_applications").select("*").order("created_at", { ascending: false }),
     ]);
     if (coachRes.error) toast.error(coachRes.error.message);
     setCoaches((coachRes.data ?? []) as Coach[]);
     setInvites((inviteRes.data ?? []) as Invite[]);
+    setApplications((appsRes.data ?? []) as CoachApplication[]);
     const parsed = parseInt(settingRes.data?.value ?? "", 10);
     setCoachLimit(Number.isFinite(parsed) && parsed > 0 ? parsed : 4);
     setLoading(false);
@@ -200,6 +220,35 @@ function AdminUsersPage() {
     }
   };
 
+  const approveApp = async (app: CoachApplication) => {
+    setActioning(true);
+    const { error } = await supabase.rpc("approve_coach_application", { _application_id: app.id });
+    setActioning(false);
+    if (error) return toast.error(error.message);
+    toast.success(`${app.full_name} aprovado como treinador.`);
+    load();
+  };
+
+  const confirmReject = async () => {
+    if (!rejectTarget) return;
+    setActioning(true);
+    const { error } = await supabase.rpc("reject_coach_application", {
+      _application_id: rejectTarget.id,
+      _notes: rejectNotes.trim() || undefined,
+    });
+    setActioning(false);
+    if (error) return toast.error(error.message);
+    toast.success("Solicitação recusada.");
+    setRejectTarget(null); setRejectNotes("");
+    load();
+  };
+
+  const appStatusBadge = (s: CoachApplication["status"]) => {
+    if (s === "pending") return <Badge variant="secondary">Pendente</Badge>;
+    if (s === "approved") return <Badge>Aprovado</Badge>;
+    return <Badge variant="outline">Recusado</Badge>;
+  };
+
   const inviteStatusBadge = (s: Invite["status"]) => {
     if (s === "pending") return <Badge variant="secondary">Pendente</Badge>;
     if (s === "accepted") return <Badge>Aceito</Badge>;
@@ -284,6 +333,12 @@ function AdminUsersPage() {
         <Tabs defaultValue="treinadores">
           <TabsList>
             <TabsTrigger value="treinadores">Treinadores</TabsTrigger>
+            <TabsTrigger value="solicitacoes">
+              Solicitações
+              {applications.filter((a) => a.status === "pending").length > 0 && (
+                <Badge variant="secondary" className="ml-2">{applications.filter((a) => a.status === "pending").length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="convites">Convites</TabsTrigger>
           </TabsList>
 
@@ -320,6 +375,55 @@ function AdminUsersPage() {
                               <Button size="sm" variant="ghost" onClick={() => setRemoveTarget(c)} title="Remover acesso">
                                 <ShieldOff className="size-4" />
                               </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table></div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="solicitacoes" className="mt-4">
+            <Card>
+              <CardContent className="pt-6">
+                {loading ? <p className="text-muted-foreground">Carregando…</p> : applications.length === 0 ? (
+                  <p className="text-muted-foreground">Nenhuma solicitação de cadastro.</p>
+                ) : (
+                  <div className="-mx-2 sm:mx-0 overflow-x-auto"><Table className="min-w-[720px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Telefone</TableHead>
+                        <TableHead>Recebida em</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {applications.map((a) => (
+                        <TableRow key={a.id}>
+                          <TableCell className="font-medium">{a.full_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{a.email}</TableCell>
+                          <TableCell>{a.phone ?? "—"}</TableCell>
+                          <TableCell>{new Date(a.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                          <TableCell>{appStatusBadge(a.status)}</TableCell>
+                          <TableCell className="text-right space-x-1">
+                            {a.status === "pending" && (
+                              <>
+                                <Button size="sm" onClick={() => approveApp(a)} disabled={actioning}>
+                                  <Check className="size-4 mr-1" /> Aprovar
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => setRejectTarget(a)} disabled={actioning}>
+                                  <X className="size-4 mr-1" /> Recusar
+                                </Button>
+                              </>
+                            )}
+                            {a.status === "rejected" && a.notes && (
+                              <span className="text-xs text-muted-foreground italic">{a.notes}</span>
                             )}
                           </TableCell>
                         </TableRow>
@@ -425,6 +529,23 @@ function AdminUsersPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog open={!!rejectTarget} onOpenChange={(v) => { if (!v) { setRejectTarget(null); setRejectNotes(""); } }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Recusar solicitação de {rejectTarget?.full_name}?</DialogTitle>
+              <DialogDescription>Você pode adicionar uma nota explicando o motivo — ela será exibida ao usuário ao tentar entrar.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="rnotes">Motivo (opcional)</Label>
+              <Textarea id="rnotes" value={rejectNotes} onChange={(e) => setRejectNotes(e.target.value)} placeholder="Ex.: Solicitação não atende aos requisitos." />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setRejectTarget(null); setRejectNotes(""); }} disabled={actioning}>Cancelar</Button>
+              <Button variant="destructive" onClick={confirmReject} disabled={actioning}>{actioning ? "Recusando…" : "Recusar"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );

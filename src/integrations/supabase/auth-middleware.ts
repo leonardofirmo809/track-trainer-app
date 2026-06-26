@@ -3,14 +3,17 @@ import { createMiddleware } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
-
-
+import {
+  SUPABASE_URL as PUBLIC_SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY as PUBLIC_KEY,
+} from './public-config'
 
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
-    
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+    // process.env is populated from Cloudflare Worker secrets at runtime.
+    // public-config provides a build-time fallback with the same public values.
+    const SUPABASE_URL = process.env.SUPABASE_URL || PUBLIC_SUPABASE_URL;
+    const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || PUBLIC_KEY;
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
       const missing = [

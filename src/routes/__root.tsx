@@ -54,6 +54,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
+    scripts: [
+      {
+        // Server injects public Supabase config so the browser can create the client.
+        // SUPABASE_PUBLISHABLE_KEY is the anon key — public by design, safe to embed.
+        // SUPABASE_SERVICE_ROLE_KEY is never included here.
+        children: `window.__ENV__=${JSON.stringify({
+          SUPABASE_URL: process.env.SUPABASE_URL ?? "",
+          SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY ?? "",
+        })};`,
+      },
+    ],
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },

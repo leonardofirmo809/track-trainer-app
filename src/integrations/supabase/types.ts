@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -11,6 +11,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -266,6 +291,7 @@ export type Database = {
         Row: {
           birth_date: string | null
           coach_id: string | null
+          company_id: string | null
           created_at: string
           email: string | null
           full_name: string
@@ -283,6 +309,7 @@ export type Database = {
         Insert: {
           birth_date?: string | null
           coach_id?: string | null
+          company_id?: string | null
           created_at?: string
           email?: string | null
           full_name: string
@@ -302,6 +329,7 @@ export type Database = {
         Update: {
           birth_date?: string | null
           coach_id?: string | null
+          company_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string
@@ -324,6 +352,13 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -500,6 +535,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_member: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       reject_coach_application: {
         Args: { _application_id: string; _notes?: string }
         Returns: undefined
@@ -507,7 +546,6 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "coach" | "runner"
-      company_role: "owner" | "admin" | "coach"
       audit_event:
         | "invite_created"
         | "invite_revoked"
@@ -515,7 +553,15 @@ export type Database = {
         | "invite_accepted"
         | "coach_created_manual"
         | "coach_role_removed"
+        | "coach_updated_manual"
+        | "admin_added"
+        | "admin_removed"
+        | "coach_added"
+        | "coach_removed"
+        | "runner_added"
+        | "runner_removed"
       coach_application_status: "pending" | "approved" | "rejected"
+      company_role: "owner" | "admin" | "coach"
       invite_status: "pending" | "accepted" | "revoked"
       plan_status: "ativa" | "concluida" | "arquivada"
       plan_type: "5km" | "10km" | "21km" | "42km"
@@ -647,10 +693,12 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "coach", "runner"],
-      company_role: ["owner", "admin", "coach"],
       audit_event: [
         "invite_created",
         "invite_revoked",
@@ -658,8 +706,16 @@ export const Constants = {
         "invite_accepted",
         "coach_created_manual",
         "coach_role_removed",
+        "coach_updated_manual",
+        "admin_added",
+        "admin_removed",
+        "coach_added",
+        "coach_removed",
+        "runner_added",
+        "runner_removed",
       ],
       coach_application_status: ["pending", "approved", "rejected"],
+      company_role: ["owner", "admin", "coach"],
       invite_status: ["pending", "accepted", "revoked"],
       plan_status: ["ativa", "concluida", "arquivada"],
       plan_type: ["5km", "10km", "21km", "42km"],

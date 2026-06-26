@@ -10,6 +10,12 @@ import {
   removeCompanyMember,
   updateCompanyMemberRole,
 } from "@/lib/admin-companies.functions";
+import {
+  listCompanyStudents,
+  listStudentsWithoutCompany,
+  addStudentToCompany,
+  removeStudentFromCompany,
+} from "@/lib/admin-company-students.functions";
 import { listAdminUsers } from "@/lib/admin-users.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,9 +36,11 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Loader2, Pencil, Plus, Trash2, UserPlus, Users } from "lucide-react";
+import {
+  Building2, Loader2, Pencil, Plus, Trash2, UserPlus, Users, GraduationCap,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/empresas")({
   component: AdminEmpresasPage,
@@ -64,17 +72,28 @@ interface UserRow {
   full_name: string | null;
 }
 
+interface CompanyStudent {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  coach_id: string | null;
+  coach_name: string | null;
+  created_at: string;
+}
+
+interface UnassignedStudent {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+}
+
 const ROLE_LABEL: Record<CompanyRole, string> = {
   owner: "Proprietário",
   admin: "Admin",
   coach: "Coach",
 };
-
-function roleBadgeVariant(role: CompanyRole) {
-  if (role === "owner") return "default" as const;
-  if (role === "admin") return "secondary" as const;
-  return "outline" as const;
-}
 
 function statusBadge(status: string) {
   return status === "active"
@@ -82,17 +101,29 @@ function statusBadge(status: string) {
     : <Badge variant="outline">Inativa</Badge>;
 }
 
+async function errMsg(e: unknown) {
+  if (e instanceof Response) return (await e.text()) || "Erro";
+  return e instanceof Error ? e.message : "Erro inesperado";
+}
+
 function AdminEmpresasPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Sheet: company detail + members
+  // Sheet: company detail
   const [sheetCompany, setSheetCompany] = useState<Company | null>(null);
+  const [activeTab, setActiveTab] = useState<"membros" | "alunos">("membros");
+
+  // Members state
   const [members, setMembers] = useState<Member[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
-
-  // All system users (for add-member dropdown)
   const [allUsers, setAllUsers] = useState<UserRow[]>([]);
+
+  // Students state
+  const [companyStudents, setCompanyStudents] = useState<CompanyStudent[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [unassignedStudents, setUnassignedStudents] = useState<UnassignedStudent[]>([]);
+  const [unassignedLoading, setUnassignedLoading] = useState(false);
 
   // Create company dialog
   const [createOpen, setCreateOpen] = useState(false);
@@ -111,15 +142,25 @@ function AdminEmpresasPage() {
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [amUserId, setAmUserId] = useState("");
   const [amRole, setAmRole] = useState<CompanyRole>("coach");
-  const [adding, setAdding] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
 
   // Remove member confirmation
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null);
-  const [removing, setRemoving] = useState(false);
+  const [removingMember, setRemovingMember] = useState(false);
 
-  // Role change in-progress tracking
+  // Role change in-progress
   const [roleChanging, setRoleChanging] = useState<string | null>(null);
 
+  // Add student dialog
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [studentToAdd, setStudentToAdd] = useState("");
+  const [addingStudent, setAddingStudent] = useState(false);
+
+  // Remove student confirmation
+  const [removeStudentTarget, setRemoveStudentTarget] = useState<CompanyStudent | null>(null);
+  const [removingStudent, setRemovingStudent] = useState(false);
+
+  // Server functions
   const listFn = useServerFn(listCompanies);
   const createFn = useServerFn(createCompany);
   const updateFn = useServerFn(updateCompany);
@@ -128,6 +169,12 @@ function AdminEmpresasPage() {
   const removeMemberFn = useServerFn(removeCompanyMember);
   const updateRoleFn = useServerFn(updateCompanyMemberRole);
   const listUsersFn = useServerFn(listAdminUsers);
+  const listStudentsFn = useServerFn(listCompanyStudents);
+  const listUnassignedFn = useServerFn(listStudentsWithoutCompany);
+  const addStudentFn = useServerFn(addStudentToCompany);
+  const removeStudentFn = useServerFn(removeStudentFromCompany);
+
+  // ── Load page data ─────────────────────────────────────────────────────────
 
   const load = async () => {
     setLoading(true);
@@ -137,8 +184,8 @@ function AdminEmpresasPage() {
       setAllUsers(((usersData ?? []) as UserRow[]).sort((a, b) =>
         (a.email ?? "").localeCompare(b.email ?? ""),
       ));
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Erro ao carregar empresas");
+    } catch (e) {
+      toast.error(await errMsg(e));
     } finally {
       setLoading(false);
     }
@@ -150,10 +197,23 @@ function AdminEmpresasPage() {
     try {
       const data = await listMembersFn({ data: { companyId } });
       setMembers((data ?? []) as Member[]);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Erro ao carregar membros");
+    } catch (e) {
+      toast.error(await errMsg(e));
     } finally {
       setMembersLoading(false);
+    }
+  };
+
+  const loadCompanyStudents = async (companyId: string) => {
+    setStudentsLoading(true);
+    setCompanyStudents([]);
+    try {
+      const data = await listStudentsFn({ data: { companyId } });
+      setCompanyStudents((data ?? []) as CompanyStudent[]);
+    } catch (e) {
+      toast.error(await errMsg(e));
+    } finally {
+      setStudentsLoading(false);
     }
   };
 
@@ -161,10 +221,21 @@ function AdminEmpresasPage() {
 
   const openSheet = (company: Company) => {
     setSheetCompany(company);
+    setActiveTab("membros");
+    setMembers([]);
+    setCompanyStudents([]);
     loadMembers(company.id);
+    loadCompanyStudents(company.id);
   };
 
-  // ── Create company ──────────────────────────────────────────────────────────
+  const closeSheet = () => {
+    setSheetCompany(null);
+    setMembers([]);
+    setCompanyStudents([]);
+    setUnassignedStudents([]);
+  };
+
+  // ── Create company ─────────────────────────────────────────────────────────
 
   const submitCreate = async () => {
     if (!cName.trim()) return toast.error("Informe o nome da empresa.");
@@ -174,15 +245,14 @@ function AdminEmpresasPage() {
       toast.success("Empresa criada com sucesso.");
       setCName(""); setCSlug(""); setCreateOpen(false);
       await load();
-    } catch (e: unknown) {
-      const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
-      toast.error(msg);
+    } catch (e) {
+      toast.error(await errMsg(e));
     } finally {
       setCreating(false);
     }
   };
 
-  // ── Edit company ────────────────────────────────────────────────────────────
+  // ── Edit company ───────────────────────────────────────────────────────────
 
   const openEdit = (company: Company) => {
     setEName(company.name);
@@ -201,55 +271,54 @@ function AdminEmpresasPage() {
       toast.success("Empresa atualizada.");
       setEditTarget(null);
       await load();
-      // Refresh sheet if open on this company
       if (sheetCompany?.id === editTarget.id) {
-        setSheetCompany((prev) => prev ? { ...prev, name: eName.trim(), slug: eSlug.trim() || null, status: eStatus } : prev);
+        setSheetCompany((prev) => prev
+          ? { ...prev, name: eName.trim(), slug: eSlug.trim() || null, status: eStatus }
+          : prev,
+        );
       }
-    } catch (e: unknown) {
-      const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
-      toast.error(msg);
+    } catch (e) {
+      toast.error(await errMsg(e));
     } finally {
       setEditing(false);
     }
   };
 
-  // ── Add member ──────────────────────────────────────────────────────────────
+  // ── Add member ─────────────────────────────────────────────────────────────
 
   const submitAddMember = async () => {
     if (!sheetCompany || !amUserId) return toast.error("Selecione um usuário.");
-    setAdding(true);
+    setAddingMember(true);
     try {
       await addMemberFn({ data: { companyId: sheetCompany.id, userId: amUserId, role: amRole } });
       toast.success("Membro adicionado.");
       setAmUserId(""); setAmRole("coach"); setAddMemberOpen(false);
       await loadMembers(sheetCompany.id);
-    } catch (e: unknown) {
-      const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
-      toast.error(msg);
+    } catch (e) {
+      toast.error(await errMsg(e));
     } finally {
-      setAdding(false);
+      setAddingMember(false);
     }
   };
 
-  // ── Remove member ───────────────────────────────────────────────────────────
+  // ── Remove member ──────────────────────────────────────────────────────────
 
-  const confirmRemove = async () => {
+  const confirmRemoveMember = async () => {
     if (!sheetCompany || !removeTarget) return;
-    setRemoving(true);
+    setRemovingMember(true);
     try {
       await removeMemberFn({ data: { companyId: sheetCompany.id, userId: removeTarget.user_id } });
       toast.success("Membro removido.");
       setRemoveTarget(null);
       await loadMembers(sheetCompany.id);
-    } catch (e: unknown) {
-      const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
-      toast.error(msg);
+    } catch (e) {
+      toast.error(await errMsg(e));
     } finally {
-      setRemoving(false);
+      setRemovingMember(false);
     }
   };
 
-  // ── Update member role ──────────────────────────────────────────────────────
+  // ── Update member role ─────────────────────────────────────────────────────
 
   const changeRole = async (member: Member, role: CompanyRole) => {
     if (!sheetCompany || role === member.role) return;
@@ -258,17 +327,68 @@ function AdminEmpresasPage() {
       await updateRoleFn({ data: { companyId: sheetCompany.id, userId: member.user_id, role } });
       toast.success("Papel atualizado.");
       await loadMembers(sheetCompany.id);
-    } catch (e: unknown) {
-      const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
-      toast.error(msg);
+    } catch (e) {
+      toast.error(await errMsg(e));
     } finally {
       setRoleChanging(null);
     }
   };
 
-  // ── Members not yet in the company (for add-member dropdown) ───────────────
+  // ── Add student ────────────────────────────────────────────────────────────
+
+  const openAddStudent = async () => {
+    setStudentToAdd("");
+    setUnassignedStudents([]);
+    setAddStudentOpen(true);
+    setUnassignedLoading(true);
+    try {
+      const data = await listUnassignedFn();
+      setUnassignedStudents((data ?? []) as UnassignedStudent[]);
+    } catch (e) {
+      toast.error(await errMsg(e));
+    } finally {
+      setUnassignedLoading(false);
+    }
+  };
+
+  const submitAddStudent = async () => {
+    if (!sheetCompany || !studentToAdd) return toast.error("Selecione um aluno.");
+    setAddingStudent(true);
+    try {
+      await addStudentFn({ data: { companyId: sheetCompany.id, studentId: studentToAdd } });
+      toast.success("Aluno vinculado à empresa.");
+      setStudentToAdd(""); setAddStudentOpen(false);
+      await loadCompanyStudents(sheetCompany.id);
+    } catch (e) {
+      toast.error(await errMsg(e));
+    } finally {
+      setAddingStudent(false);
+    }
+  };
+
+  // ── Remove student ─────────────────────────────────────────────────────────
+
+  const confirmRemoveStudent = async () => {
+    if (!sheetCompany || !removeStudentTarget) return;
+    setRemovingStudent(true);
+    try {
+      await removeStudentFn({ data: { studentId: removeStudentTarget.id } });
+      toast.success("Aluno desvinculado da empresa.");
+      setRemoveStudentTarget(null);
+      await loadCompanyStudents(sheetCompany.id);
+    } catch (e) {
+      toast.error(await errMsg(e));
+    } finally {
+      setRemovingStudent(false);
+    }
+  };
+
+  // ── Derived state ──────────────────────────────────────────────────────────
+
   const memberUserIds = new Set(members.map((m) => m.user_id));
   const availableUsers = allUsers.filter((u) => !memberUserIds.has(u.id));
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -276,7 +396,7 @@ function AdminEmpresasPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-display font-bold">Empresas</h1>
-          <p className="text-muted-foreground">Gerencie empresas e seus treinadores.</p>
+          <p className="text-muted-foreground">Gerencie empresas, treinadores e alunos.</p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>
           <Plus className="size-4 mr-2" /> Criar empresa
@@ -323,10 +443,10 @@ function AdminEmpresasPage() {
                         {new Date(c.created_at).toLocaleDateString("pt-BR")}
                       </TableCell>
                       <TableCell className="text-right space-x-1">
-                        <Button size="sm" variant="ghost" onClick={() => openSheet(c)} title="Membros">
-                          <Users className="size-4 mr-1" /> Membros
+                        <Button size="sm" variant="ghost" onClick={() => openSheet(c)}>
+                          <Users className="size-4 mr-1" /> Gerenciar
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => openEdit(c)} title="Editar">
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(c)}>
                           <Pencil className="size-4" />
                         </Button>
                       </TableCell>
@@ -340,105 +460,186 @@ function AdminEmpresasPage() {
       </Card>
 
       {/* ── Company detail sheet ───────────────────────────────────────────── */}
-      <Sheet open={!!sheetCompany} onOpenChange={(v) => !v && setSheetCompany(null)}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-          <SheetHeader>
+      <Sheet open={!!sheetCompany} onOpenChange={(v) => !v && closeSheet()}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto flex flex-col gap-0 p-0">
+          {/* Sheet header */}
+          <SheetHeader className="px-6 pt-6 pb-4 border-b">
             <SheetTitle className="flex items-center gap-3">
               <Building2 className="size-5 shrink-0" />
               <span className="truncate">{sheetCompany?.name}</span>
               {sheetCompany && statusBadge(sheetCompany.status)}
             </SheetTitle>
+            {sheetCompany && (
+              <div className="pt-1">
+                <Button size="sm" variant="outline" onClick={() => openEdit(sheetCompany)}>
+                  <Pencil className="size-3.5 mr-1" /> Editar empresa
+                </Button>
+              </div>
+            )}
           </SheetHeader>
 
-          {sheetCompany && (
-            <div className="mt-2 mb-4">
-              <Button size="sm" variant="outline" onClick={() => openEdit(sheetCompany)}>
-                <Pencil className="size-3.5 mr-1" /> Editar empresa
-              </Button>
-            </div>
-          )}
+          {/* Tabs */}
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as "membros" | "alunos")}
+            className="flex-1 flex flex-col"
+          >
+            <TabsList className="mx-6 mt-4 mb-0 w-fit">
+              <TabsTrigger value="membros">
+                <Users className="size-3.5 mr-1.5" />
+                Membros ({members.length})
+              </TabsTrigger>
+              <TabsTrigger value="alunos">
+                <GraduationCap className="size-3.5 mr-1.5" />
+                Alunos ({companyStudents.length})
+              </TabsTrigger>
+            </TabsList>
 
-          <Separator className="my-4" />
+            {/* ── Tab: Membros ─────────────────────────────────────────────── */}
+            <TabsContent value="membros" className="flex-1 px-6 pt-4 pb-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-muted-foreground">Treinadores e gestores desta empresa.</p>
+                <Button
+                  size="sm"
+                  onClick={() => { setAmUserId(""); setAmRole("coach"); setAddMemberOpen(true); }}
+                  disabled={availableUsers.length === 0}
+                  title={availableUsers.length === 0 ? "Todos os usuários já são membros" : undefined}
+                >
+                  <UserPlus className="size-4 mr-1" /> Adicionar
+                </Button>
+              </div>
 
-          {/* Members section */}
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-base">Membros ({members.length})</h3>
-            <Button
-              size="sm"
-              onClick={() => { setAmUserId(""); setAmRole("coach"); setAddMemberOpen(true); }}
-              disabled={availableUsers.length === 0}
-              title={availableUsers.length === 0 ? "Todos os usuários já são membros" : undefined}
-            >
-              <UserPlus className="size-4 mr-1" /> Adicionar
-            </Button>
-          </div>
-
-          {membersLoading ? (
-            <div className="flex items-center gap-2 py-6 text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Carregando membros…
-            </div>
-          ) : members.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">
-              Nenhum membro nesta empresa ainda. Adicione um treinador para começar.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome / Email</TableHead>
-                  <TableHead>Papel</TableHead>
-                  <TableHead>Adicionado em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((m) => {
-                  const isChanging = roleChanging === m.user_id;
-                  return (
-                    <TableRow key={m.id}>
-                      <TableCell>
-                        <p className="font-medium text-sm">{m.full_name ?? "—"}</p>
-                        <p className="text-xs text-muted-foreground">{m.email}</p>
-                      </TableCell>
-                      <TableCell>
-                        {isChanging ? (
-                          <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                        ) : (
-                          <Select
-                            value={m.role}
-                            onValueChange={(v) => changeRole(m, v as CompanyRole)}
-                          >
-                            <SelectTrigger className="w-[130px] h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="owner">{ROLE_LABEL.owner}</SelectItem>
-                              <SelectItem value="admin">{ROLE_LABEL.admin}</SelectItem>
-                              <SelectItem value="coach">{ROLE_LABEL.coach}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(m.created_at).toLocaleDateString("pt-BR")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 size-8"
-                          onClick={() => setRemoveTarget(m)}
-                          title="Remover membro"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </TableCell>
+              {membersLoading ? (
+                <div className="flex items-center gap-2 py-8 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" /> Carregando membros…
+                </div>
+              ) : members.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4">
+                  Nenhum membro ainda. Adicione um treinador para começar.
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome / Email</TableHead>
+                      <TableHead>Papel</TableHead>
+                      <TableHead>Adicionado em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+                  </TableHeader>
+                  <TableBody>
+                    {members.map((m) => {
+                      const isChanging = roleChanging === m.user_id;
+                      return (
+                        <TableRow key={m.id}>
+                          <TableCell>
+                            <p className="font-medium text-sm">{m.full_name ?? "—"}</p>
+                            <p className="text-xs text-muted-foreground">{m.email}</p>
+                          </TableCell>
+                          <TableCell>
+                            {isChanging ? (
+                              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                            ) : (
+                              <Select
+                                value={m.role}
+                                onValueChange={(v) => changeRole(m, v as CompanyRole)}
+                              >
+                                <SelectTrigger className="w-[130px] h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="owner">{ROLE_LABEL.owner}</SelectItem>
+                                  <SelectItem value="admin">{ROLE_LABEL.admin}</SelectItem>
+                                  <SelectItem value="coach">{ROLE_LABEL.coach}</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {new Date(m.created_at).toLocaleDateString("pt-BR")}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="icon" variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 size-8"
+                              onClick={() => setRemoveTarget(m)}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </TabsContent>
+
+            {/* ── Tab: Alunos ──────────────────────────────────────────────── */}
+            <TabsContent value="alunos" className="flex-1 px-6 pt-4 pb-6">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm text-muted-foreground">Alunos vinculados a esta empresa.</p>
+                <Button size="sm" onClick={openAddStudent}>
+                  <UserPlus className="size-4 mr-1" /> Vincular aluno
+                </Button>
+              </div>
+
+              {studentsLoading ? (
+                <div className="flex items-center gap-2 py-8 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" /> Carregando alunos…
+                </div>
+              ) : companyStudents.length === 0 ? (
+                <div className="py-8 text-center">
+                  <GraduationCap className="size-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum aluno vinculado ainda.
+                  </p>
+                  <Button size="sm" variant="outline" className="mt-3" onClick={openAddStudent}>
+                    <UserPlus className="size-4 mr-1" /> Vincular primeiro aluno
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Aluno</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead>Treinador</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {companyStudents.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell>
+                          <p className="font-medium text-sm">{s.full_name}</p>
+                          {s.email && (
+                            <p className="text-xs text-muted-foreground">{s.email}</p>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {s.phone ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {s.coach_name ?? <span className="italic">Sem treinador</span>}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="icon" variant="ghost"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 size-8"
+                            onClick={() => setRemoveStudentTarget(s)}
+                            title="Desvincular aluno"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </TabsContent>
+          </Tabs>
         </SheetContent>
       </Sheet>
 
@@ -506,9 +707,7 @@ function AdminEmpresasPage() {
             <div className="space-y-2">
               <Label htmlFor="estatus">Status</Label>
               <Select value={eStatus} onValueChange={(v) => setEStatus(v as CompanyStatus)}>
-                <SelectTrigger id="estatus">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger id="estatus"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Ativa</SelectItem>
                   <SelectItem value="inactive">Inativa</SelectItem>
@@ -519,7 +718,7 @@ function AdminEmpresasPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditTarget(null)} disabled={editing}>Cancelar</Button>
             <Button onClick={submitEdit} disabled={editing}>
-              {editing ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
+              {editing && <Loader2 className="size-4 mr-2 animate-spin" />}
               {editing ? "Salvando…" : "Salvar"}
             </Button>
           </DialogFooter>
@@ -562,9 +761,7 @@ function AdminEmpresasPage() {
             <div className="space-y-2">
               <Label htmlFor="amrole">Papel na empresa</Label>
               <Select value={amRole} onValueChange={(v) => setAmRole(v as CompanyRole)}>
-                <SelectTrigger id="amrole">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger id="amrole"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="owner">{ROLE_LABEL.owner}</SelectItem>
                   <SelectItem value="admin">{ROLE_LABEL.admin}</SelectItem>
@@ -577,9 +774,9 @@ function AdminEmpresasPage() {
             <Button variant="outline" onClick={() => { setAmUserId(""); setAmRole("coach"); setAddMemberOpen(false); }}>
               Cancelar
             </Button>
-            <Button onClick={submitAddMember} disabled={adding || !amUserId}>
-              {adding ? <Loader2 className="size-4 mr-2 animate-spin" /> : <UserPlus className="size-4 mr-2" />}
-              {adding ? "Adicionando…" : "Adicionar"}
+            <Button onClick={submitAddMember} disabled={addingMember || !amUserId}>
+              {addingMember ? <Loader2 className="size-4 mr-2 animate-spin" /> : <UserPlus className="size-4 mr-2" />}
+              {addingMember ? "Adicionando…" : "Adicionar"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -596,13 +793,93 @@ function AdminEmpresasPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={removing}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={removingMember}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={confirmRemove}
-              disabled={removing}
+              onClick={confirmRemoveMember}
+              disabled={removingMember}
             >
-              {removing ? "Removendo…" : "Remover"}
+              {removingMember ? "Removendo…" : "Remover"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Add student dialog ─────────────────────────────────────────────── */}
+      <Dialog open={addStudentOpen} onOpenChange={(v) => { if (!v) setStudentToAdd(""); setAddStudentOpen(v); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vincular aluno</DialogTitle>
+            <DialogDescription>
+              Vincular aluno à empresa <strong>{sheetCompany?.name}</strong>.
+              Apenas o vínculo com a empresa é alterado — treinador e demais dados do aluno permanecem intactos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="student-select">Aluno sem empresa *</Label>
+            {unassignedLoading ? (
+              <div className="flex items-center gap-2 py-3 text-muted-foreground text-sm">
+                <Loader2 className="size-4 animate-spin" /> Carregando alunos disponíveis…
+              </div>
+            ) : (
+              <Select value={studentToAdd} onValueChange={setStudentToAdd}>
+                <SelectTrigger id="student-select">
+                  <SelectValue placeholder="Selecione um aluno…" />
+                </SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {unassignedStudents.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      <span className="font-medium">{s.full_name}</span>
+                      {s.email && (
+                        <span className="ml-2 text-muted-foreground text-xs">{s.email}</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                  {unassignedStudents.length === 0 && (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      Todos os alunos já estão vinculados a uma empresa.
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+            {!unassignedLoading && unassignedStudents.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Se um aluno já está em outra empresa, desvinculá-lo primeiro antes de reassociar.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setStudentToAdd(""); setAddStudentOpen(false); }}>
+              Cancelar
+            </Button>
+            <Button onClick={submitAddStudent} disabled={addingStudent || !studentToAdd || unassignedLoading}>
+              {addingStudent ? <Loader2 className="size-4 mr-2 animate-spin" /> : <UserPlus className="size-4 mr-2" />}
+              {addingStudent ? "Vinculando…" : "Vincular"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Remove student confirmation ────────────────────────────────────── */}
+      <AlertDialog open={!!removeStudentTarget} onOpenChange={(v) => !v && setRemoveStudentTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desvincular aluno?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Desvincular <strong>{removeStudentTarget?.full_name}</strong> de{" "}
+              <strong>{sheetCompany?.name}</strong>?
+              O cadastro e o treinador do aluno não serão alterados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removingStudent}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmRemoveStudent}
+              disabled={removingStudent}
+            >
+              {removingStudent ? "Desvinculando…" : "Desvincular"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

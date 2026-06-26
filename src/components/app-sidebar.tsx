@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Activity, LayoutDashboard, Users, Timer, Route as RouteIcon, LogOut, Shield, ClipboardList, ScrollText, Palette, Settings, Target, RefreshCw, BookOpen } from "lucide-react";
+import { Activity, LayoutDashboard, Users, Timer, Route as RouteIcon, LogOut, Shield, ClipboardList, ScrollText, Palette, Settings, Target, RefreshCw, BookOpen, UserCog } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -109,6 +109,11 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/admin/auditoria")} tooltip="Auditoria" className={activeCls}>
                     <Link to="/admin/auditoria"><ScrollText /><span>Auditoria</span></Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/admin/usuarios")} tooltip="Usuários" className={activeCls}>
+                    <Link to="/admin/usuarios"><UserCog /><span>Usuários</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

@@ -36,6 +36,7 @@ import { Route as AuthenticatedCorredorOnboardingRouteImport } from './routes/_a
 import { Route as AuthenticatedCorredorAvaliacaoRouteImport } from './routes/_authenticated/corredor.avaliacao'
 import { Route as AuthenticatedAlunosNovoRouteImport } from './routes/_authenticated/alunos.novo'
 import { Route as AuthenticatedAlunosStudentIdRouteImport } from './routes/_authenticated/alunos.$studentId'
+import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin.usuarios'
 import { Route as AuthenticatedAdminTreinadoresRouteImport } from './routes/_authenticated/admin.treinadores'
 import { Route as AuthenticatedAdminConfiguracoesRouteImport } from './routes/_authenticated/admin.configuracoes'
 import { Route as AuthenticatedAdminAuditoriaRouteImport } from './routes/_authenticated/admin.auditoria'
@@ -187,6 +188,12 @@ const AuthenticatedAlunosStudentIdRoute =
     path: '/alunos/$studentId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminUsuariosRoute =
+  AuthenticatedAdminUsuariosRouteImport.update({
+    id: '/usuarios',
+    path: '/usuarios',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminTreinadoresRoute =
   AuthenticatedAdminTreinadoresRouteImport.update({
     id: '/treinadores',
@@ -254,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/admin/auditoria': typeof AuthenticatedAdminAuditoriaRoute
   '/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
   '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
+  '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRouteWithChildren
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/corredor/avaliacao': typeof AuthenticatedCorredorAvaliacaoRoute
@@ -288,6 +296,7 @@ export interface FileRoutesByTo {
   '/admin/auditoria': typeof AuthenticatedAdminAuditoriaRoute
   '/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
   '/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
+  '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRouteWithChildren
   '/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/corredor/avaliacao': typeof AuthenticatedCorredorAvaliacaoRoute
@@ -325,6 +334,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/auditoria': typeof AuthenticatedAdminAuditoriaRoute
   '/_authenticated/admin/configuracoes': typeof AuthenticatedAdminConfiguracoesRoute
   '/_authenticated/admin/treinadores': typeof AuthenticatedAdminTreinadoresRoute
+  '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/_authenticated/alunos/$studentId': typeof AuthenticatedAlunosStudentIdRouteWithChildren
   '/_authenticated/alunos/novo': typeof AuthenticatedAlunosNovoRoute
   '/_authenticated/corredor/avaliacao': typeof AuthenticatedCorredorAvaliacaoRoute
@@ -362,6 +372,7 @@ export interface FileRouteTypes {
     | '/admin/auditoria'
     | '/admin/configuracoes'
     | '/admin/treinadores'
+    | '/admin/usuarios'
     | '/alunos/$studentId'
     | '/alunos/novo'
     | '/corredor/avaliacao'
@@ -396,6 +407,7 @@ export interface FileRouteTypes {
     | '/admin/auditoria'
     | '/admin/configuracoes'
     | '/admin/treinadores'
+    | '/admin/usuarios'
     | '/alunos/$studentId'
     | '/alunos/novo'
     | '/corredor/avaliacao'
@@ -432,6 +444,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/auditoria'
     | '/_authenticated/admin/configuracoes'
     | '/_authenticated/admin/treinadores'
+    | '/_authenticated/admin/usuarios'
     | '/_authenticated/alunos/$studentId'
     | '/_authenticated/alunos/novo'
     | '/_authenticated/corredor/avaliacao'
@@ -649,6 +662,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAlunosStudentIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/usuarios': {
+      id: '/_authenticated/admin/usuarios'
+      path: '/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/treinadores': {
       id: '/_authenticated/admin/treinadores'
       path: '/treinadores'
@@ -706,6 +726,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAuditoriaRoute: typeof AuthenticatedAdminAuditoriaRoute
   AuthenticatedAdminConfiguracoesRoute: typeof AuthenticatedAdminConfiguracoesRoute
   AuthenticatedAdminTreinadoresRoute: typeof AuthenticatedAdminTreinadoresRoute
+  AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
@@ -714,6 +735,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAuditoriaRoute: AuthenticatedAdminAuditoriaRoute,
   AuthenticatedAdminConfiguracoesRoute: AuthenticatedAdminConfiguracoesRoute,
   AuthenticatedAdminTreinadoresRoute: AuthenticatedAdminTreinadoresRoute,
+  AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
 

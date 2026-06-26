@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, UserPlus, ClipboardList, Activity, ChevronRight, Shield } from "lucide-react";
+import { Users, UserPlus, ClipboardList, Activity, ChevronRight, Shield, UserCog } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/")({ component: AdminOverview });
 
@@ -56,6 +56,7 @@ function AdminOverview() {
   const shortcuts = [
     { to: "/admin/treinadores", title: "Treinadores", desc: "Convites e contas", icon: Users },
     { to: "/admin/alunos", title: "Alunos", desc: "Lista global", icon: ClipboardList },
+    { to: "/admin/usuarios", title: "Usuários", desc: "Permissões e roles", icon: UserCog },
     { to: "/admin/auditoria", title: "Auditoria", desc: "Histórico de eventos", icon: Shield },
   ] as const;
 
@@ -80,7 +81,7 @@ function AdminOverview() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {shortcuts.map((s) => (
           <Link key={s.to} to={s.to}>
             <Card className="hover:border-primary/40 transition-colors h-full">

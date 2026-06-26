@@ -200,6 +200,8 @@ export type Database = {
       }
       company_members: {
         Row: {
+          can_manage_students: boolean
+          can_manage_training: boolean
           company_id: string
           created_at: string
           id: string
@@ -207,6 +209,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          can_manage_students?: boolean
+          can_manage_training?: boolean
           company_id: string
           created_at?: string
           id?: string
@@ -214,6 +218,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          can_manage_students?: boolean
+          can_manage_training?: boolean
           company_id?: string
           created_at?: string
           id?: string

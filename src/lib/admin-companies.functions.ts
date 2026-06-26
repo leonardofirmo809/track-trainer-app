@@ -102,7 +102,7 @@ export const listCompanyMembers = createServerFn({ method: "POST" })
 
     const { data: members, error } = await supabaseAdmin
       .from("company_members")
-      .select("id, user_id, role, created_at")
+      .select("id, user_id, role, can_manage_students, can_manage_training, created_at")
       .eq("company_id", data.companyId)
       .order("created_at", { ascending: true });
 
@@ -120,6 +120,8 @@ export const listCompanyMembers = createServerFn({ method: "POST" })
       id: m.id,
       user_id: m.user_id,
       role: m.role,
+      can_manage_students: m.can_manage_students,
+      can_manage_training: m.can_manage_training,
       created_at: m.created_at,
       email: emailMap[m.user_id] ?? "",
       full_name: nameMap[m.user_id] ?? null,
@@ -195,6 +197,34 @@ export const updateCompanyMemberRole = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin
       .from("company_members")
       .update({ role: data.role })
+      .eq("company_id", data.companyId)
+      .eq("user_id", data.userId);
+
+    if (error) throw new Response(error.message, { status: 500 });
+    return { ok: true as const };
+  });
+
+// ── updateCompanyMemberPermissions ────────────────────────────────────────────
+
+const updatePermissionsSchema = z.object({
+  companyId: z.string().uuid(),
+  userId: z.string().uuid(),
+  canManageStudents: z.boolean(),
+  canManageTraining: z.boolean(),
+});
+
+export const updateCompanyMemberPermissions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => updatePermissionsSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await assertGlobalAdmin(context.userId);
+
+    const { error } = await supabaseAdmin
+      .from("company_members")
+      .update({
+        can_manage_students: data.canManageStudents,
+        can_manage_training: data.canManageTraining,
+      })
       .eq("company_id", data.companyId)
       .eq("user_id", data.userId);
 

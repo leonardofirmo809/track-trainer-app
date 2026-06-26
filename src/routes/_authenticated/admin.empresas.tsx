@@ -9,6 +9,7 @@ import {
   addCompanyMember,
   removeCompanyMember,
   updateCompanyMemberRole,
+  updateCompanyMemberPermissions,
 } from "@/lib/admin-companies.functions";
 import {
   listCompanyStudents,
@@ -36,7 +37,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import {
   Building2, Loader2, Pencil, Plus, Trash2, UserPlus, Users, GraduationCap,
@@ -61,6 +64,8 @@ interface Member {
   id: string;
   user_id: string;
   role: CompanyRole;
+  can_manage_students: boolean;
+  can_manage_training: boolean;
   created_at: string;
   email: string;
   full_name: string | null;
@@ -151,6 +156,9 @@ function AdminEmpresasPage() {
   // Role change in-progress
   const [roleChanging, setRoleChanging] = useState<string | null>(null);
 
+  // Permission change in-progress (tracks userId)
+  const [permChanging, setPermChanging] = useState<string | null>(null);
+
   // Add student dialog
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [studentToAdd, setStudentToAdd] = useState("");
@@ -169,6 +177,7 @@ function AdminEmpresasPage() {
   const removeMemberFn = useServerFn(removeCompanyMember);
   const updateRoleFn = useServerFn(updateCompanyMemberRole);
   const listUsersFn = useServerFn(listAdminUsers);
+  const updatePermsFn = useServerFn(updateCompanyMemberPermissions);
   const listStudentsFn = useServerFn(listCompanyStudents);
   const listUnassignedFn = useServerFn(listStudentsWithoutCompany);
   const addStudentFn = useServerFn(addStudentToCompany);
@@ -331,6 +340,32 @@ function AdminEmpresasPage() {
       toast.error(await errMsg(e));
     } finally {
       setRoleChanging(null);
+    }
+  };
+
+  // ── Update member permissions ──────────────────────────────────────────────
+
+  const changePermissions = async (
+    member: Member,
+    patch: { canManageStudents?: boolean; canManageTraining?: boolean },
+  ) => {
+    if (!sheetCompany) return;
+    setPermChanging(member.user_id);
+    try {
+      await updatePermsFn({
+        data: {
+          companyId: sheetCompany.id,
+          userId: member.user_id,
+          canManageStudents: patch.canManageStudents ?? member.can_manage_students,
+          canManageTraining: patch.canManageTraining ?? member.can_manage_training,
+        },
+      });
+      toast.success("Permissões atualizadas.");
+      await loadMembers(sheetCompany.id);
+    } catch (e) {
+      toast.error(await errMsg(e));
+    } finally {
+      setPermChanging(null);
     }
   };
 
@@ -518,18 +553,21 @@ function AdminEmpresasPage() {
                   Nenhum membro ainda. Adicione um treinador para começar.
                 </p>
               ) : (
+                <TooltipProvider>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome / Email</TableHead>
                       <TableHead>Papel</TableHead>
-                      <TableHead>Adicionado em</TableHead>
+                      <TableHead>Permissões</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {members.map((m) => {
-                      const isChanging = roleChanging === m.user_id;
+                      const isRoleChanging = roleChanging === m.user_id;
+                      const isPermChanging = permChanging === m.user_id;
+                      const isAdminRole = m.role === "owner" || m.role === "admin";
                       return (
                         <TableRow key={m.id}>
                           <TableCell>
@@ -537,7 +575,7 @@ function AdminEmpresasPage() {
                             <p className="text-xs text-muted-foreground">{m.email}</p>
                           </TableCell>
                           <TableCell>
-                            {isChanging ? (
+                            {isRoleChanging ? (
                               <Loader2 className="size-4 animate-spin text-muted-foreground" />
                             ) : (
                               <Select
@@ -555,8 +593,44 @@ function AdminEmpresasPage() {
                               </Select>
                             )}
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {new Date(m.created_at).toLocaleDateString("pt-BR")}
+                          <TableCell>
+                            {isAdminRole ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="secondary" className="text-xs cursor-default">
+                                    Acesso administrativo
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-56 text-xs">
+                                  Owner e Admin têm todas as permissões automaticamente pelo papel — os toggles não se aplicam.
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : isPermChanging ? (
+                              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                            ) : (
+                              <div className="flex flex-col gap-1.5">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <Switch
+                                    checked={m.can_manage_students}
+                                    onCheckedChange={(v) =>
+                                      changePermissions(m, { canManageStudents: v })
+                                    }
+                                    className="scale-75 origin-left"
+                                  />
+                                  <span className="text-xs text-muted-foreground">Alunos</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <Switch
+                                    checked={m.can_manage_training}
+                                    onCheckedChange={(v) =>
+                                      changePermissions(m, { canManageTraining: v })
+                                    }
+                                    className="scale-75 origin-left"
+                                  />
+                                  <span className="text-xs text-muted-foreground">Treinos</span>
+                                </label>
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
@@ -572,6 +646,7 @@ function AdminEmpresasPage() {
                     })}
                   </TableBody>
                 </Table>
+                </TooltipProvider>
               )}
             </TabsContent>
 

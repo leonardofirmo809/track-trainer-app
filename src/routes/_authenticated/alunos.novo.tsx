@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth-context";
+import { useEffect, useState, type FormEvent } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { createStudent, listAccessibleCompanies } from "@/lib/students.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,27 +13,63 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/alunos/novo")({ component: NovoAluno });
 
+interface Company { id: string; name: string }
+
 function NovoAluno() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     full_name: "", email: "", phone: "", birth_date: "", gender: "",
     goal: "", level: "", target_distance: "", injury_history: "", notes: "",
   });
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [companies, setCompanies] = useState<Company[]>([]);
+
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  const createFn = useServerFn(createStudent);
+  const listCompaniesFn = useServerFn(listAccessibleCompanies);
+
+  useEffect(() => {
+    listCompaniesFn()
+      .then((data) => {
+        const list = (data ?? []) as Company[];
+        setCompanies(list);
+        if (list.length === 1) setSelectedCompanyId(list[0].id);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     setLoading(true);
-    const payload: any = { ...form, coach_id: user.id };
-    Object.keys(payload).forEach((k) => { if (payload[k] === "") payload[k] = null; });
-    const { data, error } = await supabase.from("students").insert(payload).select("id").single();
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Aluno cadastrado!");
-    navigate({ to: "/alunos/$studentId", params: { studentId: data.id } });
+    try {
+      const student = await createFn({
+        data: {
+          fullName: form.full_name,
+          email: form.email || undefined,
+          phone: form.phone || undefined,
+          birthDate: form.birth_date || undefined,
+          gender: form.gender || undefined,
+          goal: form.goal || undefined,
+          level: (form.level as "iniciante" | "intermediario" | "avancado") || undefined,
+          targetDistance: (form.target_distance as "5km" | "10km" | "21km" | "42km") || undefined,
+          injuryHistory: form.injury_history || undefined,
+          notes: form.notes || undefined,
+          companyId: selectedCompanyId || undefined,
+        },
+      });
+      toast.success("Aluno cadastrado!");
+      navigate({ to: "/alunos/$studentId", params: { studentId: student.id } });
+    } catch (e: unknown) {
+      const msg = e instanceof Response
+        ? await e.text()
+        : e instanceof Error ? e.message : "Erro ao cadastrar aluno";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -95,6 +131,30 @@ function NovoAluno() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Company selector — shown only when user has accessible companies */}
+        {companies.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle>Empresa</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label>Empresa</Label>
+                <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                  <SelectTrigger><SelectValue placeholder="Sem empresa" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sem empresa</SelectItem>
+                    {companies.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Selecione a empresa à qual este aluno pertence.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader><CardTitle>Saúde & observações</CardTitle></CardHeader>

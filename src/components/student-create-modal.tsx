@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth-context";
+import { useServerFn } from "@tanstack/react-start";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { createStudent, listAccessibleCompanies } from "@/lib/students.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,13 +24,41 @@ const schema = z.object({
 
 type Errors = Partial<Record<keyof z.infer<typeof schema>, string>>;
 
+interface Company { id: string; name: string }
+
+const EMPTY_FORM = { full_name: "", email: "", phone: "", programa: "", nivel: "", notes: "" };
+
 export function StudentCreateModal({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const isMobile = useIsMobile();
-  const { user } = useAuth();
   const qc = useQueryClient();
-  const [form, setForm] = useState({ full_name: "", email: "", phone: "", programa: "", nivel: "", notes: "" });
+
+  const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState<Errors>({});
   const [saving, setSaving] = useState(false);
+
+  // Company selection
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+
+  const createFn = useServerFn(createStudent);
+  const listCompaniesFn = useServerFn(listAccessibleCompanies);
+
+  // Load accessible companies when modal opens (once per open)
+  useEffect(() => {
+    if (!open) return;
+    setCompaniesLoading(true);
+    listCompaniesFn()
+      .then((data) => {
+        const list = (data ?? []) as Company[];
+        setCompanies(list);
+        // Auto-select if only one option
+        if (list.length === 1) setSelectedCompanyId(list[0].id);
+      })
+      .catch(() => {})
+      .finally(() => setCompaniesLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const set = (k: keyof typeof form, v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
@@ -40,8 +68,15 @@ export function StudentCreateModal({ open, onOpenChange }: { open: boolean; onOp
   const canSave = form.full_name.trim().length >= 2 && !!form.programa;
 
   const reset = () => {
-    setForm({ full_name: "", email: "", phone: "", programa: "", nivel: "", notes: "" });
+    setForm(EMPTY_FORM);
     setErrors({});
+    setSelectedCompanyId("");
+    setCompanies([]);
+  };
+
+  const levelMap: Record<string, "iniciante" | "intermediario"> = {
+    "1": "iniciante",
+    "2": "intermediario",
   };
 
   const submit = async () => {
@@ -52,24 +87,31 @@ export function StudentCreateModal({ open, onOpenChange }: { open: boolean; onOp
       setErrors(errs);
       return;
     }
-    if (!user) return;
     setSaving(true);
-    const levelMap: Record<string, string> = { "1": "iniciante", "2": "intermediario" };
-    const { error } = await supabase.from("students").insert({
-      coach_id: user.id,
-      full_name: parsed.data.full_name,
-      email: parsed.data.email || null,
-      phone: parsed.data.phone || null,
-      target_distance: parsed.data.programa as "10km" | "21km" | "42km",
-      level: parsed.data.nivel ? (levelMap[parsed.data.nivel] as "iniciante" | "intermediario") : null,
-      notes: parsed.data.notes || null,
-    });
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Aluno cadastrado!");
-    qc.invalidateQueries({ queryKey: ["students"] });
-    reset();
-    onOpenChange(false);
+    try {
+      await createFn({
+        data: {
+          fullName: parsed.data.full_name,
+          email: parsed.data.email || undefined,
+          phone: parsed.data.phone || undefined,
+          targetDistance: parsed.data.programa as "10km" | "21km" | "42km",
+          level: parsed.data.nivel ? levelMap[parsed.data.nivel] : undefined,
+          notes: parsed.data.notes || undefined,
+          companyId: selectedCompanyId || undefined,
+        },
+      });
+      toast.success("Aluno cadastrado!");
+      qc.invalidateQueries({ queryKey: ["students"] });
+      reset();
+      onOpenChange(false);
+    } catch (e: unknown) {
+      const msg = e instanceof Response
+        ? await e.text()
+        : e instanceof Error ? e.message : "Erro ao cadastrar aluno";
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const Body = (
@@ -112,6 +154,28 @@ export function StudentCreateModal({ open, onOpenChange }: { open: boolean; onOp
           </Select>
         </div>
       </div>
+
+      {/* Company selector — shown only when user has accessible companies */}
+      {!companiesLoading && companies.length > 0 && (
+        <div className="space-y-1.5">
+          <Label>Empresa</Label>
+          <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sem empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Sem empresa</SelectItem>
+              {companies.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Selecione a empresa à qual este aluno pertence.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-1.5">
         <Label htmlFor="sn-notes">Observações</Label>
         <Textarea id="sn-notes" rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} maxLength={1000} />

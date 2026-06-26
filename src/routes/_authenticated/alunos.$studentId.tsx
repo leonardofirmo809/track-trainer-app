@@ -1,14 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getStudentPermissions, updateStudent } from "@/lib/students.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Mail, Phone, Calendar, Eye, Settings2 } from "lucide-react";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, Mail, Phone, Calendar, Eye, Settings2, Pencil } from "lucide-react";
 import { formatMmss } from "@/lib/teste-3km";
 
 export const Route = createFileRoute("/_authenticated/alunos/$studentId")({ component: PerfilAluno });
@@ -22,8 +32,14 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+const EMPTY_FORM = {
+  full_name: "", email: "", phone: "", birth_date: "", gender: "",
+  goal: "", level: "", target_distance: "", injury_history: "", notes: "",
+};
+
 function PerfilAluno() {
   const { studentId } = Route.useParams();
+  const qc = useQueryClient();
 
   const student = useQuery({
     queryKey: ["student", studentId],
@@ -50,9 +66,91 @@ function PerfilAluno() {
     },
   });
 
+  // Edit state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm, setEditForm] = useState(EMPTY_FORM);
+  const [editPerms, setEditPerms] = useState({ canEditCadastral: false, canEditTraining: false, loaded: false });
+
+  const getPermsFn = useServerFn(getStudentPermissions);
+  const updateFn = useServerFn(updateStudent);
+
+  // Load permissions once student data is available
+  useEffect(() => {
+    if (!student.data) return;
+    getPermsFn({ data: { studentId } })
+      .then((perms) => {
+        const p = perms as { canEditCadastral: boolean; canEditTraining: boolean };
+        setEditPerms({ canEditCadastral: p.canEditCadastral, canEditTraining: p.canEditTraining, loaded: true });
+      })
+      .catch(() => setEditPerms({ canEditCadastral: false, canEditTraining: false, loaded: true }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student.data?.id]);
+
+  const openEdit = () => {
+    const s = student.data!;
+    setEditForm({
+      full_name: s.full_name ?? "",
+      email: s.email ?? "",
+      phone: s.phone ?? "",
+      birth_date: s.birth_date ?? "",
+      gender: s.gender ?? "",
+      goal: s.goal ?? "",
+      level: s.level ?? "",
+      target_distance: s.target_distance ?? "",
+      injury_history: s.injury_history ?? "",
+      notes: s.notes ?? "",
+    });
+    setEditOpen(true);
+  };
+
+  const setF = (k: keyof typeof EMPTY_FORM, v: string) => setEditForm((p) => ({ ...p, [k]: v }));
+
+  const saveEdit = async () => {
+    if (editPerms.canEditCadastral && editForm.full_name.trim().length < 2) {
+      toast.error("Nome deve ter ao menos 2 caracteres.");
+      return;
+    }
+    setEditSaving(true);
+    try {
+      await updateFn({
+        data: {
+          studentId,
+          updateCadastral: editPerms.canEditCadastral,
+          updateTraining: editPerms.canEditTraining,
+          ...(editPerms.canEditCadastral && {
+            fullName: editForm.full_name,
+            email: editForm.email,
+            phone: editForm.phone,
+            birthDate: editForm.birth_date,
+            gender: editForm.gender,
+          }),
+          ...(editPerms.canEditTraining && {
+            goal: editForm.goal,
+            level: (editForm.level as "iniciante" | "intermediario" | "avancado") || undefined,
+            targetDistance: (editForm.target_distance as "5km" | "10km" | "21km" | "42km") || undefined,
+            injuryHistory: editForm.injury_history,
+            notes: editForm.notes,
+          }),
+        },
+      });
+      toast.success("Aluno atualizado!");
+      qc.invalidateQueries({ queryKey: ["student", studentId] });
+      setEditOpen(false);
+    } catch (e: unknown) {
+      const msg = e instanceof Response
+        ? await e.text()
+        : e instanceof Error ? e.message : "Erro ao atualizar aluno";
+      toast.error(msg);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   if (student.isLoading) return <p className="text-muted-foreground">Carregando…</p>;
   if (!student.data) return <p>Aluno não encontrado.</p>;
   const s = student.data;
+  const canEdit = editPerms.loaded && (editPerms.canEditCadastral || editPerms.canEditTraining);
 
   return (
     <div className="max-w-6xl space-y-6">
@@ -71,9 +169,14 @@ function PerfilAluno() {
               {s.birth_date && <span className="flex items-center gap-1"><Calendar className="size-4" /> {new Date(s.birth_date).toLocaleDateString("pt-BR")}</span>}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {s.level && <Badge variant="secondary" className="capitalize">{s.level}</Badge>}
             {s.target_distance && <Badge>{s.target_distance.toUpperCase()}</Badge>}
+            {canEdit && (
+              <Button size="sm" variant="outline" onClick={openEdit}>
+                <Pencil className="size-3.5 mr-1" /> Editar
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -209,6 +312,101 @@ function PerfilAluno() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Edit sheet */}
+      <Sheet open={editOpen} onOpenChange={setEditOpen}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Editar aluno</SheetTitle>
+            <SheetDescription>Salve as alterações ao final.</SheetDescription>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-6">
+            {editPerms.canEditCadastral && (
+              <div className="space-y-4">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Dados cadastrais</p>
+                <div className="space-y-2">
+                  <Label>Nome completo *</Label>
+                  <Input value={editForm.full_name} onChange={(e) => setF("full_name", e.target.value)} maxLength={120} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input type="email" value={editForm.email} onChange={(e) => setF("email", e.target.value)} maxLength={255} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone</Label>
+                  <Input value={editForm.phone} onChange={(e) => setF("phone", e.target.value)} maxLength={32} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data de nascimento</Label>
+                  <Input type="date" value={editForm.birth_date} onChange={(e) => setF("birth_date", e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sexo</Label>
+                  <Select value={editForm.gender} onValueChange={(v) => setF("gender", v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="masculino">Masculino</SelectItem>
+                      <SelectItem value="feminino">Feminino</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {editPerms.canEditCadastral && editPerms.canEditTraining && <Separator />}
+
+            {editPerms.canEditTraining && (
+              <div className="space-y-4">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Objetivo & treino</p>
+                <div className="space-y-2">
+                  <Label>Objetivo</Label>
+                  <Textarea rows={2} value={editForm.goal} onChange={(e) => setF("goal", e.target.value)} maxLength={500} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Nível</Label>
+                    <Select value={editForm.level} onValueChange={(v) => setF("level", v)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="iniciante">Iniciante</SelectItem>
+                        <SelectItem value="intermediario">Intermediário</SelectItem>
+                        <SelectItem value="avancado">Avançado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Distância-alvo</Label>
+                    <Select value={editForm.target_distance} onValueChange={(v) => setF("target_distance", v)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5km">5KM</SelectItem>
+                        <SelectItem value="10km">10KM</SelectItem>
+                        <SelectItem value="21km">21KM</SelectItem>
+                        <SelectItem value="42km">42KM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Histórico de lesões</Label>
+                  <Textarea rows={3} value={editForm.injury_history} onChange={(e) => setF("injury_history", e.target.value)} maxLength={2000} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Observações</Label>
+                  <Textarea rows={3} value={editForm.notes} onChange={(e) => setF("notes", e.target.value)} maxLength={1000} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <SheetFooter className="mt-8 flex-row justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button onClick={saveEdit} disabled={editSaving}>{editSaving ? "Salvando…" : "Salvar"}</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

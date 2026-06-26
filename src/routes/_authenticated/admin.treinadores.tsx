@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Check, Copy, KeyRound, Pencil, Plus, RefreshCw, ShieldOff, Trash2, UserPlus, Users, X } from "lucide-react";
@@ -33,6 +34,13 @@ interface Invite {
   status: "pending" | "accepted" | "revoked";
   expires_at: string;
   created_at: string;
+  company_id: string | null;
+  companies: { name: string } | null;
+}
+
+interface Company {
+  id: string;
+  name: string;
 }
 
 interface Coach {
@@ -70,9 +78,11 @@ function AdminUsersPage() {
   const [coachLimit, setCoachLimit] = useState(4);
   const [loading, setLoading] = useState(true);
 
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [openInvite, setOpenInvite] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [inviteCompanyId, setInviteCompanyId] = useState<string>("");
   const [creating, setCreating] = useState(false);
 
   const createCoach = useServerFn(createCoachAccount);
@@ -110,16 +120,18 @@ function AdminUsersPage() {
 
   const load = async () => {
     setLoading(true);
-    const [coachRes, inviteRes, settingRes, appsRes] = await Promise.all([
+    const [coachRes, inviteRes, settingRes, appsRes, companyRes] = await Promise.all([
       supabase.rpc("get_all_coaches"),
-      supabase.from("coach_invites").select("*").order("created_at", { ascending: false }),
+      supabase.from("coach_invites").select("*, companies(name)").order("created_at", { ascending: false }),
       supabase.from("app_settings").select("value").eq("key", "max_coaches").maybeSingle(),
       supabase.from("coach_applications").select("*").order("created_at", { ascending: false }),
+      supabase.from("companies").select("id, name").eq("status", "active").order("name"),
     ]);
     if (coachRes.error) toast.error(coachRes.error.message);
     setCoaches((coachRes.data ?? []) as Coach[]);
     setInvites((inviteRes.data ?? []) as Invite[]);
     setApplications((appsRes.data ?? []) as CoachApplication[]);
+    setCompanies((companyRes.data ?? []) as Company[]);
     const parsed = parseInt(settingRes.data?.value ?? "", 10);
     setCoachLimit(Number.isFinite(parsed) && parsed > 0 ? parsed : 4);
     setLoading(false);
@@ -137,10 +149,16 @@ function AdminUsersPage() {
     if (!name.trim() || !email.trim()) return toast.error("Preencha nome e e-mail.");
     setCreating(true);
     try {
-      const result = await createInviteFn({ data: { email: email.trim(), fullName: name.trim() } });
+      const result = await createInviteFn({
+        data: {
+          email: email.trim(),
+          fullName: name.trim(),
+          companyId: inviteCompanyId || undefined,
+        },
+      });
       await navigator.clipboard.writeText(inviteLink(result.token)).catch(() => {});
       toast.success("Convite criado! Link copiado.");
-      setName(""); setEmail(""); setOpenInvite(false);
+      setName(""); setEmail(""); setInviteCompanyId(""); setOpenInvite(false);
       load();
     } catch (e) {
       const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
@@ -355,6 +373,23 @@ function AdminUsersPage() {
                       <div className="space-y-4">
                         <div className="space-y-2"><Label htmlFor="iname">Nome completo</Label><Input id="iname" value={name} onChange={(e) => setName(e.target.value)} /></div>
                         <div className="space-y-2"><Label htmlFor="iemail">Email</Label><Input id="iemail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+                        {companies.length > 0 && (
+                          <div className="space-y-2">
+                            <Label>Empresa (opcional)</Label>
+                            <Select value={inviteCompanyId} onValueChange={setInviteCompanyId}>
+                              <SelectTrigger><SelectValue placeholder="Sem empresa" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Sem empresa</SelectItem>
+                                {companies.map((c) => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              Se selecionada, o coach é adicionado automaticamente à empresa ao aceitar o convite.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <DialogFooter>
                         <Button variant="outline" onClick={() => setOpenInvite(false)}>Cancelar</Button>
@@ -488,6 +523,7 @@ function AdminUsersPage() {
                       <TableRow>
                         <TableHead>Nome</TableHead>
                         <TableHead>Email</TableHead>
+                        <TableHead>Empresa</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Expira em</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
@@ -498,6 +534,7 @@ function AdminUsersPage() {
                         <TableRow key={i.id}>
                           <TableCell className="font-medium">{i.full_name}</TableCell>
                           <TableCell>{i.email}</TableCell>
+                          <TableCell className="text-muted-foreground">{i.companies?.name ?? "—"}</TableCell>
                           <TableCell>{inviteStatusBadge(i.status)}</TableCell>
                           <TableCell>{new Date(i.expires_at).toLocaleDateString("pt-BR")}</TableCell>
                           <TableCell className="text-right space-x-1">

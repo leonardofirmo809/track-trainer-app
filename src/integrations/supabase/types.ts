@@ -132,6 +132,7 @@ export type Database = {
       coach_invites: {
         Row: {
           accepted_at: string | null
+          company_id: string | null
           created_at: string
           email: string
           expires_at: string
@@ -144,6 +145,7 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          company_id?: string | null
           created_at?: string
           email: string
           expires_at?: string
@@ -156,6 +158,7 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          company_id?: string | null
           created_at?: string
           email?: string
           expires_at?: string
@@ -166,7 +169,15 @@ export type Database = {
           token?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "coach_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       companies: {
         Row: {

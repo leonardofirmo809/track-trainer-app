@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 const createSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(255),
   fullName: z.string().trim().min(2).max(100),
+  companyId: z.string().uuid().optional(),
 });
 
 export const createCoachInvite = createServerFn({ method: "POST" })
@@ -22,7 +23,7 @@ export const createCoachInvite = createServerFn({ method: "POST" })
 
     const { data: invite, error } = await supabaseAdmin
       .from("coach_invites")
-      .insert({ email: data.email, full_name: data.fullName, token, invited_by: userId })
+      .insert({ email: data.email, full_name: data.fullName, token, invited_by: userId, company_id: data.companyId ?? null })
       .select("id, token")
       .single();
 

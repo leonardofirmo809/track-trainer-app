@@ -8,14 +8,21 @@ export async function assertCanManageStudents(companyId: string, userId: string)
   const { data: isAdmin } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
   if (isAdmin) return;
 
-  const { data: member } = await supabaseAdmin
-    .from("company_members")
-    .select("role, can_manage_students")
-    .eq("company_id", companyId)
-    .eq("user_id", userId)
-    .single();
+  const [{ data: member }, { data: company }] = await Promise.all([
+    supabaseAdmin
+      .from("company_members")
+      .select("role, can_manage_students")
+      .eq("company_id", companyId)
+      .eq("user_id", userId)
+      .single(),
+    supabaseAdmin
+      .from("companies")
+      .select("status")
+      .eq("id", companyId)
+      .single(),
+  ]);
 
-  if (!member) throw new Response("Forbidden", { status: 403 });
+  if (!member || company?.status !== "active") throw new Response("Forbidden", { status: 403 });
   if (member.role === "owner" || member.role === "admin") return;
   if (member.can_manage_students) return;
   throw new Response("Forbidden: sem permissão para gerenciar alunos", { status: 403 });
@@ -29,14 +36,21 @@ export async function assertCanManageTraining(companyId: string, userId: string)
   const { data: isAdmin } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
   if (isAdmin) return;
 
-  const { data: member } = await supabaseAdmin
-    .from("company_members")
-    .select("role, can_manage_training")
-    .eq("company_id", companyId)
-    .eq("user_id", userId)
-    .single();
+  const [{ data: member }, { data: company }] = await Promise.all([
+    supabaseAdmin
+      .from("company_members")
+      .select("role, can_manage_training")
+      .eq("company_id", companyId)
+      .eq("user_id", userId)
+      .single(),
+    supabaseAdmin
+      .from("companies")
+      .select("status")
+      .eq("id", companyId)
+      .single(),
+  ]);
 
-  if (!member) throw new Response("Forbidden", { status: 403 });
+  if (!member || company?.status !== "active") throw new Response("Forbidden", { status: 403 });
   if (member.role === "owner" || member.role === "admin") return;
   if (member.can_manage_training) return;
   throw new Response("Forbidden: sem permissão para gerenciar treinos", { status: 403 });

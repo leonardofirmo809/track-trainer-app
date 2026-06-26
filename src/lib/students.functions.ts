@@ -81,15 +81,22 @@ export const getStudentPermissions = createServerFn({ method: "POST" })
       return { canEditCadastral: isCoach, canEditTraining: isCoach };
     }
 
-    // Has company: check membership permissions
-    const { data: member } = await supabaseAdmin
-      .from("company_members")
-      .select("role, can_manage_students, can_manage_training")
-      .eq("company_id", student.company_id)
-      .eq("user_id", userId)
-      .single();
+    // Has company: check membership AND active company status
+    const [{ data: member }, { data: company }] = await Promise.all([
+      supabaseAdmin
+        .from("company_members")
+        .select("role, can_manage_students, can_manage_training")
+        .eq("company_id", student.company_id)
+        .eq("user_id", userId)
+        .single(),
+      supabaseAdmin
+        .from("companies")
+        .select("status")
+        .eq("id", student.company_id)
+        .single(),
+    ]);
 
-    if (!member) return { canEditCadastral: false, canEditTraining: false };
+    if (!member || company?.status !== "active") return { canEditCadastral: false, canEditTraining: false };
 
     const isAdminRole = member.role === "owner" || member.role === "admin";
     return {
@@ -143,14 +150,21 @@ export const updateStudent = createServerFn({ method: "POST" })
       canEditCadastral = isCoach;
       canEditTraining = isCoach;
     } else {
-      const { data: member } = await supabaseAdmin
-        .from("company_members")
-        .select("role, can_manage_students, can_manage_training")
-        .eq("company_id", student.company_id)
-        .eq("user_id", userId)
-        .single();
+      const [{ data: member }, { data: company }] = await Promise.all([
+        supabaseAdmin
+          .from("company_members")
+          .select("role, can_manage_students, can_manage_training")
+          .eq("company_id", student.company_id)
+          .eq("user_id", userId)
+          .single(),
+        supabaseAdmin
+          .from("companies")
+          .select("status")
+          .eq("id", student.company_id)
+          .single(),
+      ]);
 
-      if (member) {
+      if (member && company?.status === "active") {
         const isAdminRole = member.role === "owner" || member.role === "admin";
         canEditCadastral = isAdminRole || member.can_manage_students;
         canEditTraining = isAdminRole || member.can_manage_training;
@@ -218,14 +232,22 @@ export const createStudent = createServerFn({ method: "POST" })
       });
 
       if (!isAdmin) {
-        const { data: member } = await supabaseAdmin
-          .from("company_members")
-          .select("role, can_manage_students")
-          .eq("company_id", data.companyId)
-          .eq("user_id", userId)
-          .single();
+        const [{ data: member }, { data: company }] = await Promise.all([
+          supabaseAdmin
+            .from("company_members")
+            .select("role, can_manage_students")
+            .eq("company_id", data.companyId)
+            .eq("user_id", userId)
+            .single(),
+          supabaseAdmin
+            .from("companies")
+            .select("status")
+            .eq("id", data.companyId)
+            .single(),
+        ]);
 
-        if (!member) throw new Response("Forbidden: não é membro desta empresa.", { status: 403 });
+        if (!member || company?.status !== "active")
+          throw new Response("Forbidden: não é membro de uma empresa ativa.", { status: 403 });
         if (
           member.role !== "owner" &&
           member.role !== "admin" &&

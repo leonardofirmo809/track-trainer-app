@@ -50,6 +50,7 @@ function Layout() {
 
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Carregando…</div>;
   if (!user) return <Navigate to="/login" />;
+  if (guardQ.isLoading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Carregando…</div>;
   if (guardQ.data?.needsOnboarding && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" />;
   }
@@ -63,7 +64,8 @@ function Layout() {
       p.startsWith("/corredor") ||
       p.startsWith("/planilha-") ||
       p === "/teste-3km" ||
-      p.startsWith("/teste-3km/");
+      p.startsWith("/teste-3km/") ||
+      p === "/minha-conta";
     if (!allowed) return <Navigate to="/corredor" />;
   }
 

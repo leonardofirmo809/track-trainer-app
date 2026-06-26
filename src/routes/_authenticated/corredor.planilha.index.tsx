@@ -19,10 +19,10 @@ function RunnerPlanRedirect() {
     return <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">Carregando…</div>;
   }
 
-  const goal = String(data?.profile?.goal_distance ?? 10);
-  const path = goal === "5" ? "/planilha-5km"
-    : goal === "21" ? "/planilha-21km"
-    : goal === "42" ? "/planilha-42km"
+  const goal = data?.profile?.goal_distance ?? "";
+  const path = goal === "5km" ? "/planilha-5km"
+    : goal === "21km" ? "/planilha-21km"
+    : goal === "42km" ? "/planilha-42km"
     : "/planilha-10km";
   return <Navigate to={path} />;
 }

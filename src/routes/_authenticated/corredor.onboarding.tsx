@@ -20,10 +20,10 @@ import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated/corredor/onboarding")({ component: OnboardingPage });
 
-type Distance = "10km" | "21km" | "42km";
+type Distance = "5km" | "10km" | "21km" | "42km";
 type Level = 1 | 2;
 
-const DIST_LABEL: Record<Distance, string> = { "10km": "10KM", "21km": "Meia maratona (21km)", "42km": "Maratona (42km)" };
+const DIST_LABEL: Record<Distance, string> = { "5km": "5KM", "10km": "10KM", "21km": "Meia maratona (21km)", "42km": "Maratona (42km)" };
 
 const TEST_INSTRUCTIONS: Record<EvalKind, string> = {
   "3km": "Faça um aquecimento leve de 10 a 15 minutos. Em seguida, corra 3 km no maior ritmo que conseguir manter de forma constante. Cronometre e informe o tempo total (mm:ss).",
@@ -163,8 +163,8 @@ function OnboardingPage() {
         <Card>
           <CardHeader><CardTitle><Trophy className="inline size-5 mr-2" />Qual seu objetivo?</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid sm:grid-cols-3 gap-3">
-              {(["10km","21km","42km"] as Distance[]).map((d) => (
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
+              {(["5km","10km","21km","42km"] as Distance[]).map((d) => (
                 <button key={d} type="button" onClick={() => setDistance(d)}
                   className={`rounded-lg border-2 p-4 text-left transition ${distance === d ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
                   <div className="text-2xl font-bold font-display">{d.toUpperCase()}</div>

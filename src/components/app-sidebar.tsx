@@ -123,13 +123,19 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border">
         <div className="flex items-center gap-2 p-2">
-          <Avatar className="size-8"><AvatarFallback>{initials}</AvatarFallback></Avatar>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.user_metadata?.full_name || "Professor"}</p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
-            </div>
-          )}
+          <Link
+            to="/minha-conta"
+            title="Minha conta"
+            className="flex items-center gap-2 flex-1 min-w-0 rounded hover:bg-accent transition-colors"
+          >
+            <Avatar className="size-8 shrink-0"><AvatarFallback>{initials}</AvatarFallback></Avatar>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user?.user_metadata?.full_name || "Professor"}</p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+              </div>
+            )}
+          </Link>
           <Button size="icon" variant="ghost" onClick={() => signOut()} title="Sair" className="shrink-0">
             <LogOut className="size-4" />
           </Button>

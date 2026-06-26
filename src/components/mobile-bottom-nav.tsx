@@ -7,7 +7,7 @@ const coachItems = [
   { title: "Home", url: "/dashboard", icon: Home, match: (p: string) => p === "/dashboard" },
   { title: "Alunos", url: "/alunos", icon: Users, match: (p: string) => p === "/alunos" || p.startsWith("/alunos/") },
   { title: "Planilhas", url: "/planilha-5km", icon: ClipboardList, match: (p: string) => p.startsWith("/planilha-") || p.startsWith("/teste-") },
-  { title: "Perfil", url: "/minha-marca", icon: User, match: (p: string) => p === "/minha-marca" },
+  { title: "Conta", url: "/minha-conta", icon: User, match: (p: string) => p === "/minha-conta" },
 ];
 
 const runnerItems = [

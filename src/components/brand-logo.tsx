@@ -1,5 +1,6 @@
-import mark from "@/assets/8020pace-mark.png.asset.json";
 import { cn } from "@/lib/utils";
+
+const LOGO_URL = "https://pub-87cb7b9bcf7a4d8097c43101ac0213ea.r2.dev/8020pace-logo.png";
 
 type Props = {
   className?: string;
@@ -13,7 +14,7 @@ export function BrandLogo({ className, size = 32, showWordmark = false, wordmark
     <div className={cn("flex items-center gap-2", className)}>
       <div className="shrink-0 rounded-full bg-white p-[2px] shadow-sm">
         <img
-          src={mark.url}
+          src={LOGO_URL}
           alt="8020Pace"
           width={size}
           height={size}

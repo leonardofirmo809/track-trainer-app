@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { createCoachAccount, removeCoachRole } from "@/lib/admin-coaches.functions";
+import { createCoachAccount, removeCoachRole, updateCoachAccount } from "@/lib/admin-coaches.functions";
+import { createCoachInvite, revokeCoachInvite, resendCoachInvite } from "@/lib/admin-invites.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Check, Copy, KeyRound, Plus, RefreshCw, ShieldOff, Trash2, UserPlus, Users, X } from "lucide-react";
+import { Check, Copy, KeyRound, Pencil, Plus, RefreshCw, ShieldOff, Trash2, UserPlus, Users, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/admin/treinadores")({ component: AdminUsersPage });
@@ -62,12 +63,6 @@ interface CoachApplication {
   created_at: string;
 }
 
-function generateToken() {
-  const a = crypto.randomUUID().replace(/-/g, "");
-  const b = crypto.randomUUID().replace(/-/g, "");
-  return `${a}${b}`;
-}
-
 function AdminUsersPage() {
   const { user } = useAuth();
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -82,6 +77,10 @@ function AdminUsersPage() {
 
   const createCoach = useServerFn(createCoachAccount);
   const removeRole = useServerFn(removeCoachRole);
+  const updateCoach = useServerFn(updateCoachAccount);
+  const createInviteFn = useServerFn(createCoachInvite);
+  const revokeInviteFn = useServerFn(revokeCoachInvite);
+  const resendInviteFn = useServerFn(resendCoachInvite);
   const [openManual, setOpenManual] = useState(false);
   const [mName, setMName] = useState("");
   const [mEmail, setMEmail] = useState("");
@@ -95,6 +94,13 @@ function AdminUsersPage() {
 
   const [removeTarget, setRemoveTarget] = useState<Coach | null>(null);
   const [removing, setRemoving] = useState(false);
+
+  const [editTarget, setEditTarget] = useState<Coach | null>(null);
+  const [edName, setEdName] = useState("");
+  const [edEmail, setEdEmail] = useState("");
+  const [edPass, setEdPass] = useState("");
+  const [edConfirm, setEdConfirm] = useState("");
+  const [edUpdating, setEdUpdating] = useState(false);
 
 
   const [applications, setApplications] = useState<CoachApplication[]>([]);
@@ -130,41 +136,41 @@ function AdminUsersPage() {
   const createInvite = async () => {
     if (!name.trim() || !email.trim()) return toast.error("Preencha nome e e-mail.");
     setCreating(true);
-    const token = generateToken();
-    const { data, error } = await supabase.from("coach_invites").insert({
-      email: email.trim().toLowerCase(),
-      full_name: name.trim(),
-      token,
-      invited_by: user?.id,
-    }).select().single();
-    setCreating(false);
-    if (error) return toast.error(`Falha ao criar convite: ${error.message}`);
-    if (!data?.id) return toast.error("Convite não foi salvo.");
-    await navigator.clipboard.writeText(inviteLink((data as Invite).token)).catch(() => {});
-    toast.success("Convite criado! Link copiado.");
-    setName(""); setEmail(""); setOpenInvite(false);
-    load();
+    try {
+      const result = await createInviteFn({ data: { email: email.trim(), fullName: name.trim() } });
+      await navigator.clipboard.writeText(inviteLink(result.token)).catch(() => {});
+      toast.success("Convite criado! Link copiado.");
+      setName(""); setEmail(""); setOpenInvite(false);
+      load();
+    } catch (e) {
+      const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
+      toast.error(`Falha ao criar convite: ${msg}`);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const revoke = async (id: string) => {
-    const { error } = await supabase.from("coach_invites").update({ status: "revoked" }).eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Convite revogado.");
-    load();
+    try {
+      await revokeInviteFn({ data: { id } });
+      toast.success("Convite revogado.");
+      load();
+    } catch (e) {
+      const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
+      toast.error(msg);
+    }
   };
 
   const resend = async (inv: Invite) => {
-    const newToken = generateToken();
-    const { error } = await supabase.from("coach_invites").update({
-      token: newToken,
-      status: "pending",
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      accepted_at: null,
-    }).eq("id", inv.id);
-    if (error) return toast.error(error.message);
-    await navigator.clipboard.writeText(inviteLink(newToken)).catch(() => {});
-    toast.success("Novo link gerado e copiado.");
-    load();
+    try {
+      const result = await resendInviteFn({ data: { id: inv.id } });
+      await navigator.clipboard.writeText(inviteLink(result.token)).catch(() => {});
+      toast.success("Novo link gerado e copiado.");
+      load();
+    } catch (e) {
+      const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
+      toast.error(msg);
+    }
   };
 
   const copy = async (token: string) => {
@@ -217,6 +223,39 @@ function AdminUsersPage() {
       toast.error(msg);
     } finally {
       setRemoving(false);
+    }
+  };
+
+  const openEdit = (c: Coach) => {
+    setEdName(c.full_name ?? "");
+    setEdEmail(c.email);
+    setEdPass("");
+    setEdConfirm("");
+    setEditTarget(c);
+  };
+
+  const submitEdit = async () => {
+    if (!editTarget) return;
+    if (edPass && edPass.length < 8) return toast.error("A nova senha deve ter ao menos 8 caracteres.");
+    if (edPass && edPass !== edConfirm) return toast.error("As senhas não conferem.");
+    setEdUpdating(true);
+    try {
+      await updateCoach({
+        data: {
+          userId: editTarget.id,
+          fullName: edName.trim(),
+          email: edEmail.trim(),
+          ...(edPass ? { password: edPass } : {}),
+        },
+      });
+      toast.success("Treinador atualizado com sucesso.");
+      setEditTarget(null);
+      load();
+    } catch (e) {
+      const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
+      toast.error(msg);
+    } finally {
+      setEdUpdating(false);
     }
   };
 
@@ -371,6 +410,9 @@ function AdminUsersPage() {
                             <Button size="sm" variant="ghost" onClick={() => openStudents(c)}>
                               <Users className="size-4 mr-1" /> {c.students_count}
                             </Button>
+                            <Button size="sm" variant="ghost" onClick={() => openEdit(c)} title="Editar treinador">
+                              <Pencil className="size-4" />
+                            </Button>
                             {c.has_role && c.id !== user?.id && (
                               <Button size="sm" variant="ghost" onClick={() => setRemoveTarget(c)} title="Remover acesso">
                                 <ShieldOff className="size-4" />
@@ -512,6 +554,61 @@ function AdminUsersPage() {
             </div>
           </SheetContent>
         </Sheet>
+
+        <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar treinador</DialogTitle>
+              <DialogDescription>
+                Editando <strong>{editTarget?.full_name ?? editTarget?.email}</strong>. Deixe a senha em branco para não alterá-la.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edname">Nome completo</Label>
+                <Input id="edname" value={edName} onChange={(e) => setEdName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edemail">Email</Label>
+                <Input id="edemail" type="email" value={edEmail} onChange={(e) => setEdEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edpass">
+                  Nova senha{" "}
+                  <span className="text-muted-foreground font-normal text-xs">(opcional, mín. 8 caracteres)</span>
+                </Label>
+                <Input
+                  id="edpass"
+                  type="password"
+                  value={edPass}
+                  onChange={(e) => setEdPass(e.target.value)}
+                  placeholder="Deixe em branco para não alterar"
+                  autoComplete="new-password"
+                />
+              </div>
+              {edPass && (
+                <div className="space-y-2">
+                  <Label htmlFor="edconfirm">Confirmar nova senha</Label>
+                  <Input
+                    id="edconfirm"
+                    type="password"
+                    value={edConfirm}
+                    onChange={(e) => setEdConfirm(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditTarget(null)} disabled={edUpdating}>
+                Cancelar
+              </Button>
+              <Button onClick={submitEdit} disabled={edUpdating}>
+                {edUpdating ? "Salvando…" : "Salvar alterações"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <AlertDialog open={!!removeTarget} onOpenChange={(v) => !v && setRemoveTarget(null)}>
           <AlertDialogContent>

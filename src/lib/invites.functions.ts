@@ -29,5 +29,11 @@ export const acceptInvite = createServerFn({ method: "POST" })
     });
     if (error) throw new Response(error.message, { status: 400 });
 
+    // Explicitly mark invite as accepted regardless of trigger outcome.
+    await supabaseAdmin
+      .from("coach_invites")
+      .update({ status: "accepted", accepted_at: new Date().toISOString() })
+      .eq("id", invite.id);
+
     return { ok: true as const, email: invite.email };
   });

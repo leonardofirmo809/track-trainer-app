@@ -55,6 +55,56 @@ export const createCoachAccount = createServerFn({ method: "POST" })
     return { id: created.user?.id };
   });
 
+const updateSchema = z.object({
+  userId: z.string().uuid(),
+  fullName: z.string().trim().min(2).max(100),
+  email: z.string().trim().toLowerCase().email().max(255),
+  password: z.string().min(8).max(72).optional(),
+});
+
+export const updateCoachAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => updateSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+
+    const { data: isAdmin, error: roleErr } = await supabaseAdmin.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
+    if (roleErr) throw new Response(roleErr.message, { status: 500 });
+    if (!isAdmin) throw new Response("Forbidden", { status: 403 });
+
+    const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
+      email: data.email,
+      ...(data.password ? { password: data.password } : {}),
+      email_confirm: true,
+      user_metadata: { full_name: data.fullName },
+    });
+    if (authErr) throw new Response(authErr.message, { status: 400 });
+
+    const { error: profErr } = await supabaseAdmin
+      .from("profiles")
+      .update({ full_name: data.fullName })
+      .eq("id", data.userId);
+    if (profErr) throw new Response(`Perfil: ${profErr.message}`, { status: 500 });
+
+    const { error: roleErr2 } = await supabaseAdmin
+      .from("user_roles")
+      .upsert({ user_id: data.userId, role: "coach" }, { onConflict: "user_id,role" });
+    if (roleErr2) throw new Response(`Papel: ${roleErr2.message}`, { status: 500 });
+
+    await supabaseAdmin.from("admin_audit_log").insert({
+      event_type: "coach_updated_manual",
+      target_email: data.email,
+      target_user_id: data.userId,
+      actor_id: userId,
+      metadata: { full_name: data.fullName },
+    });
+
+    return { ok: true as const };
+  });
+
 const removeRoleSchema = z.object({ userId: z.string().uuid() });
 
 export const removeCoachRole = createServerFn({ method: "POST" })

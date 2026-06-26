@@ -18,7 +18,7 @@ const zoneSchema = z.object({
   velTo: z.number().nullable(),
 });
 
-const DistanceEnum = z.enum(["10km", "21km", "42km"]);
+const DistanceEnum = z.enum(["5km", "10km", "21km", "42km"]);
 const LevelEnum = z.union([z.literal(1), z.literal(2)]);
 
 const completeSchema = z.object({
@@ -154,7 +154,7 @@ export const completeRunnerOnboarding = createServerFn({ method: "POST" })
       .insert({
         student_id: studentId,
         coach_id: null,
-        test_type: "3km",
+        test_type: data.testSource === "cooper" ? "outro" : data.testSource,
         test_date: data.testDate,
         duration_seconds: data.durationSeconds,
         pace_seconds_per_km: Math.round(data.ftpSecondsPerKm),

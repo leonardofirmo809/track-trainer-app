@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,13 +37,18 @@ function AlunosList() {
   const [open, setOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
 
   const studentsQ = useQuery({
     queryKey: ["students"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("students")
-        .select("id, full_name, email, target_distance, level, created_at")
+        .select("id, full_name, email, target_distance, level, created_at, coach_id")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -176,14 +181,16 @@ function AlunosList() {
                           >
                             <Pencil className="size-4" />
                           </Button>
-                          <Button
-                            size="icon" variant="ghost"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => setRemoveTarget({ id: s.id, name: s.full_name })}
-                            aria-label="Remover"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
+                          {s.coach_id === userId && (
+                            <Button
+                              size="icon" variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setRemoveTarget({ id: s.id, name: s.full_name })}
+                              aria-label="Remover"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -204,7 +211,7 @@ function AlunosList() {
                   programa: s.target_distance ? s.target_distance.toUpperCase() : null,
                   nivel: s.level ? (LEVEL_LABEL[s.level] ?? s.level) : null,
                 }}
-                onRemove={() => setRemoveTarget({ id: s.id, name: s.full_name })}
+                onRemove={s.coach_id === userId ? () => setRemoveTarget({ id: s.id, name: s.full_name }) : undefined}
               />
             ))}
           </div>

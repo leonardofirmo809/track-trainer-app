@@ -26,7 +26,7 @@ export interface StudentCardData {
   nivel: string | null;
 }
 
-export function StudentMobileCard({ s, onRemove }: { s: StudentCardData; onRemove: () => void }) {
+export function StudentMobileCard({ s, onRemove }: { s: StudentCardData; onRemove?: () => void }) {
   const [tx, setTx] = useState(0);
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
@@ -64,21 +64,23 @@ export function StudentMobileCard({ s, onRemove }: { s: StudentCardData; onRemov
 
   return (
     <div className="relative overflow-hidden rounded-lg">
-      <button
-        type="button"
-        onClick={onRemove}
-        className="absolute inset-y-0 right-0 w-[88px] bg-destructive text-destructive-foreground flex flex-col items-center justify-center gap-1 text-xs font-medium"
-        aria-label="Remover aluno"
-      >
-        <Trash2 className="size-5" />
-        Remover
-      </button>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="absolute inset-y-0 right-0 w-[88px] bg-destructive text-destructive-foreground flex flex-col items-center justify-center gap-1 text-xs font-medium"
+          aria-label="Remover aluno"
+        >
+          <Trash2 className="size-5" />
+          Remover
+        </button>
+      )}
       <div
         className="relative bg-card border border-border rounded-lg transition-transform"
         style={{ transform: `translateX(${tx}px)` }}
-        onTouchStart={onStart}
-        onTouchMove={onMove}
-        onTouchEnd={onEnd}
+        onTouchStart={onRemove ? onStart : undefined}
+        onTouchMove={onRemove ? onMove : undefined}
+        onTouchEnd={onRemove ? onEnd : undefined}
       >
         <Link
           to="/alunos/$studentId"

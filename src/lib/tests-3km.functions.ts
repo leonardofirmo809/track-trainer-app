@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { assertCanManageStudentTraining } from "@/lib/company-permissions.server";
 
 const zoneSchema = z.object({
   id: z.enum(["Z1", "Z2", "Z3", "Z4", "Z5"]),
@@ -35,24 +36,7 @@ export const saveTeste3km = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
 
-    // Use supabaseAdmin to bypass RLS — permission is checked manually below.
-    const { data: student, error: sErr } = await supabaseAdmin
-      .from("students")
-      .select("id, coach_id, user_id")
-      .eq("id", data.studentId)
-      .maybeSingle();
-    if (sErr) throw new Response(sErr.message, { status: 500 });
-    if (!student) throw new Response("Aluno não encontrado.", { status: 404 });
-
-    const isOwnCoach = student.coach_id === userId;
-    const isOwnRunner = student.user_id === userId;
-    if (!isOwnCoach && !isOwnRunner) {
-      const { data: adminCheck } = await supabaseAdmin.rpc("has_role", {
-        _user_id: userId,
-        _role: "admin",
-      });
-      if (!adminCheck) throw new Response("Forbidden", { status: 403 });
-    }
+    const student = await assertCanManageStudentTraining(data.studentId, userId, true);
 
     const { data: inserted, error: iErr } = await supabaseAdmin
       .from("tests")

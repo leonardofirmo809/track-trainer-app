@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { assertCanManageStudentTraining } from "@/lib/company-permissions.server";
 
 const DAY = z.enum(["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"]);
 
@@ -13,24 +14,12 @@ const configSchema = z.object({
   currentPhase: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
 });
 
-async function assertCanAccessStudent(userId: string, studentId: string) {
-  const { data: student, error } = await supabaseAdmin
-    .from("students").select("id, coach_id, user_id").eq("id", studentId).maybeSingle();
-  if (error) throw new Response(error.message, { status: 500 });
-  if (!student) throw new Response("Aluno não encontrado", { status: 404 });
-  if (student.coach_id !== userId && student.user_id !== userId) {
-    const { data: adminCheck } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
-    if (!adminCheck) throw new Response("Forbidden", { status: 403 });
-  }
-  return student;
-}
-
 export const getPlanilha5kmData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ studentId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const student = await assertCanAccessStudent(userId, data.studentId);
+    const { userId } = context;
+    const student = await assertCanManageStudentTraining(data.studentId, userId, true);
 
     // Último teste 3km do aluno (via admin para contornar RLS quando admin atua sobre coach diferente)
     const { data: tests } = await supabaseAdmin
@@ -57,8 +46,8 @@ export const savePlanilha5kmConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => configSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const student = await assertCanAccessStudent(userId, data.studentId);
+    const { userId } = context;
+    const student = await assertCanManageStudentTraining(data.studentId, userId, true);
 
     const payload = {
       level: data.level,

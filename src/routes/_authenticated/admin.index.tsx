@@ -113,12 +113,12 @@ function AdminOverview() {
           ) : (
             <ul className="divide-y">
               {recent.map((e) => (
-                <li key={e.id} className="py-3 flex items-center justify-between text-sm">
-                  <div>
+                <li key={e.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 text-sm">
+                  <div className="min-w-0">
                     <span className="font-medium">{EVENT_LABEL[e.event_type] ?? e.event_type}</span>
                     {e.target_email && <span className="text-muted-foreground"> — {e.target_email}</span>}
                   </div>
-                  <span className="text-muted-foreground">{new Date(e.created_at).toLocaleString("pt-BR")}</span>
+                  <span className="text-muted-foreground shrink-0 text-xs sm:text-sm">{new Date(e.created_at).toLocaleString("pt-BR")}</span>
                 </li>
               ))}
             </ul>

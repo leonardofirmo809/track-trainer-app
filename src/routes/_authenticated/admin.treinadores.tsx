@@ -327,7 +327,7 @@ function AdminUsersPage() {
               <Progress value={usagePct} className={atLimit ? "[&>div]:bg-destructive" : ""} />
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
@@ -405,12 +405,12 @@ function AdminUsersPage() {
         </div>
 
         <Tabs defaultValue="treinadores">
-          <TabsList>
+          <TabsList className="w-full grid grid-cols-3">
             <TabsTrigger value="treinadores">Treinadores</TabsTrigger>
             <TabsTrigger value="solicitacoes">
               Solicitações
               {applications.filter((a) => a.status === "pending").length > 0 && (
-                <Badge variant="secondary" className="ml-2">{applications.filter((a) => a.status === "pending").length}</Badge>
+                <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">{applications.filter((a) => a.status === "pending").length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="convites">Convites</TabsTrigger>

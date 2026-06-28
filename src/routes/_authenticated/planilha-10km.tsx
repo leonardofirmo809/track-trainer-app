@@ -233,7 +233,7 @@ function Planilha10kmPage() {
                     <p className="font-medium capitalize">{dataQuery.data.student?.level ?? "—"}</p>
                   </div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-5">
+                <div className="grid gap-2 grid-cols-2 sm:grid-cols-5">
                   {zones.map((z) => (
                     <div key={z.id} className="rounded-md border p-2 text-xs">
                       <p className="font-bold">{z.id}</p>

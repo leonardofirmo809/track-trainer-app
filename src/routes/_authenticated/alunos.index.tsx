@@ -210,6 +210,9 @@ function AlunosList() {
                   full_name: s.full_name,
                   programa: s.target_distance ? s.target_distance.toUpperCase() : null,
                   nivel: s.level ? (LEVEL_LABEL[s.level] ?? s.level) : null,
+                  email: s.email ?? null,
+                  phone: null,
+                  lastActivity: lastQ.data?.get(s.id) ?? null,
                 }}
                 onRemove={s.coach_id === userId ? () => setRemoveTarget({ id: s.id, name: s.full_name }) : undefined}
               />

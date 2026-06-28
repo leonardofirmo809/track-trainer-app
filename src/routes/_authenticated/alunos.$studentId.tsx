@@ -159,14 +159,16 @@ function PerfilAluno() {
       </div>
 
       <Card>
-        <CardContent className="p-6 flex items-center gap-5 flex-wrap">
-          <Avatar className="size-16"><AvatarFallback className="text-lg">{s.full_name.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
+        <CardContent className="p-4 sm:p-6 flex items-center gap-4 flex-wrap">
+          <Avatar className="size-12 sm:size-16 shrink-0">
+            <AvatarFallback className="text-base sm:text-lg">{s.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-display font-bold">{s.full_name}</h1>
-            <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
-              {s.email && <span className="flex items-center gap-1"><Mail className="size-4" /> {s.email}</span>}
-              {s.phone && <span className="flex items-center gap-1"><Phone className="size-4" /> {s.phone}</span>}
-              {s.birth_date && <span className="flex items-center gap-1"><Calendar className="size-4" /> {new Date(s.birth_date).toLocaleDateString("pt-BR")}</span>}
+            <h1 className="text-xl sm:text-2xl font-display font-bold truncate">{s.full_name}</h1>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-sm text-muted-foreground">
+              {s.email && <span className="flex items-center gap-1 truncate"><Mail className="size-3.5 shrink-0" /> {s.email}</span>}
+              {s.phone && <span className="flex items-center gap-1"><Phone className="size-3.5 shrink-0" /> {s.phone}</span>}
+              {s.birth_date && <span className="flex items-center gap-1"><Calendar className="size-3.5 shrink-0" /> {new Date(s.birth_date).toLocaleDateString("pt-BR")}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -364,7 +366,7 @@ function PerfilAluno() {
                   <Label>Objetivo</Label>
                   <Textarea rows={2} value={editForm.goal} onChange={(e) => setF("goal", e.target.value)} maxLength={500} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Nível</Label>
                     <Select value={editForm.level} onValueChange={(v) => setF("level", v)}>
@@ -401,7 +403,7 @@ function PerfilAluno() {
             )}
           </div>
 
-          <SheetFooter className="mt-8 flex-row justify-end gap-2">
+          <SheetFooter className="sticky bottom-0 bg-background border-t -mx-6 px-6 py-4 mt-6 flex-row justify-end gap-2">
             <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
             <Button onClick={saveEdit} disabled={editSaving}>{editSaving ? "Salvando…" : "Salvar"}</Button>
           </SheetFooter>

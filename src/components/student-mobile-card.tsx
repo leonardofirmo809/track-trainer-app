@@ -24,6 +24,19 @@ export interface StudentCardData {
   full_name: string;
   programa: string | null;
   nivel: string | null;
+  email: string | null;
+  phone: string | null;
+  lastActivity: string | null;
+}
+
+function fmtRel(date: string | null): string {
+  if (!date) return "";
+  const d = new Date(date);
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days === 0) return "Hoje";
+  if (days === 1) return "Ontem";
+  if (days < 30) return `${days}d atrás`;
+  return d.toLocaleDateString("pt-BR");
 }
 
 export function StudentMobileCard({ s, onRemove }: { s: StudentCardData; onRemove?: () => void }) {
@@ -62,6 +75,10 @@ export function StudentMobileCard({ s, onRemove }: { s: StudentCardData; onRemov
     locked.current = null;
   };
 
+  const contact = s.phone || s.email;
+  const tags = [s.programa, s.nivel].filter(Boolean).join(" · ");
+  const lastAct = fmtRel(s.lastActivity);
+
   return (
     <div className="relative overflow-hidden rounded-lg">
       {onRemove && (
@@ -86,16 +103,21 @@ export function StudentMobileCard({ s, onRemove }: { s: StudentCardData; onRemov
           to="/alunos/$studentId"
           params={{ studentId: s.id }}
           onClick={(e) => { if (tx !== 0) { e.preventDefault(); setTx(0); } }}
-          className="flex items-center gap-3 p-3 min-h-16"
+          className="flex items-center gap-3 px-3 py-3 min-h-16"
         >
-          <Avatar className="size-10">
+          <Avatar className="size-10 shrink-0">
             <AvatarFallback className={cn("text-sm font-semibold", colorFor(s.full_name))}>{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="font-medium truncate">{s.full_name}</p>
-            <p className="text-xs text-muted-foreground truncate">
-              {[s.programa, s.nivel].filter(Boolean).join(" · ") || "Sem programa"}
+            <p className="font-medium truncate leading-snug">{s.full_name}</p>
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
+              {tags || "Sem programa"}
             </p>
+            {(contact || lastAct) && (
+              <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
+                {[contact, lastAct].filter(Boolean).join(" · ")}
+              </p>
+            )}
           </div>
           <ChevronRight className="size-5 text-muted-foreground shrink-0" />
         </Link>

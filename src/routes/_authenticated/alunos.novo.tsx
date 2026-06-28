@@ -164,9 +164,13 @@ function NovoAluno() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" asChild><Link to="/alunos">Cancelar</Link></Button>
-          <Button type="submit" disabled={loading}>{loading ? "Salvando…" : "Cadastrar aluno"}</Button>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+          <Button type="button" variant="outline" className="w-full sm:w-auto" asChild>
+            <Link to="/alunos">Cancelar</Link>
+          </Button>
+          <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+            {loading ? "Salvando…" : "Cadastrar aluno"}
+          </Button>
         </div>
       </form>
     </div>

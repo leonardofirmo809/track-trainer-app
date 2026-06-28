@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background: brand dark navy (#1a274a) -->
+  <rect width="512" height="512" fill="#1a274a"/>
+  <!-- Main numeral: 80 (white, dominant) -->
+  <text
+    x="256" y="295"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif"
+    font-size="230" font-weight="800"
+    fill="#ffffff" text-anchor="middle"
+  >80</text>
+  <!-- Sub label: PACE (orange accent) -->
+  <text
+    x="256" y="400"
+    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif"
+    font-size="80" font-weight="700"
+    fill="#e87420" text-anchor="middle" letter-spacing="14"
+  >PACE</text>
+</svg>

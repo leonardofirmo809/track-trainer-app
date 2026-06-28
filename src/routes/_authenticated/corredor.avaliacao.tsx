@@ -59,14 +59,14 @@ function AvaliacaoPage() {
 
       {lastTest && (
         <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <div>
+          <CardHeader className="flex-row items-start justify-between space-y-0 gap-3 flex-wrap">
+            <div className="min-w-0">
               <CardTitle className="flex items-center gap-2"><Target className="size-5 text-primary" /> Zonas atuais</CardTitle>
               <CardDescription>
                 {TEST_LABEL[lastTest.test_type] ?? lastTest.test_type} feito em {new Date(lastTest.test_date).toLocaleDateString("pt-BR")}
               </CardDescription>
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <p className="text-xs uppercase text-muted-foreground">FTP</p>
               <p className="font-mono text-2xl font-bold">
                 {lastTest.pace_seconds_per_km ? formatMmss(lastTest.pace_seconds_per_km) : "—"}
@@ -76,7 +76,7 @@ function AvaliacaoPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {zones && (
-              <div className="grid sm:grid-cols-5 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {zones.map((z) => (
                   <div key={z.id} className="rounded-md border p-3 text-xs space-y-1">
                     <div className="flex items-center justify-between">

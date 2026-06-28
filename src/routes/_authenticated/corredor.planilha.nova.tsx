@@ -54,11 +54,11 @@ function NovaPlanilhaPage() {
               Sua planilha atual (com customizações) será marcada como arquivada. Ela não será apagada, mas a nova será a sua planilha ativa.
             </p>
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="ghost" onClick={() => navigate({ to: "/corredor" })} disabled={archiving}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <Button variant="ghost" className="w-full sm:w-auto" onClick={() => navigate({ to: "/corredor" })} disabled={archiving}>
               <X /> Cancelar
             </Button>
-            <Button onClick={handleConfirm} disabled={archiving}>
+            <Button className="w-full sm:w-auto" onClick={handleConfirm} disabled={archiving}>
               {archiving ? "Arquivando…" : "Continuar"} <RefreshCw />
             </Button>
           </div>

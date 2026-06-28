@@ -110,13 +110,13 @@ function RunnerHome() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-7 gap-1.5">
+            <div className="grid grid-cols-7 gap-1">
               {today.weekChips.map((c) => (
                 <Link
                   key={c.dayKey}
                   to={planUrl!}
                   className={cn(
-                    "rounded-md border p-2 text-center transition hover:border-primary/60 min-h-[64px] flex flex-col justify-between",
+                    "rounded-md border p-1 sm:p-2 text-center transition hover:border-primary/60 min-h-[52px] sm:min-h-[64px] flex flex-col justify-between",
                     c.isToday && "border-primary bg-primary/5",
                     c.isPast && !c.isToday && "opacity-50",
                   )}

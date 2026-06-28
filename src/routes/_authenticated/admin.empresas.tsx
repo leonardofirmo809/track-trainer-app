@@ -554,7 +554,8 @@ function AdminEmpresasPage() {
                 </p>
               ) : (
                 <TooltipProvider>
-                <Table>
+                <div className="overflow-x-auto">
+                <Table className="min-w-[600px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome / Email</TableHead>
@@ -635,7 +636,7 @@ function AdminEmpresasPage() {
                           <TableCell className="text-right">
                             <Button
                               size="icon" variant="ghost"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10 size-8"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 size-9"
                               onClick={() => setRemoveTarget(m)}
                             >
                               <Trash2 className="size-4" />
@@ -646,6 +647,7 @@ function AdminEmpresasPage() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
                 </TooltipProvider>
               )}
             </TabsContent>
@@ -674,7 +676,8 @@ function AdminEmpresasPage() {
                   </Button>
                 </div>
               ) : (
-                <Table>
+                <div className="overflow-x-auto">
+                <Table className="min-w-[480px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Aluno</TableHead>
@@ -701,7 +704,7 @@ function AdminEmpresasPage() {
                         <TableCell className="text-right">
                           <Button
                             size="icon" variant="ghost"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10 size-8"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 size-9"
                             onClick={() => setRemoveStudentTarget(s)}
                             title="Desvincular aluno"
                           >
@@ -712,6 +715,7 @@ function AdminEmpresasPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </TabsContent>
           </Tabs>

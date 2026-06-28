@@ -316,7 +316,7 @@ function AdminUsersPage() {
     <TooltipProvider>
       <div className="space-y-8 max-w-6xl">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="min-w-[260px]">
+          <div className="min-w-0 flex-1">
             <h1 className="text-3xl font-display font-bold">Usuários</h1>
             <p className="text-muted-foreground">Gerencie treinadores e convites.</p>
             <div className="mt-3 space-y-1.5">

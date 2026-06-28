@@ -312,9 +312,9 @@ function Planilha10kmPage() {
       {/* Card 4 — Fase + treinos */}
       {applied && weeks && zones && (
         <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle>4. {level === 1 ? "Treinos (4 semanas)" : "Fase e treinos"}</CardTitle>
-            <div className="flex gap-2">
+          <CardHeader className="flex-row items-start justify-between space-y-0 flex-wrap gap-3">
+            <CardTitle className="pt-0.5">4. {level === 1 ? "Treinos (4 semanas)" : "Fase e treinos"}</CardTitle>
+            <div className="flex gap-2 flex-wrap">
               {dataQuery.data?.plan?.id ? (
                 <Button variant="outline" size="sm" onClick={() => setEditorOpen(true)}>
                   <Settings2 /> Personalizar planilha

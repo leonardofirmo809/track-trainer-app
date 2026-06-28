@@ -129,7 +129,7 @@ function AdminUsuariosPage() {
               <p className="py-6 text-muted-foreground">Nenhum usuário encontrado.</p>
             ) : (
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="min-w-[640px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome</TableHead>

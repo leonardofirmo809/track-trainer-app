@@ -161,7 +161,7 @@ function PerfilAluno() {
       <Card>
         <CardContent className="p-6 flex items-center gap-5 flex-wrap">
           <Avatar className="size-16"><AvatarFallback className="text-lg">{s.full_name.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
-          <div className="flex-1 min-w-[240px]">
+          <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-display font-bold">{s.full_name}</h1>
             <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
               {s.email && <span className="flex items-center gap-1"><Mail className="size-4" /> {s.email}</span>}
@@ -182,7 +182,7 @@ function PerfilAluno() {
       </Card>
 
       <Tabs defaultValue="dados">
-        <TabsList className="grid grid-cols-3 lg:grid-cols-6 w-full lg:w-auto">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 w-full lg:w-auto">
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="objetivo">Objetivo</TabsTrigger>
           <TabsTrigger value="lesoes">Lesões</TabsTrigger>

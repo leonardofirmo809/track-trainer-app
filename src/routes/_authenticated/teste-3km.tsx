@@ -194,7 +194,7 @@ function Teste3kmPage() {
         <CardHeader><CardTitle>Tipo de avaliação</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <Tabs value={kind} onValueChange={handleKindChange}>
-            <TabsList>
+            <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full">
               <TabsTrigger value="3km">Teste 3km</TabsTrigger>
               <TabsTrigger value="5km">Prova 5km</TabsTrigger>
               <TabsTrigger value="10km">Prova 10km</TabsTrigger>

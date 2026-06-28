@@ -222,7 +222,7 @@ function OnboardingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Tabs value={kind} onValueChange={(v) => { setKind(v as EvalKind); setTempo(""); setMeters(""); setResult(null); setTestError(null); }}>
-              <TabsList className="grid grid-cols-4 w-full">
+              <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full">
                 {(["3km","5km","10km","cooper"] as EvalKind[]).map((k) => (
                   <TabsTrigger key={k} value={k}>{TEST_LABEL[k]}</TabsTrigger>
                 ))}

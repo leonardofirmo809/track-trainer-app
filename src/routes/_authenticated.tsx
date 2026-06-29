@@ -58,9 +58,6 @@ function Layout() {
   if (guardQ.data?.needsOnboarding && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" />;
   }
-  if (guardQ.data?.needsRunnerOnboarding && !location.pathname.startsWith("/corredor/onboarding")) {
-    return <Navigate to="/corredor/onboarding" />;
-  }
   // Block runner from accessing coach/admin-only routes
   if (guardQ.data?.isRunner) {
     const p = location.pathname;

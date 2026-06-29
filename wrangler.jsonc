@@ -6,6 +6,13 @@
 		"nodejs_compat"
 	],
 	"main": "src/server.ts",
+	"workers_dev": true,
+	"routes": [
+		{
+			"pattern": "app.8020pace.com.br",
+			"custom_domain": true
+		}
+	],
 	"r2_buckets": [
 		{
 			"bucket_name": "corrida8020-assets",

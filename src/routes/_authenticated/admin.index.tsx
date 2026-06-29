@@ -25,24 +25,35 @@ function AdminOverview() {
   const [stats, setStats] = useState({ coaches: 0, pendingInvites: 0, students: 0, tests: 0 });
   const [recent, setRecent] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const [coaches, invites, students, tests, audit] = await Promise.all([
-        supabase.from("user_roles").select("*", { count: "exact", head: true }).eq("role", "coach"),
-        supabase.from("coach_invites").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("students").select("*", { count: "exact", head: true }),
-        supabase.from("tests").select("*", { count: "exact", head: true }),
-        supabase.from("admin_audit_log").select("id, event_type, target_email, created_at").order("created_at", { ascending: false }).limit(5),
-      ]);
-      setStats({
-        coaches: coaches.count ?? 0,
-        pendingInvites: invites.count ?? 0,
-        students: students.count ?? 0,
-        tests: tests.count ?? 0,
-      });
-      setRecent((audit.data ?? []) as AuditRow[]);
-      setLoading(false);
+      try {
+        const [coaches, invites, students, tests, audit] = await Promise.all([
+          supabase.from("user_roles").select("*", { count: "exact", head: true }).eq("role", "coach"),
+          supabase.from("coach_invites").select("*", { count: "exact", head: true }).eq("status", "pending"),
+          supabase.from("students").select("*", { count: "exact", head: true }),
+          supabase.from("tests").select("*", { count: "exact", head: true }),
+          supabase.from("admin_audit_log").select("id, event_type, target_email, created_at").order("created_at", { ascending: false }).limit(5),
+        ]);
+        const firstErr = coaches.error ?? invites.error ?? students.error ?? tests.error ?? audit.error;
+        if (firstErr) {
+          setError(`Erro ao carregar dados: ${firstErr.message}`);
+          return;
+        }
+        setStats({
+          coaches: coaches.count ?? 0,
+          pendingInvites: invites.count ?? 0,
+          students: students.count ?? 0,
+          tests: tests.count ?? 0,
+        });
+        setRecent((audit.data ?? []) as AuditRow[]);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Erro inesperado ao carregar visão geral.");
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -59,6 +70,20 @@ function AdminOverview() {
     { to: "/admin/usuarios", title: "Usuários", desc: "Permissões e roles", icon: UserCog },
     { to: "/admin/auditoria", title: "Auditoria", desc: "Histórico de eventos", icon: Shield },
   ] as const;
+
+  if (error) {
+    return (
+      <div className="space-y-8 max-w-6xl">
+        <div>
+          <h1 className="text-3xl font-display font-bold">Administração</h1>
+          <p className="text-muted-foreground">Visão geral do sistema.</p>
+        </div>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-6 text-sm text-destructive">
+          {error}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-6xl">

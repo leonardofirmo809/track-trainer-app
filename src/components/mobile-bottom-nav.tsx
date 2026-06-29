@@ -19,8 +19,9 @@ const runnerItems = [
 
 export function MobileBottomNav() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { isRunner } = useGuardRoles();
-  const items = isRunner ? runnerItems : coachItems;
+  const { isAdmin, isCoach, isRunner } = useGuardRoles();
+  const isPureRunner = isRunner && !isAdmin && !isCoach;
+  const items = isPureRunner ? runnerItems : coachItems;
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-card border-t border-border flex items-stretch justify-around pb-[env(safe-area-inset-bottom)]">

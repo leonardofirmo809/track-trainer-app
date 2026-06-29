@@ -11,15 +11,15 @@ import { useGuardRoles } from "@/lib/use-role";
 import { Button } from "./ui/button";
 
 const mainCoach = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Alunos", url: "/alunos", icon: Users },
-  { title: "Minha marca", url: "/minha-marca", icon: Palette },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, match: (p: string) => p === "/dashboard" || p.startsWith("/dashboard/") },
+  { title: "Alunos", url: "/alunos", icon: Users, match: (p: string) => p === "/alunos" || p.startsWith("/alunos/") },
+  { title: "Minha marca", url: "/minha-marca", icon: Palette, match: (p: string) => p === "/minha-marca" || p.startsWith("/minha-marca/") },
 ];
 const mainRunner = [
-  { title: "Visão geral", url: "/corredor", icon: LayoutDashboard },
-  { title: "Minha planilha", url: "/corredor/planilha", icon: BookOpen },
-  { title: "Minha avaliação", url: "/corredor/avaliacao", icon: Target },
-  { title: "Nova planilha", url: "/corredor/planilha/nova", icon: RefreshCw },
+  { title: "Visão geral", url: "/corredor", icon: LayoutDashboard, match: (p: string) => p === "/corredor" },
+  { title: "Minha planilha", url: "/corredor/planilha", icon: BookOpen, match: (p: string) => p === "/corredor/planilha" },
+  { title: "Minha avaliação", url: "/corredor/avaliacao", icon: Target, match: (p: string) => p === "/corredor/avaliacao" },
+  { title: "Nova planilha", url: "/corredor/planilha/nova", icon: RefreshCw, match: (p: string) => p === "/corredor/planilha/nova" },
 ];
 const planosCoach = [
   { title: "Teste de 3KM", url: "/teste-3km", icon: Timer },
@@ -37,11 +37,13 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { user, signOut } = useAuth();
-  const { isAdmin, isRunner } = useGuardRoles();
-  const isActive = (u: string) => path === u || path.startsWith(u + "/");
+  const { isAdmin, isCoach, isRunner } = useGuardRoles();
+  const isPureRunner = isRunner && !isAdmin && !isCoach;
+  const isActive = (item: { url: string; match?: (p: string) => boolean }) =>
+    item.match ? item.match(path) : path === item.url || path.startsWith(item.url + "/");
   const initials = (user?.user_metadata?.full_name || user?.email || "?").slice(0, 2).toUpperCase();
-  const main = isRunner ? mainRunner : mainCoach;
-  const planos = isRunner ? [] : planosCoach;
+  const main = isPureRunner ? mainRunner : mainCoach;
+  const planos = isPureRunner ? [] : planosCoach;
 
   return (
     <Sidebar collapsible="icon">
@@ -62,7 +64,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {main.map((i) => (
                 <SidebarMenuItem key={i.url}>
-                  <SidebarMenuButton asChild isActive={isActive(i.url)} tooltip={i.title} className={activeCls}>
+                  <SidebarMenuButton asChild isActive={isActive(i)} tooltip={i.title} className={activeCls}>
                     <Link to={i.url}><i.icon /><span>{i.title}</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -77,7 +79,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {planos.map((i) => (
                   <SidebarMenuItem key={i.url}>
-                    <SidebarMenuButton asChild isActive={isActive(i.url)} tooltip={i.title} className={activeCls}>
+                    <SidebarMenuButton asChild isActive={isActive(i)} tooltip={i.title} className={activeCls}>
                       <Link to={i.url}><i.icon /><span>{i.title}</span></Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

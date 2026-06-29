@@ -58,8 +58,11 @@ function Layout() {
   if (guardQ.data?.needsOnboarding && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" />;
   }
-  // Block runner from accessing coach/admin-only routes
-  if (guardQ.data?.isRunner) {
+  // Block pure runners from coach/admin-only routes.
+  // Admin and coach with runner role are not restricted.
+  const isPureRunner =
+    guardQ.data?.isRunner && !guardQ.data?.isAdmin && !guardQ.data?.isCoach;
+  if (isPureRunner) {
     const p = location.pathname;
     const allowed =
       p.startsWith("/corredor") ||

@@ -1,12 +1,11 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { Shield } from "lucide-react";
-import { useRoles } from "@/lib/use-role";
+import { useGuardRoles } from "@/lib/use-role";
 
 export const Route = createFileRoute("/_authenticated/admin")({ component: AdminLayout });
 
 function AdminLayout() {
-  const { isAdmin, loading } = useRoles();
-  if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">Carregando…</div>;
+  const { isAdmin } = useGuardRoles();
   if (!isAdmin) return <AccessDenied />;
   return <Outlet />;
 }

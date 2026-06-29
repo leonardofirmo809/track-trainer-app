@@ -1,8 +1,20 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 
 export type AppRole = "admin" | "coach" | "runner";
+
+// Roles já resolvidas pelo guardQ de _authenticated.tsx.
+// Garantido estar preenchido antes de AppSidebar e MobileBottomNav renderizarem.
+// Evita race condition onde menus exibem itens errados enquanto roles carregam.
+export interface GuardRoles {
+  isAdmin: boolean;
+  isCoach: boolean;
+  isRunner: boolean;
+}
+
+export const GuardRolesCtx = createContext<GuardRoles>({ isAdmin: false, isCoach: false, isRunner: false });
+export const useGuardRoles = () => useContext(GuardRolesCtx);
 
 export function useRoles() {
   const { user } = useAuth();

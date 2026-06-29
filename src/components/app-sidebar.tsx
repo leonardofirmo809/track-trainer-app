@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth-context";
-import { useRoles } from "@/lib/use-role";
+import { useGuardRoles } from "@/lib/use-role";
 import { Button } from "./ui/button";
 
 const mainCoach = [
@@ -37,7 +37,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { user, signOut } = useAuth();
-  const { isAdmin, isRunner } = useRoles();
+  const { isAdmin, isRunner } = useGuardRoles();
   const isActive = (u: string) => path === u || path.startsWith(u + "/");
   const initials = (user?.user_metadata?.full_name || user?.email || "?").slice(0, 2).toUpperCase();
   const main = isRunner ? mainRunner : mainCoach;

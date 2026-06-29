@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, Users, ClipboardList, User, Target, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRoles } from "@/lib/use-role";
+import { useGuardRoles } from "@/lib/use-role";
 
 const coachItems = [
   { title: "Home", url: "/dashboard", icon: Home, match: (p: string) => p === "/dashboard" },
@@ -19,7 +19,7 @@ const runnerItems = [
 
 export function MobileBottomNav() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { isRunner } = useRoles();
+  const { isRunner } = useGuardRoles();
   const items = isRunner ? runnerItems : coachItems;
 
   return (

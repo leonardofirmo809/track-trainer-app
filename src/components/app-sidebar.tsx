@@ -33,8 +33,9 @@ const activeCls =
   "data-[active=true]:bg-accent data-[active=true]:text-primary data-[active=true]:font-semibold data-[active=true]:border-l-[3px] data-[active=true]:border-primary data-[active=true]:rounded-l-none";
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
+  const closeOnMobile = () => { if (isMobile) setOpenMobile(false); };
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { user, signOut } = useAuth();
   const { isAdmin, isCoach, isRunner } = useGuardRoles();
@@ -65,7 +66,7 @@ export function AppSidebar() {
               {main.map((i) => (
                 <SidebarMenuItem key={i.url}>
                   <SidebarMenuButton asChild isActive={isActive(i)} tooltip={i.title} className={activeCls}>
-                    <Link to={i.url}><i.icon /><span>{i.title}</span></Link>
+                    <Link to={i.url} onClick={closeOnMobile}><i.icon /><span>{i.title}</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -80,7 +81,7 @@ export function AppSidebar() {
                 {planos.map((i) => (
                   <SidebarMenuItem key={i.url}>
                     <SidebarMenuButton asChild isActive={isActive(i)} tooltip={i.title} className={activeCls}>
-                      <Link to={i.url}><i.icon /><span>{i.title}</span></Link>
+                      <Link to={i.url} onClick={closeOnMobile}><i.icon /><span>{i.title}</span></Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -95,37 +96,37 @@ export function AppSidebar() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={path === "/admin"} tooltip="Visão geral" className={activeCls}>
-                    <Link to="/admin"><Shield /><span>Visão geral</span></Link>
+                    <Link to="/admin" onClick={closeOnMobile}><Shield /><span>Visão geral</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/admin/treinadores")} tooltip="Treinadores" className={activeCls}>
-                    <Link to="/admin/treinadores"><Users /><span>Treinadores</span></Link>
+                    <Link to="/admin/treinadores" onClick={closeOnMobile}><Users /><span>Treinadores</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/admin/alunos")} tooltip="Alunos" className={activeCls}>
-                    <Link to="/admin/alunos"><ClipboardList /><span>Alunos</span></Link>
+                    <Link to="/admin/alunos" onClick={closeOnMobile}><ClipboardList /><span>Alunos</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/admin/auditoria")} tooltip="Auditoria" className={activeCls}>
-                    <Link to="/admin/auditoria"><ScrollText /><span>Auditoria</span></Link>
+                    <Link to="/admin/auditoria" onClick={closeOnMobile}><ScrollText /><span>Auditoria</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/admin/usuarios")} tooltip="Usuários" className={activeCls}>
-                    <Link to="/admin/usuarios"><UserCog /><span>Usuários</span></Link>
+                    <Link to="/admin/usuarios" onClick={closeOnMobile}><UserCog /><span>Usuários</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/admin/empresas")} tooltip="Empresas" className={activeCls}>
-                    <Link to="/admin/empresas"><Building2 /><span>Empresas</span></Link>
+                    <Link to="/admin/empresas" onClick={closeOnMobile}><Building2 /><span>Empresas</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/admin/configuracoes")} tooltip="Configurações" className={activeCls}>
-                    <Link to="/admin/configuracoes"><Settings /><span>Configurações</span></Link>
+                    <Link to="/admin/configuracoes" onClick={closeOnMobile}><Settings /><span>Configurações</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -138,6 +139,7 @@ export function AppSidebar() {
           <Link
             to="/minha-conta"
             title="Minha conta"
+            onClick={closeOnMobile}
             className="flex items-center gap-2 flex-1 min-w-0 rounded hover:bg-accent transition-colors"
           >
             <Avatar className="size-8 shrink-0"><AvatarFallback>{initials}</AvatarFallback></Avatar>

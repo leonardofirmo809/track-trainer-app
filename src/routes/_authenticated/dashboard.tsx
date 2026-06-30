@@ -15,6 +15,7 @@ import {
   UserCog,
   ClipboardCheck,
   AlertCircle,
+  Clock,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({ component: Dashboard });
@@ -92,6 +93,56 @@ function Dashboard() {
     },
   });
 
+  const expiring = useQuery({
+    queryKey: ["expiring-plans", userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<ExpiringData> => {
+      const localDate = (n: number) => {
+        const d = new Date();
+        d.setDate(d.getDate() + n);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      };
+      const todayStr = localDate(0);
+      const in1 = localDate(1);
+      const in2 = localDate(2);
+      const in3 = localDate(3);
+      const in4 = localDate(4);
+      const in7 = localDate(7);
+
+      const { data } = await supabase
+        .from("training_plans")
+        .select("id, plan_type, end_date, student_id, students!inner(full_name)")
+        .eq("status", "ativa")
+        .not("end_date", "is", null)
+        .lte("end_date", in7)
+        .order("end_date", { ascending: true });
+
+      type Row = {
+        id: string;
+        plan_type: string;
+        end_date: string;
+        student_id: string;
+        students: { full_name: string };
+      };
+
+      const rows = (data ?? []) as Row[];
+      const toEntry = (r: Row): PlanEntry => ({
+        planId: r.id,
+        studentId: r.student_id,
+        studentName: r.students.full_name,
+        planType: r.plan_type,
+        dueDate: r.end_date,
+      });
+
+      return {
+        expired: rows.filter((r) => r.end_date < todayStr).map(toEntry),
+        dueIn1Day: rows.filter((r) => r.end_date >= todayStr && r.end_date <= in1).map(toEntry),
+        dueIn3Days: rows.filter((r) => r.end_date >= in2 && r.end_date <= in3).map(toEntry),
+        dueIn7Days: rows.filter((r) => r.end_date >= in4 && r.end_date <= in7).map(toEntry),
+      };
+    },
+  });
+
   const fullName = profile.data?.full_name || user?.email?.split("@")[0] || "Treinador";
   const firstName = fullName.split(" ")[0];
   const isEmpty = !stats.isLoading && (stats.data?.total ?? 0) === 0;
@@ -142,6 +193,9 @@ function Dashboard() {
                 className="col-span-2 lg:col-span-1"
               />
             </div>
+
+            {/* Treinos para vencer */}
+            <ExpiringPlansCard data={expiring.data ?? null} />
 
             {/* Alunos recentes */}
             <Card>
@@ -295,6 +349,120 @@ function QuickAction({
         {label}
       </Link>
     </Button>
+  );
+}
+
+// ── Expiring plans ────────────────────────────────────────────────────────────
+
+type PlanEntry = {
+  planId: string;
+  studentId: string;
+  studentName: string;
+  planType: string;
+  dueDate: string;
+};
+
+type ExpiringData = {
+  expired: PlanEntry[];
+  dueIn1Day: PlanEntry[];
+  dueIn3Days: PlanEntry[];
+  dueIn7Days: PlanEntry[];
+};
+
+const groupVariants = {
+  expired: {
+    badge: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300",
+    dot: "bg-red-500",
+  },
+  day1: {
+    badge: "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300",
+    dot: "bg-orange-500",
+  },
+  day3: {
+    badge: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+    dot: "bg-amber-500",
+  },
+  day7: {
+    badge: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300",
+    dot: "bg-yellow-500",
+  },
+} as const;
+
+function ExpiringGroup({
+  entries,
+  label,
+  variant,
+}: {
+  entries: PlanEntry[];
+  label: string;
+  variant: keyof typeof groupVariants;
+}) {
+  if (entries.length === 0) return null;
+  const v = groupVariants[variant];
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${v.badge}`}>
+          <span className={`size-1.5 rounded-full ${v.dot}`} />
+          {label}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {entries.length} aluno{entries.length > 1 ? "s" : ""}
+        </span>
+      </div>
+      <ul className="divide-y">
+        {entries.map((e) => (
+          <li key={e.planId}>
+            <Link
+              to="/alunos/$studentId"
+              params={{ studentId: e.studentId }}
+              className="flex items-center gap-3 py-2 -mx-1 px-1 rounded-md hover:bg-muted/60 transition"
+            >
+              <Avatar className="size-8 shrink-0">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                  {initials(e.studentName) || "AL"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{e.studentName}</p>
+                <p className="text-xs text-muted-foreground">Planilha {e.planType}</p>
+              </div>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {new Date(e.dueDate + "T12:00:00").toLocaleDateString("pt-BR")}
+              </span>
+              <ArrowRight className="size-3.5 text-muted-foreground shrink-0" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ExpiringPlansCard({ data }: { data: ExpiringData | null }) {
+  if (!data) return null;
+  const total = data.expired.length + data.dueIn1Day.length + data.dueIn3Days.length + data.dueIn7Days.length;
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center gap-2 space-y-0 pb-3">
+        <Clock className="size-5 text-muted-foreground shrink-0" />
+        <CardTitle className="text-lg">Treinos para vencer</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {total === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Não há treinos vencendo nos próximos 7 dias.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            <ExpiringGroup entries={data.expired} label="Vencidos" variant="expired" />
+            <ExpiringGroup entries={data.dueIn1Day} label="Vence em 1 dia" variant="day1" />
+            <ExpiringGroup entries={data.dueIn3Days} label="Vence em 3 dias" variant="day3" />
+            <ExpiringGroup entries={data.dueIn7Days} label="Vence em 7 dias" variant="day7" />
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -69,7 +69,8 @@ function Layout() {
       p.startsWith("/planilha-") ||
       p === "/teste-3km" ||
       p.startsWith("/teste-3km/") ||
-      p === "/minha-conta";
+      p === "/minha-conta" ||
+      p.startsWith("/integracoes");
     if (!allowed) return <Navigate to="/corredor" />;
   }
 

@@ -43,6 +43,7 @@ import { Route as AuthenticatedAdminConfiguracoesRouteImport } from './routes/_a
 import { Route as AuthenticatedAdminAuditoriaRouteImport } from './routes/_authenticated/admin.auditoria'
 import { Route as AuthenticatedAdminAlunosRouteImport } from './routes/_authenticated/admin.alunos'
 import { Route as AuthenticatedCorredorPlanilhaIndexRouteImport } from './routes/_authenticated/corredor.planilha.index'
+import { Route as AuthenticatedIntegracoesStravaCallbackRouteImport } from './routes/_authenticated/integracoes.strava.callback'
 import { Route as AuthenticatedCorredorPlanilhaNovaRouteImport } from './routes/_authenticated/corredor.planilha.nova'
 import { Route as AuthenticatedAlunosStudentIdPrescricaoPlanIdRouteImport } from './routes/_authenticated/alunos.$studentId.prescricao.$planId'
 
@@ -231,6 +232,12 @@ const AuthenticatedCorredorPlanilhaIndexRoute =
     path: '/corredor/planilha/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedIntegracoesStravaCallbackRoute =
+  AuthenticatedIntegracoesStravaCallbackRouteImport.update({
+    id: '/integracoes/strava/callback',
+    path: '/integracoes/strava/callback',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedCorredorPlanilhaNovaRoute =
   AuthenticatedCorredorPlanilhaNovaRouteImport.update({
     id: '/corredor/planilha/nova',
@@ -278,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/alunos/': typeof AuthenticatedAlunosIndexRoute
   '/corredor/': typeof AuthenticatedCorredorIndexRoute
   '/corredor/planilha/nova': typeof AuthenticatedCorredorPlanilhaNovaRoute
+  '/integracoes/strava/callback': typeof AuthenticatedIntegracoesStravaCallbackRoute
   '/corredor/planilha/': typeof AuthenticatedCorredorPlanilhaIndexRoute
   '/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
 }
@@ -314,6 +322,7 @@ export interface FileRoutesByTo {
   '/alunos': typeof AuthenticatedAlunosIndexRoute
   '/corredor': typeof AuthenticatedCorredorIndexRoute
   '/corredor/planilha/nova': typeof AuthenticatedCorredorPlanilhaNovaRoute
+  '/integracoes/strava/callback': typeof AuthenticatedIntegracoesStravaCallbackRoute
   '/corredor/planilha': typeof AuthenticatedCorredorPlanilhaIndexRoute
   '/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
 }
@@ -353,6 +362,7 @@ export interface FileRoutesById {
   '/_authenticated/alunos/': typeof AuthenticatedAlunosIndexRoute
   '/_authenticated/corredor/': typeof AuthenticatedCorredorIndexRoute
   '/_authenticated/corredor/planilha/nova': typeof AuthenticatedCorredorPlanilhaNovaRoute
+  '/_authenticated/integracoes/strava/callback': typeof AuthenticatedIntegracoesStravaCallbackRoute
   '/_authenticated/corredor/planilha/': typeof AuthenticatedCorredorPlanilhaIndexRoute
   '/_authenticated/alunos/$studentId/prescricao/$planId': typeof AuthenticatedAlunosStudentIdPrescricaoPlanIdRoute
 }
@@ -392,6 +402,7 @@ export interface FileRouteTypes {
     | '/alunos/'
     | '/corredor/'
     | '/corredor/planilha/nova'
+    | '/integracoes/strava/callback'
     | '/corredor/planilha/'
     | '/alunos/$studentId/prescricao/$planId'
   fileRoutesByTo: FileRoutesByTo
@@ -428,6 +439,7 @@ export interface FileRouteTypes {
     | '/alunos'
     | '/corredor'
     | '/corredor/planilha/nova'
+    | '/integracoes/strava/callback'
     | '/corredor/planilha'
     | '/alunos/$studentId/prescricao/$planId'
   id:
@@ -466,6 +478,7 @@ export interface FileRouteTypes {
     | '/_authenticated/alunos/'
     | '/_authenticated/corredor/'
     | '/_authenticated/corredor/planilha/nova'
+    | '/_authenticated/integracoes/strava/callback'
     | '/_authenticated/corredor/planilha/'
     | '/_authenticated/alunos/$studentId/prescricao/$planId'
   fileRoutesById: FileRoutesById
@@ -724,6 +737,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCorredorPlanilhaIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/integracoes/strava/callback': {
+      id: '/_authenticated/integracoes/strava/callback'
+      path: '/integracoes/strava/callback'
+      fullPath: '/integracoes/strava/callback'
+      preLoaderRoute: typeof AuthenticatedIntegracoesStravaCallbackRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/corredor/planilha/nova': {
       id: '/_authenticated/corredor/planilha/nova'
       path: '/corredor/planilha/nova'
@@ -796,6 +816,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAlunosIndexRoute: typeof AuthenticatedAlunosIndexRoute
   AuthenticatedCorredorIndexRoute: typeof AuthenticatedCorredorIndexRoute
   AuthenticatedCorredorPlanilhaNovaRoute: typeof AuthenticatedCorredorPlanilhaNovaRoute
+  AuthenticatedIntegracoesStravaCallbackRoute: typeof AuthenticatedIntegracoesStravaCallbackRoute
   AuthenticatedCorredorPlanilhaIndexRoute: typeof AuthenticatedCorredorPlanilhaIndexRoute
 }
 
@@ -818,6 +839,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCorredorIndexRoute: AuthenticatedCorredorIndexRoute,
   AuthenticatedCorredorPlanilhaNovaRoute:
     AuthenticatedCorredorPlanilhaNovaRoute,
+  AuthenticatedIntegracoesStravaCallbackRoute:
+    AuthenticatedIntegracoesStravaCallbackRoute,
   AuthenticatedCorredorPlanilhaIndexRoute:
     AuthenticatedCorredorPlanilhaIndexRoute,
 }

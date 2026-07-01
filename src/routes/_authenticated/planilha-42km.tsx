@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Home, ChevronRight, Save, Settings2, AlertTriangle, Download, Clock, Route as RouteIcon } from "lucide-react";
 import { useCoachBranding } from "@/lib/use-coach-branding";
 import { generatePlanilha42kmPdf, downloadBlob } from "@/lib/planilha-42km-pdf";
-import { workoutToFitBlob, type WorkoutForFit } from "@/lib/planilha-fit-export";
+import { GarminExportDialog, type GarminWeek, type GarminSession } from "@/components/planilha/GarminExportDialog";
 import { makeStatsLookup42km, formatKm, formatKm2, formatHms } from "@/lib/planilha-42km-stats";
 import { computeWorkoutTotals, computePhaseTotals, type PhaseTotals } from "@/lib/planilha-5km-zone-distribution";
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, ResponsiveContainer, Cell, LabelList, Legend } from "recharts";
@@ -60,7 +60,7 @@ function Planilha42kmPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [overrides, setOverrides] = useState<WorkoutOverrides>({});
   const [exporting, setExporting] = useState(false);
-  const [exportingFit, setExportingFit] = useState(false);
+  const [garminOpen, setGarminOpen] = useState(false);
   const [pdfStartDate, setPdfStartDate] = useState<string | null>(null);
   const branding = useCoachBranding();
 
@@ -146,6 +146,26 @@ function Planilha42kmPage() {
     });
   }, [applied, level, phase, weekDays, validation, overrides]);
 
+  const garminWeeks = useMemo((): GarminWeek[] => {
+    if (!weeks) return [];
+    return weeks.map((wk, wi) => {
+      let idx = 0;
+      const sessions: GarminSession[] = [];
+      for (const a of wk.assignments) {
+        if (a.workout) {
+          sessions.push({
+            sessionIdx: ++idx,
+            dayCode: a.day,
+            dayLabel: DAY_FULL[a.day],
+            workoutType: a.workout.type,
+            workout: a.workout as unknown as GarminSession["workout"],
+          });
+        }
+      }
+      return { weekNum: wi + 1, sessions };
+    }).filter((wk) => wk.sessions.length > 0);
+  }, [weeks]);
+
   async function persistConfig(opts: { phase?: Phase42 } = {}) {
     if (!studentId) return;
     setSaving(true);
@@ -195,33 +215,6 @@ function Planilha42kmPage() {
       toast.error(`Falha ao gerar PDF: ${(e as Error).message}`);
     } finally {
       setExporting(false);
-    }
-  }
-
-  async function handleExportFit() {
-    if (!weeks) return;
-    setExportingFit(true);
-    try {
-      const safeName = (dataQuery.data?.student?.full_name ?? "aluno").replace(/[^\w-]+/g, "-");
-      const jobs: { filename: string; wkt: WorkoutForFit }[] = [];
-      weeks.forEach((wk, wi) => {
-        wk.assignments.forEach((a) => {
-          if (a.workout) {
-            const label = `42km-P${phase}-S${wi + 1}-${a.day}`;
-            jobs.push({ filename: `${safeName}-${label}.fit`, wkt: a.workout as unknown as WorkoutForFit });
-          }
-        });
-      });
-      if (jobs.length === 0) { toast.error("Nenhum treino disponível para exportar."); return; }
-      for (let i = 0; i < jobs.length; i++) {
-        if (i > 0) await new Promise((r) => setTimeout(r, 350));
-        downloadBlob(workoutToFitBlob(jobs[i].wkt, jobs[i].filename.replace(/\.fit$/, "").slice(0, 15)), jobs[i].filename);
-      }
-      toast.success(`${jobs.length} treino(s) Garmin FIT exportado(s).`);
-    } catch (e) {
-      toast.error(`Falha ao exportar FIT: ${(e as Error).message}`);
-    } finally {
-      setExportingFit(false);
     }
   }
 
@@ -378,8 +371,8 @@ function Planilha42kmPage() {
               <Button onClick={handleExportPdf} disabled={exporting} size="sm">
                 <Download /> {exporting ? "Gerando…" : "Exportar PDF"}
               </Button>
-              <Button onClick={handleExportFit} disabled={exportingFit || !weeks} size="sm" variant="outline">
-                <Download /> {exportingFit ? "Gerando…" : "Garmin (.FIT)"}
+              <Button onClick={() => setGarminOpen(true)} disabled={!weeks || garminWeeks.length === 0} size="sm" variant="outline">
+                <Download /> Garmin (.FIT)
               </Button>
             </div>
           </CardHeader>
@@ -433,6 +426,14 @@ function Planilha42kmPage() {
           </CardContent>
         </Card>
       )}
+
+      <GarminExportDialog
+        open={garminOpen}
+        onClose={() => setGarminOpen(false)}
+        weeks={garminWeeks}
+        studentName={dataQuery.data?.student?.full_name ?? "aluno"}
+        distance="42km"
+      />
 
       <Dialog open={!!openWorkout} onOpenChange={(o) => !o && setOpenWorkout(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">

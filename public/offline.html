@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1a274a" />
+  <title>Sem conexão — 8020Pace</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      min-height: 100svh;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      background: #f8fafc;
+      color: #1a274a;
+    }
+    .box {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      max-width: 360px;
+    }
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #1a274a;
+      margin-bottom: 2rem;
+    }
+    .logo span { color: #f97316; }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+    }
+    p {
+      font-size: 0.9rem;
+      color: #64748b;
+      margin: 0 0 1.5rem;
+      line-height: 1.5;
+    }
+    button {
+      background: #1a274a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.65rem 1.75rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.85; }
+    button:active { opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo">8020<span>Pace</span></div>
+    <h1>Sem conexão</h1>
+    <p>Verifique sua conexão com a internet e tente novamente.</p>
+    <button onclick="location.reload()">Tentar novamente</button>
+  </div>
+</body>
+</html>

@@ -65,6 +65,8 @@ const [r, g, b] = [0x1a, 0x27, 0x4a];
 
 writeFileSync("public/icon-192.png", solidPNG(192, r, g, b));
 writeFileSync("public/icon-512.png", solidPNG(512, r, g, b));
+writeFileSync("public/icon-1024.png", solidPNG(1024, r, g, b));
 
-console.log("✓ public/icon-192.png  (192×192 navy)");
-console.log("✓ public/icon-512.png  (512×512 navy)");
+console.log("✓ public/icon-192.png   (192×192  navy)");
+console.log("✓ public/icon-512.png   (512×512  navy)");
+console.log("✓ public/icon-1024.png  (1024×1024 navy)");

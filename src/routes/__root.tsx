@@ -11,6 +11,7 @@ import {
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/sonner";
+import { PwaServiceWorkerRegistration } from "@/components/PwaServiceWorkerRegistration";
 
 function NotFoundComponent() {
   return (
@@ -120,6 +121,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <PwaServiceWorkerRegistration />
         <Outlet />
         <Toaster richColors position="top-right" />
       </AuthProvider>

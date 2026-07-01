@@ -9,11 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermosDeUsoRouteImport } from './routes/termos-de-uso'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
+import { Route as PoliticaDePrivacidadeRouteImport } from './routes/politica-de-privacidade'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as NovaSenhaRouteImport } from './routes/nova-senha'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ExclusaoDeContaRouteImport } from './routes/exclusao-de-conta'
+import { Route as ContatoRouteImport } from './routes/contato'
 import { Route as CadastroTreinadorRouteImport } from './routes/cadastro-treinador'
 import { Route as CadastroCorredorRouteImport } from './routes/cadastro-corredor'
 import { Route as CadastroRouteImport } from './routes/cadastro'
@@ -47,6 +51,11 @@ import { Route as AuthenticatedIntegracoesStravaCallbackRouteImport } from './ro
 import { Route as AuthenticatedCorredorPlanilhaNovaRouteImport } from './routes/_authenticated/corredor.planilha.nova'
 import { Route as AuthenticatedAlunosStudentIdPrescricaoPlanIdRouteImport } from './routes/_authenticated/alunos.$studentId.prescricao.$planId'
 
+const TermosDeUsoRoute = TermosDeUsoRouteImport.update({
+  id: '/termos-de-uso',
+  path: '/termos-de-uso',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -55,6 +64,11 @@ const SignupRoute = SignupRouteImport.update({
 const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
   id: '/recuperar-senha',
   path: '/recuperar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PoliticaDePrivacidadeRoute = PoliticaDePrivacidadeRouteImport.update({
+  id: '/politica-de-privacidade',
+  path: '/politica-de-privacidade',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -70,6 +84,16 @@ const NovaSenhaRoute = NovaSenhaRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExclusaoDeContaRoute = ExclusaoDeContaRouteImport.update({
+  id: '/exclusao-de-conta',
+  path: '/exclusao-de-conta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContatoRoute = ContatoRouteImport.update({
+  id: '/contato',
+  path: '/contato',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CadastroTreinadorRoute = CadastroTreinadorRouteImport.update({
@@ -257,11 +281,15 @@ export interface FileRoutesByFullPath {
   '/cadastro': typeof CadastroRoute
   '/cadastro-corredor': typeof CadastroCorredorRoute
   '/cadastro-treinador': typeof CadastroTreinadorRoute
+  '/contato': typeof ContatoRoute
+  '/exclusao-de-conta': typeof ExclusaoDeContaRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/onboarding': typeof OnboardingRoute
+  '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/signup': typeof SignupRoute
+  '/termos-de-uso': typeof TermosDeUsoRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/minha-conta': typeof AuthenticatedMinhaContaRoute
@@ -295,11 +323,15 @@ export interface FileRoutesByTo {
   '/cadastro': typeof CadastroRoute
   '/cadastro-corredor': typeof CadastroCorredorRoute
   '/cadastro-treinador': typeof CadastroTreinadorRoute
+  '/contato': typeof ContatoRoute
+  '/exclusao-de-conta': typeof ExclusaoDeContaRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/onboarding': typeof OnboardingRoute
+  '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/signup': typeof SignupRoute
+  '/termos-de-uso': typeof TermosDeUsoRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/minha-conta': typeof AuthenticatedMinhaContaRoute
   '/minha-marca': typeof AuthenticatedMinhaMarcaRoute
@@ -334,11 +366,15 @@ export interface FileRoutesById {
   '/cadastro': typeof CadastroRoute
   '/cadastro-corredor': typeof CadastroCorredorRoute
   '/cadastro-treinador': typeof CadastroTreinadorRoute
+  '/contato': typeof ContatoRoute
+  '/exclusao-de-conta': typeof ExclusaoDeContaRoute
   '/login': typeof LoginRoute
   '/nova-senha': typeof NovaSenhaRoute
   '/onboarding': typeof OnboardingRoute
+  '/politica-de-privacidade': typeof PoliticaDePrivacidadeRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/signup': typeof SignupRoute
+  '/termos-de-uso': typeof TermosDeUsoRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/minha-conta': typeof AuthenticatedMinhaContaRoute
@@ -374,11 +410,15 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/cadastro-corredor'
     | '/cadastro-treinador'
+    | '/contato'
+    | '/exclusao-de-conta'
     | '/login'
     | '/nova-senha'
     | '/onboarding'
+    | '/politica-de-privacidade'
     | '/recuperar-senha'
     | '/signup'
+    | '/termos-de-uso'
     | '/admin'
     | '/dashboard'
     | '/minha-conta'
@@ -412,11 +452,15 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/cadastro-corredor'
     | '/cadastro-treinador'
+    | '/contato'
+    | '/exclusao-de-conta'
     | '/login'
     | '/nova-senha'
     | '/onboarding'
+    | '/politica-de-privacidade'
     | '/recuperar-senha'
     | '/signup'
+    | '/termos-de-uso'
     | '/dashboard'
     | '/minha-conta'
     | '/minha-marca'
@@ -450,11 +494,15 @@ export interface FileRouteTypes {
     | '/cadastro'
     | '/cadastro-corredor'
     | '/cadastro-treinador'
+    | '/contato'
+    | '/exclusao-de-conta'
     | '/login'
     | '/nova-senha'
     | '/onboarding'
+    | '/politica-de-privacidade'
     | '/recuperar-senha'
     | '/signup'
+    | '/termos-de-uso'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/minha-conta'
@@ -490,15 +538,26 @@ export interface RootRouteChildren {
   CadastroRoute: typeof CadastroRoute
   CadastroCorredorRoute: typeof CadastroCorredorRoute
   CadastroTreinadorRoute: typeof CadastroTreinadorRoute
+  ContatoRoute: typeof ContatoRoute
+  ExclusaoDeContaRoute: typeof ExclusaoDeContaRoute
   LoginRoute: typeof LoginRoute
   NovaSenhaRoute: typeof NovaSenhaRoute
   OnboardingRoute: typeof OnboardingRoute
+  PoliticaDePrivacidadeRoute: typeof PoliticaDePrivacidadeRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   SignupRoute: typeof SignupRoute
+  TermosDeUsoRoute: typeof TermosDeUsoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/termos-de-uso': {
+      id: '/termos-de-uso'
+      path: '/termos-de-uso'
+      fullPath: '/termos-de-uso'
+      preLoaderRoute: typeof TermosDeUsoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -511,6 +570,13 @@ declare module '@tanstack/react-router' {
       path: '/recuperar-senha'
       fullPath: '/recuperar-senha'
       preLoaderRoute: typeof RecuperarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/politica-de-privacidade': {
+      id: '/politica-de-privacidade'
+      path: '/politica-de-privacidade'
+      fullPath: '/politica-de-privacidade'
+      preLoaderRoute: typeof PoliticaDePrivacidadeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -532,6 +598,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exclusao-de-conta': {
+      id: '/exclusao-de-conta'
+      path: '/exclusao-de-conta'
+      fullPath: '/exclusao-de-conta'
+      preLoaderRoute: typeof ExclusaoDeContaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contato': {
+      id: '/contato'
+      path: '/contato'
+      fullPath: '/contato'
+      preLoaderRoute: typeof ContatoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cadastro-treinador': {
@@ -856,11 +936,15 @@ const rootRouteChildren: RootRouteChildren = {
   CadastroRoute: CadastroRoute,
   CadastroCorredorRoute: CadastroCorredorRoute,
   CadastroTreinadorRoute: CadastroTreinadorRoute,
+  ContatoRoute: ContatoRoute,
+  ExclusaoDeContaRoute: ExclusaoDeContaRoute,
   LoginRoute: LoginRoute,
   NovaSenhaRoute: NovaSenhaRoute,
   OnboardingRoute: OnboardingRoute,
+  PoliticaDePrivacidadeRoute: PoliticaDePrivacidadeRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   SignupRoute: SignupRoute,
+  TermosDeUsoRoute: TermosDeUsoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -32,6 +32,7 @@ import {
 import { distributeWeek, type DistributionResult } from "@/lib/planilha-5km-distribute";
 import { getPlanilha5kmData, savePlanilha5kmConfig } from "@/lib/planilha-5km.functions";
 import { formatMmss } from "@/lib/teste-3km";
+import { PlanAllPhasesSummary, type PhaseBlock } from "@/components/planilha/PlanAllPhasesSummary";
 
 export const Route = createFileRoute("/_authenticated/planilha-5km")({ component: Planilha5kmPage });
 
@@ -115,6 +116,25 @@ function Planilha5kmPage() {
   const softMessage = weekDays.length > 0 && weekDays.length !== suggestedCount
     ? `Sugestão para Nível ${level}: ${suggestedCount} dias. Você pode escolher quantos quiser — ajuste a alocação dos treinos no Personalizar planilha.`
     : null;
+
+  // Resumo de todas as fases (blocos de 4 semanas)
+  const allPhasesBlocks = useMemo((): PhaseBlock[] | null => {
+    if (!applied) return null;
+    return ([1, 2, 3, 4] as const).map((p) => {
+      const totals = computePhaseTotals(WORKOUTS[level][p], level, p);
+      return {
+        phaseNum: p,
+        label: PHASE_LABELS[p].title,
+        subtitle: PHASE_LABELS[p].subtitle,
+        perWeek: totals.perWeek.map((w, i) => ({
+          weekNum: i + 1, totalM: w.totalM, totalMin: w.totalMin,
+          lightPct: w.lightPct, hardPct: w.hardPct,
+        })),
+        totalM: totals.totalM, totalMin: totals.totalMin,
+        lightPct: totals.lightPct, hardPct: totals.hardPct,
+      };
+    });
+  }, [applied, level]);
 
   // Distribuição da fase atual
   const weeks = useMemo(() => {
@@ -402,6 +422,18 @@ function Planilha5kmPage() {
                 </TabsContent>
               ))}
             </Tabs>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Resumo por bloco de 4 semanas */}
+      {applied && allPhasesBlocks && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Resumo por bloco de 4 semanas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PlanAllPhasesSummary blocks={allPhasesBlocks} />
           </CardContent>
         </Card>
       )}

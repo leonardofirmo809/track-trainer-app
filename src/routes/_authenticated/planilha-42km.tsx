@@ -31,6 +31,7 @@ import { distributeWeek, type DistributionResult } from "@/lib/planilha-5km-dist
 import { validateWeekDays42km } from "@/lib/planilha-42km-distribute";
 import { getPlanilha42kmData, savePlanilha42kmConfig } from "@/lib/planilha-42km.functions";
 import { formatMmss } from "@/lib/teste-3km";
+import { PlanAllPhasesSummary, type PhaseBlock } from "@/components/planilha/PlanAllPhasesSummary";
 
 export const Route = createFileRoute("/_authenticated/planilha-42km")({ component: Planilha42kmPage });
 
@@ -109,6 +110,29 @@ function Planilha42kmPage() {
   }, [dataQuery.data]);
 
   const validation = useMemo<string | null>(() => validateWeekDays42km(level, weekDays), [level, weekDays]);
+
+  // Resumo de todas as fases (blocos de 4 semanas)
+  const allPhasesBlocks = useMemo((): PhaseBlock[] | null => {
+    if (!applied) return null;
+    return ([1, 2, 3, 4, 5] as const).map((p) => {
+      const phaseAs4 = Math.min(p, 4) as 1 | 2 | 3 | 4;
+      const totals = computePhaseTotals(
+        WORKOUTS_42KM[level][p] as never,
+        level, phaseAs4, statsLookup,
+      );
+      return {
+        phaseNum: p,
+        label: PHASE_LABELS_42KM[p].title,
+        subtitle: PHASE_LABELS_42KM[p].subtitle,
+        perWeek: totals.perWeek.map((w, i) => ({
+          weekNum: i + 1, totalM: w.totalM, totalMin: w.totalMin,
+          lightPct: w.lightPct, hardPct: w.hardPct,
+        })),
+        totalM: totals.totalM, totalMin: totals.totalMin,
+        lightPct: totals.lightPct, hardPct: totals.hardPct,
+      };
+    });
+  }, [applied, level, statsLookup]);
 
   const weeks = useMemo(() => {
     if (!applied || validation) return null;
@@ -394,6 +418,18 @@ function Planilha42kmPage() {
                 <li>Qualquer dúvida entrar em contato.</li>
               </ul>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Resumo por bloco de 4 semanas */}
+      {applied && allPhasesBlocks && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Resumo por bloco de 4 semanas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PlanAllPhasesSummary blocks={allPhasesBlocks} />
           </CardContent>
         </Card>
       )}

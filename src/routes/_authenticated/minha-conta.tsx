@@ -55,8 +55,8 @@ function StravaCard() {
   const qc = useQueryClient();
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [showActivities, setShowActivities] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncCooldown, setSyncCooldown] = useState(false);
 
   const statusQ = useQuery({
     queryKey: ["strava-status"],
@@ -64,10 +64,11 @@ function StravaCard() {
     staleTime: 30_000,
   });
 
+  // Carrega automaticamente quando conectado — sem precisar clicar em Sincronizar
   const activitiesQ = useQuery({
     queryKey: ["strava-activities"],
     queryFn: () => getMyStravaActivities(),
-    enabled: showActivities,
+    enabled: statusQ.data?.connected === true,
     staleTime: 120_000,
   });
 
@@ -76,7 +77,7 @@ function StravaCard() {
     try {
       const { url } = await getStravaConnectUrl();
       window.location.href = url;
-    } catch (e) {
+    } catch {
       toast.error("Erro ao iniciar conexão com o Strava.");
       setConnecting(false);
     }
@@ -88,11 +89,17 @@ function StravaCard() {
     try {
       await disconnectStrava();
       toast.success("Strava desconectado.");
-      setShowActivities(false);
       await qc.invalidateQueries({ queryKey: ["strava-status"] });
       await qc.invalidateQueries({ queryKey: ["strava-activities"] });
-    } catch {
-      toast.error("Erro ao desconectar o Strava.");
+    } catch (e) {
+      const msg =
+        e instanceof Response
+          ? await e.text()
+          : e instanceof Error
+          ? e.message
+          : "Erro ao desconectar o Strava.";
+      toast.error(msg);
+      await qc.invalidateQueries({ queryKey: ["strava-status"] });
     } finally {
       setDisconnecting(false);
     }
@@ -100,7 +107,6 @@ function StravaCard() {
 
   async function handleSync() {
     setSyncing(true);
-    setShowActivities(true);
     try {
       const result = await syncStravaActivities();
       toast.success(
@@ -108,9 +114,19 @@ function StravaCard() {
           ? `${result.saved} corrida(s) sincronizada(s).`
           : "Atividades atualizadas."
       );
+      setSyncCooldown(true);
+      setTimeout(() => setSyncCooldown(false), 60_000);
       await qc.invalidateQueries({ queryKey: ["strava-activities"] });
-    } catch {
-      toast.error("Erro ao sincronizar atividades do Strava.");
+    } catch (e) {
+      const msg =
+        e instanceof Response
+          ? await e.text()
+          : e instanceof Error
+          ? e.message
+          : "Erro ao sincronizar atividades do Strava.";
+      toast.error(msg);
+      // Atualiza status para refletir possível estado de erro (ex: token revogado)
+      await qc.invalidateQueries({ queryKey: ["strava-status"] });
     } finally {
       setSyncing(false);
     }
@@ -158,6 +174,7 @@ function StravaCard() {
 
   const status = statusQ.data;
   const connected = status?.connected === true;
+  const needsReconnect = status?.connected === false && status.needsReconnect === true;
 
   return (
     <div className="space-y-4">
@@ -176,11 +193,19 @@ function StravaCard() {
                   Conectado
                 </Badge>
               )}
+              {needsReconnect && (
+                <Badge variant="outline" className="text-xs border-destructive text-destructive">
+                  <AlertCircle className="size-3 mr-1" />
+                  Reconexão necessária
+                </Badge>
+              )}
             </div>
           </div>
           <CardDescription>
             {connected
               ? "Sua conta Strava está conectada. Sincronize para ver suas corridas."
+              : needsReconnect
+              ? "Sua conexão com o Strava expirou ou foi revogada. Reconecte para continuar."
               : "Conecte sua conta Strava para visualizar suas atividades de corrida nesta plataforma."}
           </CardDescription>
         </CardHeader>
@@ -213,10 +238,14 @@ function StravaCard() {
                 <Button
                   size="sm"
                   onClick={() => void handleSync()}
-                  disabled={syncing}
+                  disabled={syncing || syncCooldown}
                 >
                   <RefreshCw className={syncing ? "animate-spin" : ""} />
-                  {syncing ? "Sincronizando…" : "Sincronizar atividades"}
+                  {syncing
+                    ? "Sincronizando…"
+                    : syncCooldown
+                    ? "Sincronizado recentemente"
+                    : "Sincronizar atividades"}
                 </Button>
                 <Button
                   size="sm"
@@ -229,6 +258,33 @@ function StravaCard() {
                 </Button>
               </div>
             </>
+          ) : needsReconnect ? (
+            <div className="space-y-3">
+              <p className="text-sm text-destructive flex items-center gap-1.5">
+                <AlertCircle className="size-4 shrink-0" />
+                Sua conexão com o Strava expirou ou foi revogada.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => void handleConnect()}
+                  disabled={connecting}
+                  style={{ backgroundColor: "#FC4C02", color: "#fff" }}
+                  className="hover:opacity-90"
+                >
+                  <Link2 />
+                  {connecting ? "Redirecionando…" : "Reconectar Strava"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void handleDisconnect()}
+                  disabled={disconnecting}
+                >
+                  <Unlink />
+                  {disconnecting ? "Removendo…" : "Remover conexão"}
+                </Button>
+              </div>
+            </div>
           ) : (
             <Button
               onClick={() => void handleConnect()}
@@ -243,8 +299,8 @@ function StravaCard() {
         </CardContent>
       </Card>
 
-      {/* Atividades ─────────────────────────────────────────────────── */}
-      {showActivities && (
+      {/* Atividades — carregadas automaticamente quando conectado */}
+      {connected && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Últimas corridas — Strava</CardTitle>
@@ -261,7 +317,7 @@ function StravaCard() {
             <CardContent>
               {activitiesQ.data.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma corrida encontrada nas últimas 50 atividades.
+                  Nenhuma corrida sincronizada. Clique em "Sincronizar atividades" para buscar suas corridas do Strava.
                 </p>
               ) : (
                 <div className="overflow-x-auto">

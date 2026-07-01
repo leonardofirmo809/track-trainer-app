@@ -174,7 +174,7 @@ export const getStravaConnectionStatus = createServerFn({ method: "GET" })
       .maybeSingle();
 
     if (!data || data.status !== "connected") {
-      return { connected: false as const };
+      return { connected: false as const, needsReconnect: data?.status === "error" };
     }
 
     return {
@@ -186,12 +186,70 @@ export const getStravaConnectionStatus = createServerFn({ method: "GET" })
   });
 
 // ── disconnectStrava ──────────────────────────────────────────────────────────
-// Marca a conexão como desconectada e limpa os tokens do banco.
+// Revoga o token no Strava (oauth/revoke) e limpa a conexão local.
+// Se revogação falhar por 5xx/rede, marca status='error' sem limpar tokens.
+// 4xx do Strava = token já inválido → procede com limpeza local.
 
 export const disconnectStrava = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
+
+    // Ler tokens antes de limpar para tentar revogação no Strava
+    const { data: integration } = await db
+      .from("user_integrations")
+      .select("refresh_token, access_token")
+      .eq("user_id", userId)
+      .eq("provider", "strava")
+      .maybeSingle();
+
+    if (!integration) {
+      throw new Response("Conexão Strava não encontrada.", { status: 404 });
+    }
+
+    const { clientId, clientSecret } = getStravaCredentials();
+    const tokenToRevoke =
+      (integration.refresh_token as string) || (integration.access_token as string);
+    let revokeOk = false;
+
+    if (tokenToRevoke) {
+      const basicCred = btoa(`${clientId}:${clientSecret}`);
+      try {
+        const revokeRes = await fetch("https://www.strava.com/oauth/revoke", {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${basicCred}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            token: tokenToRevoke,
+            token_type_hint: "refresh_token",
+          }).toString(),
+        });
+        // 2xx = sucesso; 4xx = token já inválido no Strava — ambos permitem limpeza local
+        revokeOk = revokeRes.ok || (revokeRes.status >= 400 && revokeRes.status < 500);
+        if (!revokeOk) {
+          console.error("[Strava] Revoke failed:", revokeRes.status);
+        }
+      } catch {
+        console.error("[Strava] Revoke request failed — network error");
+      }
+    } else {
+      revokeOk = true; // sem token para revogar
+    }
+
+    if (!revokeOk) {
+      // Strava indisponível — manter tokens, marcar como error para retry
+      await db
+        .from("user_integrations")
+        .update({ status: "error", updated_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .eq("provider", "strava");
+      throw new Response(
+        "Não foi possível revogar o acesso no Strava. Tente novamente ou acesse strava.com/settings/apps para revogar manualmente.",
+        { status: 502 }
+      );
+    }
 
     const { error } = await db
       .from("user_integrations")
@@ -206,8 +264,8 @@ export const disconnectStrava = createServerFn({ method: "POST" })
       .eq("provider", "strava");
 
     if (error) {
-      console.error("[Strava] Disconnect error");
-      throw new Response("Erro ao desconectar Strava.", { status: 500 });
+      console.error("[Strava] Disconnect update error");
+      throw new Response("Erro ao atualizar status da conexão.", { status: 500 });
     }
 
     return { success: true };
@@ -248,8 +306,21 @@ async function refreshStravaTokenIfNeeded(userId: string): Promise<string> {
   });
 
   if (!refreshRes.ok) {
+    const is4xx = refreshRes.status >= 400 && refreshRes.status < 500;
     console.error("[Strava] Token refresh failed:", refreshRes.status);
-    throw new Response("Falha ao renovar token do Strava.", { status: 502 });
+    if (is4xx) {
+      // Token revogado ou inválido — marcar conexão como error para UI mostrar reconexão
+      await db
+        .from("user_integrations")
+        .update({ status: "error", updated_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .eq("provider", "strava");
+      throw new Response(
+        "Token do Strava expirou ou foi revogado. Reconecte o Strava em Minha Conta.",
+        { status: 401 }
+      );
+    }
+    throw new Response("Falha ao renovar token do Strava. Tente novamente.", { status: 502 });
   }
 
   const refreshData = (await refreshRes.json()) as {
@@ -323,6 +394,13 @@ export const syncStravaActivities = createServerFn({ method: "POST" })
     });
 
     if (!res.ok) {
+      if (res.status === 429) {
+        console.error("[Strava] Rate limit hit");
+        throw new Response(
+          "Limite do Strava atingido. Aguarde alguns minutos e tente novamente.",
+          { status: 429 }
+        );
+      }
       console.error("[Strava] Activities fetch failed:", res.status);
       throw new Response("Falha ao buscar atividades do Strava.", { status: 502 });
     }

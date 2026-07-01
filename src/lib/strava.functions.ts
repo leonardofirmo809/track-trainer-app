@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { assertCanManageStudentTraining } from "@/lib/company-permissions.server";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const db = supabaseAdmin as any;
@@ -271,11 +272,46 @@ async function refreshStravaTokenIfNeeded(userId: string): Promise<string> {
   return refreshData.access_token;
 }
 
-// ── listStravaActivities ──────────────────────────────────────────────────────
-// Busca as últimas 50 atividades de corrida do atleta autenticado.
-// Renova o token se necessário. Retorna apenas campos seguros/relevantes.
+// ── shared types / helpers ────────────────────────────────────────────────────
 
-export const listStravaActivities = createServerFn({ method: "GET" })
+type ActivityRow = {
+  id: string;
+  stravaId: string;
+  name: string | null;
+  sportType: string | null;
+  startDate: string | null;
+  distanceM: number | null;
+  movingTimeSec: number | null;
+  paceSec: number | null;
+  elevationGainM: number | null;
+  avgHeartrate: number | null;
+  syncedAt: string;
+};
+
+function rowToActivity(r: Record<string, unknown>): ActivityRow {
+  return {
+    id: r.id as string,
+    stravaId: r.strava_activity_id as string,
+    name: (r.name as string | null) ?? null,
+    sportType: (r.sport_type as string | null) ?? null,
+    startDate: (r.start_date as string | null) ?? null,
+    distanceM: (r.distance_meters as number | null) ?? null,
+    movingTimeSec: (r.moving_time_seconds as number | null) ?? null,
+    paceSec: (r.average_pace_seconds_per_km as number | null) ?? null,
+    elevationGainM: (r.total_elevation_gain as number | null) ?? null,
+    avgHeartrate: (r.average_heartrate as number | null) ?? null,
+    syncedAt: r.synced_at as string,
+  };
+}
+
+const ACTIVITY_SELECT =
+  "id, strava_activity_id, name, sport_type, start_date, distance_meters, moving_time_seconds, average_pace_seconds_per_km, total_elevation_gain, average_heartrate, synced_at";
+
+// ── syncStravaActivities ──────────────────────────────────────────────────────
+// Busca as últimas 50 atividades do Strava, filtra corridas e persiste no banco.
+// Retorna resumo sem tokens.
+
+export const syncStravaActivities = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
@@ -291,27 +327,129 @@ export const listStravaActivities = createServerFn({ method: "GET" })
       throw new Response("Falha ao buscar atividades do Strava.", { status: 502 });
     }
 
-    const activities = (await res.json()) as Array<{
+    const raw = (await res.json()) as Array<{
       id: number;
       name: string;
       type: string;
       sport_type: string;
       distance: number;
       moving_time: number;
+      elapsed_time: number;
       average_speed: number;
       start_date: string;
       total_elevation_gain: number;
+      average_heartrate?: number;
+      max_heartrate?: number;
+      calories?: number;
     }>;
 
-    return activities
-      .filter((a) => a.type === "Run" || a.sport_type === "Run")
-      .map((a) => ({
-        id: String(a.id),
-        name: a.name,
-        distanceM: a.distance,
-        movingTimeSec: a.moving_time,
-        paceSec: a.average_speed > 0 ? Math.round(1000 / a.average_speed) : null,
-        startDate: a.start_date,
-        elevationGainM: a.total_elevation_gain,
-      }));
+    const RUN_TYPES = new Set(["Run", "TrailRun", "VirtualRun"]);
+    const runs = raw.filter((a) => RUN_TYPES.has(a.sport_type) || RUN_TYPES.has(a.type));
+
+    if (runs.length === 0) {
+      return { saved: 0, total: raw.length, message: "Nenhuma corrida encontrada." };
+    }
+
+    const now = new Date().toISOString();
+    const rows = runs.map((a) => ({
+      user_id: userId,
+      strava_activity_id: String(a.id),
+      name: a.name,
+      sport_type: a.sport_type || a.type,
+      start_date: a.start_date,
+      distance_meters: a.distance,
+      moving_time_seconds: a.moving_time,
+      elapsed_time_seconds: a.elapsed_time,
+      average_speed_mps: a.average_speed,
+      average_pace_seconds_per_km:
+        a.average_speed > 0 ? Math.round(1000 / a.average_speed) : null,
+      total_elevation_gain: a.total_elevation_gain,
+      average_heartrate: a.average_heartrate ?? null,
+      max_heartrate: a.max_heartrate ?? null,
+      calories: a.calories ?? null,
+      raw_payload: a as unknown as Record<string, unknown>,
+      synced_at: now,
+      updated_at: now,
+    }));
+
+    const { error } = await db
+      .from("strava_activities")
+      .upsert(rows, { onConflict: "user_id,strava_activity_id" });
+
+    if (error) {
+      console.error("[Strava] Upsert activities error");
+      throw new Response("Erro ao salvar atividades.", { status: 500 });
+    }
+
+    return { saved: runs.length, total: raw.length, message: null as string | null };
+  });
+
+// ── getMyStravaActivities ─────────────────────────────────────────────────────
+// Lê as atividades persistidas do usuário autenticado. Sem tokens na resposta.
+
+export const getMyStravaActivities = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+
+    const { data, error } = await db
+      .from("strava_activities")
+      .select(ACTIVITY_SELECT)
+      .eq("user_id", userId)
+      .order("start_date", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("[Strava] getMyStravaActivities error");
+      throw new Response("Erro ao buscar atividades.", { status: 500 });
+    }
+
+    return ((data ?? []) as unknown as Record<string, unknown>[]).map(rowToActivity);
+  });
+
+// ── getStudentStravaActivities ────────────────────────────────────────────────
+// Para uso do treinador: verifica permissão e retorna atividades do aluno.
+
+export const getStudentStravaActivities = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ studentId: z.string().uuid() }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+
+    const student = await assertCanManageStudentTraining(data.studentId, userId);
+    const studentUserId = student.user_id;
+
+    if (!studentUserId) {
+      return { stravaConnected: false, activities: [] as ActivityRow[] };
+    }
+
+    const { data: integration } = await db
+      .from("user_integrations")
+      .select("status")
+      .eq("user_id", studentUserId)
+      .eq("provider", "strava")
+      .maybeSingle();
+
+    if (!integration || integration.status !== "connected") {
+      return { stravaConnected: false, activities: [] as ActivityRow[] };
+    }
+
+    const { data: rows, error } = await db
+      .from("strava_activities")
+      .select(ACTIVITY_SELECT)
+      .eq("user_id", studentUserId)
+      .order("start_date", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("[Strava] getStudentStravaActivities error");
+      throw new Response("Erro ao buscar atividades do aluno.", { status: 500 });
+    }
+
+    return {
+      stravaConnected: true,
+      activities: ((rows ?? []) as unknown as Record<string, unknown>[]).map(rowToActivity),
+    };
   });

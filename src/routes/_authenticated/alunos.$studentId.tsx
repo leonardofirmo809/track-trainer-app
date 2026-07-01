@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getStudentPermissions, updateStudent } from "@/lib/students.functions";
+import { getStudentStravaActivities } from "@/lib/strava.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +19,35 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Mail, Phone, Calendar, Eye, Settings2, Pencil } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar, Eye, Settings2, Pencil, Link2 } from "lucide-react";
 import { formatMmss } from "@/lib/teste-3km";
 
 export const Route = createFileRoute("/_authenticated/alunos/$studentId")({ component: PerfilAluno });
+
+function fmtPace(paceSec: number | null): string {
+  if (!paceSec || paceSec <= 0) return "—";
+  const m = Math.floor(paceSec / 60);
+  const s = paceSec % 60;
+  return `${m}:${String(s).padStart(2, "0")} /km`;
+}
+
+function fmtDuration(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}h${String(m).padStart(2, "0")}m`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function fmtDist(m: number): string {
+  return (m / 1000).toFixed(2) + " km";
+}
+
+function fmtDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("pt-BR", {
+    day: "2-digit", month: "short", year: "numeric",
+  });
+}
 
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -64,6 +90,13 @@ function PerfilAluno() {
       const { data } = await supabase.from("training_plans").select("*").eq("student_id", studentId).order("created_at", { ascending: false });
       return data ?? [];
     },
+  });
+
+  const stravaQ = useQuery({
+    queryKey: ["student-strava", studentId],
+    queryFn: () => getStudentStravaActivities({ data: { studentId } }),
+    enabled: !!student.data,
+    staleTime: 120_000,
   });
 
   // Edit state
@@ -184,13 +217,16 @@ function PerfilAluno() {
       </Card>
 
       <Tabs defaultValue="dados">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 w-full lg:w-auto">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 w-full lg:w-auto">
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="objetivo">Objetivo</TabsTrigger>
           <TabsTrigger value="lesoes">Lesões</TabsTrigger>
           <TabsTrigger value="obs">Observações</TabsTrigger>
           <TabsTrigger value="testes">Testes</TabsTrigger>
           <TabsTrigger value="planilhas">Planilhas</TabsTrigger>
+          <TabsTrigger value="strava" className="flex items-center gap-1">
+            <Link2 className="size-3.5" /> Strava
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dados" className="mt-4">
@@ -309,6 +345,79 @@ function PerfilAluno() {
                 </Table></div>
               ) : (
                 <p className="p-8 text-center text-sm text-muted-foreground">Nenhuma planilha gerada ainda.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="strava" className="mt-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Link2 className="size-4 text-muted-foreground" />
+                <CardTitle>Atividades Strava</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 pb-4">
+              {stravaQ.isLoading && (
+                <p className="p-6 text-sm text-muted-foreground">Carregando atividades…</p>
+              )}
+              {stravaQ.isError && (
+                <p className="p-6 text-sm text-destructive">Erro ao carregar atividades do aluno.</p>
+              )}
+              {stravaQ.data && !stravaQ.data.stravaConnected && (
+                <p className="p-6 text-sm text-muted-foreground">
+                  Este aluno ainda não conectou o Strava. As atividades aparecerão aqui após a conexão e sincronização na conta do aluno.
+                </p>
+              )}
+              {stravaQ.data?.stravaConnected && stravaQ.data.activities.length === 0 && (
+                <p className="p-6 text-sm text-muted-foreground">
+                  Nenhuma corrida sincronizada ainda. Solicite ao aluno que acesse Minha Conta e sincronize as atividades.
+                </p>
+              )}
+              {stravaQ.data?.stravaConnected && stravaQ.data.activities.length > 0 && (
+                <div className="-mx-2 sm:mx-0 overflow-x-auto px-4">
+                  <table className="w-full text-sm min-w-[560px]">
+                    <thead>
+                      <tr className="border-b text-muted-foreground text-xs">
+                        <th className="text-left pb-2 pr-4">Data</th>
+                        <th className="text-left pb-2 pr-4">Nome</th>
+                        <th className="text-right pb-2 pr-4">Distância</th>
+                        <th className="text-right pb-2 pr-4">Tempo</th>
+                        <th className="text-right pb-2 pr-4">Pace</th>
+                        <th className="text-right pb-2 pr-4">Desnível</th>
+                        <th className="text-right pb-2">FC Média</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stravaQ.data.activities.map((a) => (
+                        <tr key={a.id} className="border-b last:border-0 hover:bg-muted/30">
+                          <td className="py-2 pr-4 whitespace-nowrap text-muted-foreground text-xs">
+                            {a.startDate ? fmtDate(a.startDate) : "—"}
+                          </td>
+                          <td className="py-2 pr-4 max-w-[180px] truncate font-medium">
+                            {a.name ?? "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-right whitespace-nowrap">
+                            {a.distanceM != null ? fmtDist(a.distanceM) : "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-right whitespace-nowrap">
+                            {a.movingTimeSec != null ? fmtDuration(a.movingTimeSec) : "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-right whitespace-nowrap">
+                            {fmtPace(a.paceSec)}
+                          </td>
+                          <td className="py-2 pr-4 text-right whitespace-nowrap text-muted-foreground">
+                            {(a.elevationGainM ?? 0) > 0 ? `+${Math.round(a.elevationGainM!)}m` : "—"}
+                          </td>
+                          <td className="py-2 text-right whitespace-nowrap text-muted-foreground">
+                            {a.avgHeartrate ? `${Math.round(a.avgHeartrate)} bpm` : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </CardContent>
           </Card>

@@ -14,7 +14,8 @@ import {
   getStravaConnectUrl,
   getStravaConnectionStatus,
   disconnectStrava,
-  listStravaActivities,
+  syncStravaActivities,
+  getMyStravaActivities,
 } from "@/lib/strava.functions";
 
 export const Route = createFileRoute("/_authenticated/minha-conta")({ component: MinhaConta });
@@ -65,7 +66,7 @@ function StravaCard() {
 
   const activitiesQ = useQuery({
     queryKey: ["strava-activities"],
-    queryFn: () => listStravaActivities(),
+    queryFn: () => getMyStravaActivities(),
     enabled: showActivities,
     staleTime: 120_000,
   });
@@ -101,11 +102,15 @@ function StravaCard() {
     setSyncing(true);
     setShowActivities(true);
     try {
+      const result = await syncStravaActivities();
+      toast.success(
+        result.saved > 0
+          ? `${result.saved} corrida(s) sincronizada(s).`
+          : "Atividades atualizadas."
+      );
       await qc.invalidateQueries({ queryKey: ["strava-activities"] });
-      await activitiesQ.refetch();
-      toast.success("Atividades sincronizadas.");
     } catch {
-      toast.error("Erro ao buscar atividades do Strava.");
+      toast.error("Erro ao sincronizar atividades do Strava.");
     } finally {
       setSyncing(false);
     }
@@ -275,22 +280,22 @@ function StravaCard() {
                       {activitiesQ.data.map((a) => (
                         <tr key={a.id} className="border-b last:border-0 hover:bg-muted/30">
                           <td className="py-2 pr-4 whitespace-nowrap text-muted-foreground text-xs">
-                            {fmtDate(a.startDate)}
+                            {a.startDate ? fmtDate(a.startDate) : "—"}
                           </td>
                           <td className="py-2 pr-4 max-w-[180px] truncate font-medium">
-                            {a.name}
+                            {a.name ?? "—"}
                           </td>
                           <td className="py-2 pr-4 text-right whitespace-nowrap">
-                            {fmtDist(a.distanceM)}
+                            {a.distanceM != null ? fmtDist(a.distanceM) : "—"}
                           </td>
                           <td className="py-2 pr-4 text-right whitespace-nowrap">
-                            {fmtDuration(a.movingTimeSec)}
+                            {a.movingTimeSec != null ? fmtDuration(a.movingTimeSec) : "—"}
                           </td>
                           <td className="py-2 pr-4 text-right whitespace-nowrap">
                             {fmtPace(a.paceSec)}
                           </td>
                           <td className="py-2 text-right whitespace-nowrap text-muted-foreground">
-                            {a.elevationGainM > 0 ? `+${Math.round(a.elevationGainM)}m` : "—"}
+                            {(a.elevationGainM ?? 0) > 0 ? `+${Math.round(a.elevationGainM!)}m` : "—"}
                           </td>
                         </tr>
                       ))}

@@ -157,7 +157,7 @@ function AdminUsersPage() {
         },
       });
       await navigator.clipboard.writeText(inviteLink(result.token)).catch(() => {});
-      toast.success("Convite criado! Link copiado.");
+      toast.success("Convite criado! E-mail enviado e link copiado como backup.");
       setName(""); setEmail(""); setInviteCompanyId(""); setOpenInvite(false);
       load();
     } catch (e) {
@@ -183,7 +183,7 @@ function AdminUsersPage() {
     try {
       const result = await resendInviteFn({ data: { id: inv.id } });
       await navigator.clipboard.writeText(inviteLink(result.token)).catch(() => {});
-      toast.success("Novo link gerado e copiado.");
+      toast.success("Novo e-mail enviado e link copiado como backup.");
       load();
     } catch (e) {
       const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
@@ -368,7 +368,7 @@ function AdminUsersPage() {
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Convidar treinador</DialogTitle>
-                        <DialogDescription>O convite gera um link válido por 7 dias.</DialogDescription>
+                        <DialogDescription>O convite é enviado por e-mail e gera um link válido por 7 dias.</DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
                         <div className="space-y-2"><Label htmlFor="iname">Nome completo</Label><Input id="iname" value={name} onChange={(e) => setName(e.target.value)} /></div>

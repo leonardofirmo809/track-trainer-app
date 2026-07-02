@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { sendEmail } from "@/lib/email/email.server";
+import { coachWelcomeEmail } from "@/lib/email/templates";
+
+const APP_URL = "https://app.8020pace.com.br";
 
 const schema = z.object({
   token: z.string().min(10).max(200),
@@ -50,6 +54,12 @@ export const acceptInvite = createServerFn({ method: "POST" })
           { onConflict: "company_id,user_id" },
         );
     }
+
+    const { subject, html, text } = coachWelcomeEmail({
+      fullName: invite.full_name,
+      loginUrl: `${APP_URL}/login`,
+    });
+    await sendEmail("coach_welcome", { to: invite.email, subject, html, text });
 
     return { ok: true as const, email: invite.email };
   });

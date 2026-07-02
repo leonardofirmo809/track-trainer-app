@@ -247,6 +247,36 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          created_at: string
+          email_type: string
+          error: string | null
+          id: string
+          provider_message_id: string | null
+          recipient: string
+          status: Database["public"]["Enums"]["email_status"]
+        }
+        Insert: {
+          created_at?: string
+          email_type: string
+          error?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient: string
+          status: Database["public"]["Enums"]["email_status"]
+        }
+        Update: {
+          created_at?: string
+          email_type?: string
+          error?: string | null
+          id?: string
+          provider_message_id?: string | null
+          recipient?: string
+          status?: Database["public"]["Enums"]["email_status"]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -579,6 +609,7 @@ export type Database = {
         | "runner_removed"
       coach_application_status: "pending" | "approved" | "rejected"
       company_role: "owner" | "admin" | "coach"
+      email_status: "sent" | "failed"
       invite_status: "pending" | "accepted" | "revoked"
       plan_status: "ativa" | "concluida" | "arquivada"
       plan_type: "5km" | "10km" | "21km" | "42km"
@@ -733,6 +764,7 @@ export const Constants = {
       ],
       coach_application_status: ["pending", "approved", "rejected"],
       company_role: ["owner", "admin", "coach"],
+      email_status: ["sent", "failed"],
       invite_status: ["pending", "accepted", "revoked"],
       plan_status: ["ativa", "concluida", "arquivada"],
       plan_type: ["5km", "10km", "21km", "42km"],

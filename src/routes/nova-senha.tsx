@@ -50,7 +50,7 @@ function NovaSenhaPage() {
     setSubmitting(false);
     if (updErr) return toast.error(updErr.message);
     await supabase.auth.signOut();
-    toast.success("Senha alterada com sucesso!");
+    toast.success("Senha atualizada com sucesso. Você já pode acessar sua conta.");
     navigate({ to: "/login" });
   };
 

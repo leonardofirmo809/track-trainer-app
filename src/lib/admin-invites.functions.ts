@@ -2,10 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { sendEmail } from "@/lib/email/email.server";
-import { coachInviteEmail } from "@/lib/email/templates";
-
-const APP_URL = "https://app.8020pace.com.br";
 
 const createSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(255),
@@ -33,15 +29,7 @@ export const createCoachInvite = createServerFn({ method: "POST" })
 
     if (error) throw new Response(error.message, { status: 500 });
     // DB trigger `coach_invites_audit` logs `invite_created` automatically on INSERT.
-
-    // Best-effort: envio de e-mail nunca bloqueia a criação do convite — o admin
-    // ainda pode copiar o link manualmente se o envio falhar (ver `email_logs`).
-    const { subject, html, text } = coachInviteEmail({
-      fullName: data.fullName,
-      inviteUrl: `${APP_URL}/aceitar-convite?token=${invite.token}`,
-    });
-    await sendEmail("coach_invite", { to: data.email, subject, html, text });
-
+    // O link é entregue manualmente (fora do sistema) — sem envio automático de e-mail.
     return { id: invite.id, token: invite.token };
   });
 
@@ -77,7 +65,7 @@ export const resendCoachInvite = createServerFn({ method: "POST" })
 
     const newToken = `${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
 
-    const { data: invite, error } = await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from("coach_invites")
       .update({
         token: newToken,
@@ -85,18 +73,9 @@ export const resendCoachInvite = createServerFn({ method: "POST" })
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         accepted_at: null,
       })
-      .eq("id", data.id)
-      .select("email, full_name")
-      .single();
+      .eq("id", data.id);
 
     if (error) throw new Response(error.message, { status: 500 });
     // DB trigger logs `invite_resent` automatically on UPDATE token+status→'pending'.
-
-    const { subject, html, text } = coachInviteEmail({
-      fullName: invite.full_name,
-      inviteUrl: `${APP_URL}/aceitar-convite?token=${newToken}`,
-    });
-    await sendEmail("coach_invite", { to: invite.email, subject, html, text });
-
     return { ok: true as const, token: newToken };
   });

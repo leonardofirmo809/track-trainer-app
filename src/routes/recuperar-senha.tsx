@@ -48,7 +48,7 @@ function RecuperarSenhaPage() {
               <div className="space-y-4">
                 <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-4 text-sm">
                   <CheckCircle2 className="size-4 mt-0.5 shrink-0 text-primary" />
-                  <p>Se este e-mail estiver cadastrado, você receberá um link em breve.</p>
+                  <p>Se este e-mail estiver cadastrado, enviaremos um link para redefinir sua senha.</p>
                 </div>
                 <Button asChild variant="outline" className="w-full">
                   <Link to="/login">Voltar para o login</Link>

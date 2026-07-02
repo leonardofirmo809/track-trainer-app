@@ -35,11 +35,11 @@ function RunnerSignupPage() {
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (signInError) {
-      toast.success("Conta criada! Verifique seu email para confirmar e faça login.");
+      toast.success("Cadastro criado com sucesso. Enviamos um e-mail de confirmação para você. Se não encontrar, verifique a caixa de spam.");
       navigate({ to: "/login" });
       return;
     }
-    toast.success("Conta criada! Vamos montar sua planilha.");
+    toast.success("Cadastro criado com sucesso. Agora você já pode acessar sua conta. Vamos montar sua planilha.");
     navigate({ to: "/corredor/onboarding" });
   }
 

@@ -1,3 +1,7 @@
+// Reservado para uso futuro (Fase 2+): nenhum server function chama sendEmail()
+// hoje. O fluxo atual do produto é convite/cadastro entregue por link manual
+// (fora do sistema) + e-mails essenciais via Supabase Auth (confirmação de
+// cadastro e recuperação de senha). Ver docs/supabase-auth-emails.md.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { EmailType, SendEmailParams, SendEmailResult } from "./types";
 

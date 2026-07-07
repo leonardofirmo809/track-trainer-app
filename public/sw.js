@@ -12,7 +12,7 @@
  * NEVER cached: authenticated pages, Supabase, Strava, server functions.
  */
 
-const CACHE_NAME = "8020pace-shell-v1";
+const CACHE_NAME = "8020pace-shell-v2";
 const OFFLINE_URL = "/offline.html";
 
 // Third-party hostnames that must never be cached.

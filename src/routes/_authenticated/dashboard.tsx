@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { getStudentScopeFilter } from "@/lib/student-scope";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,8 +66,9 @@ function Dashboard() {
     queryKey: ["dashboard-stats-v2", userId],
     enabled: !!userId,
     queryFn: async () => {
+      const scope = await getStudentScopeFilter(userId!);
       const [students, plans] = await Promise.all([
-        supabase.from("students").select("id"),
+        supabase.from("students").select("id").or(scope),
         supabase.from("training_plans").select("student_id").eq("status", "ativa"),
       ]);
       const studentIds = (students.data ?? []).map((s) => s.id);
@@ -84,9 +86,11 @@ function Dashboard() {
     queryKey: ["recent-students-v2", userId],
     enabled: !!userId,
     queryFn: async () => {
+      const scope = await getStudentScopeFilter(userId!);
       const { data } = await supabase
         .from("students")
         .select("id, full_name, level, target_distance, created_at")
+        .or(scope)
         .order("created_at", { ascending: false })
         .limit(5);
       return data ?? [];

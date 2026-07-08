@@ -66,15 +66,32 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   return brandedErrorResponse();
 }
 
+// Every request that reaches this Worker is SSR HTML or a server-function call —
+// both can carry per-user data (multi-tenant students/plans/tests). Static assets
+// under public/ never hit this fetch() (Cloudflare serves them separately), so this
+// cannot break asset caching. Without this, an intermediate cache (CDN, proxy, or a
+// shared browser) could replay one user's authenticated response to another user
+// hitting the same URL.
+function withNoStore(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
+  headers.delete("Expires");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return withNoStore(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
-      return brandedErrorResponse();
+      return withNoStore(brandedErrorResponse());
     }
   },
 };

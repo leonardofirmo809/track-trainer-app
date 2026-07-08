@@ -4,6 +4,7 @@ import { Check, ChevronsUpDown, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { getStudentScopeFilter } from "@/lib/student-scope";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -27,7 +28,15 @@ export function StudentPicker({
   const students = useQuery({
     queryKey: ["students-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("students").select("id, full_name").order("full_name");
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) return [];
+      const scope = await getStudentScopeFilter(userId);
+      const { data, error } = await supabase
+        .from("students")
+        .select("id, full_name")
+        .or(scope)
+        .order("full_name");
       if (error) throw error;
       return data ?? [];
     },

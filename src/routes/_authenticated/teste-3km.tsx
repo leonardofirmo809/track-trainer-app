@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getStudentScopeFilter } from "@/lib/student-scope";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,15 @@ function Teste3kmPage() {
   const students = useQuery({
     queryKey: ["students-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("students").select("id, full_name").order("full_name");
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) return [];
+      const scope = await getStudentScopeFilter(userId);
+      const { data, error } = await supabase
+        .from("students")
+        .select("id, full_name")
+        .or(scope)
+        .order("full_name");
       if (error) throw error;
       return data ?? [];
     },

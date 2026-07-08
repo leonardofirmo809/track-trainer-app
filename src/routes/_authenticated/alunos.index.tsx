@@ -15,6 +15,7 @@ import { StudentCreateModal } from "@/components/student-create-modal";
 import { StudentMobileCard } from "@/components/student-mobile-card";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { cn } from "@/lib/utils";
+import { getStudentScopeFilter } from "@/lib/student-scope";
 
 export const Route = createFileRoute("/_authenticated/alunos/")({ component: AlunosList });
 
@@ -44,11 +45,14 @@ function AlunosList() {
   }, []);
 
   const studentsQ = useQuery({
-    queryKey: ["students"],
+    queryKey: ["students", userId],
+    enabled: !!userId,
     queryFn: async () => {
+      const scope = await getStudentScopeFilter(userId!);
       const { data, error } = await supabase
         .from("students")
         .select("id, full_name, email, target_distance, level, created_at, coach_id")
+        .or(scope)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];

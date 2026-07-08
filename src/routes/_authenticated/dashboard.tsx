@@ -113,9 +113,20 @@ function Dashboard() {
       const in4 = localDate(4);
       const in7 = localDate(7);
 
+      // Defense-in-depth: mesmo escopo aplicado por `stats`/`recent` acima — não depender
+      // apenas de RLS para restringir a consulta ao roster visível deste usuário.
+      const scope = await getStudentScopeFilter(userId!);
+      const { data: scopedStudents } = await supabase.from("students").select("id").or(scope);
+      const studentIds = (scopedStudents ?? []).map((s) => s.id);
+
+      if (studentIds.length === 0) {
+        return { expired: [], dueIn1Day: [], dueIn3Days: [], dueIn7Days: [] };
+      }
+
       const { data } = await supabase
         .from("training_plans")
         .select("id, plan_type, end_date, student_id, students!inner(full_name)")
+        .in("student_id", studentIds)
         .eq("status", "ativa")
         .not("end_date", "is", null)
         .lte("end_date", in7)

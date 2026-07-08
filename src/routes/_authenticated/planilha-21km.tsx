@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PlanilhaCustomizerSheet } from "@/components/planilha/PlanilhaCustomizerSheet";
 import { PlanStartDatePicker } from "@/components/planilha/plan-start-date-picker";
+import { PlanEndDatePicker } from "@/components/planilha/plan-end-date-picker";
 import { DistanceSelector } from "@/components/planilha/distance-selector";
 import { StudentPicker } from "@/components/planilha/student-picker";
 import { applyOverrides, getManualDayMap, getOverridesFromPayload, type WorkoutOverrides } from "@/lib/workout-overrides";
@@ -376,6 +377,11 @@ function Planilha21kmPage() {
                 fallbackDate={dataQuery.data?.plan?.created_at ?? null}
                 invalidateQueryKey={["planilha-21km", studentId] as const}
                 onChange={setPdfStartDate}
+              />
+              <PlanEndDatePicker
+                planId={dataQuery.data?.plan?.id ?? null}
+                initialEndDate={(dataQuery.data?.plan as { end_date?: string | null } | null)?.end_date ?? null}
+                invalidateQueryKey={["planilha-21km", studentId] as const}
               />
               <Button onClick={handleExportPdf} disabled={exporting} size="sm">
                 <Download /> {exporting ? "Gerando…" : "Exportar PDF"}

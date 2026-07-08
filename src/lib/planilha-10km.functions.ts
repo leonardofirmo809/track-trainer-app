@@ -32,7 +32,7 @@ export const getPlanilha10kmData = createServerFn({ method: "GET" })
 
     const { data: plans } = await supabaseAdmin
       .from("training_plans")
-      .select("id, payload, status, plan_type, updated_at, created_at, start_date")
+      .select("id, payload, status, plan_type, updated_at, created_at, start_date, end_date")
       .eq("student_id", data.studentId).eq("plan_type", "10km").eq("status", "ativa")
       .order("updated_at", { ascending: false }).limit(1);
     const plan = plans?.[0] ?? null;
@@ -47,16 +47,22 @@ export const savePlanilha10kmConfig = createServerFn({ method: "POST" })
     const { userId } = context;
     const student = await assertCanManageStudentTraining(data.studentId, userId, true);
 
+    const { data: existing } = await supabaseAdmin
+      .from("training_plans")
+      .select("id, payload").eq("student_id", data.studentId).eq("plan_type", "10km").eq("status", "ativa")
+      .order("updated_at", { ascending: false }).limit(1);
+
+    const existingPayload =
+      existing?.[0]?.payload && typeof existing[0].payload === "object" && !Array.isArray(existing[0].payload)
+        ? (existing[0].payload as Record<string, unknown>)
+        : {};
+
     const payload = {
+      ...existingPayload,
       level: data.level,
       weekDays: data.weekDays,
       currentPhase: data.currentPhase,
     };
-
-    const { data: existing } = await supabaseAdmin
-      .from("training_plans")
-      .select("id").eq("student_id", data.studentId).eq("plan_type", "10km").eq("status", "ativa")
-      .order("updated_at", { ascending: false }).limit(1);
 
     if (existing?.[0]) {
       const { error } = await supabaseAdmin

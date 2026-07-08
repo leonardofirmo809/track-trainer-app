@@ -103,7 +103,12 @@ function PerfilAluno() {
   const [editOpen, setEditOpen] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
-  const [editPerms, setEditPerms] = useState({ canEditCadastral: false, canEditTraining: false, loaded: false });
+  const [editPerms, setEditPerms] = useState({
+    canEditCadastral: false,
+    canEditTraining: false,
+    canCustomizeTraining: false,
+    loaded: false,
+  });
 
   const getPermsFn = useServerFn(getStudentPermissions);
   const updateFn = useServerFn(updateStudent);
@@ -113,10 +118,15 @@ function PerfilAluno() {
     if (!student.data) return;
     getPermsFn({ data: { studentId } })
       .then((perms) => {
-        const p = perms as { canEditCadastral: boolean; canEditTraining: boolean };
-        setEditPerms({ canEditCadastral: p.canEditCadastral, canEditTraining: p.canEditTraining, loaded: true });
+        const p = perms as { canEditCadastral: boolean; canEditTraining: boolean; canCustomizeTraining: boolean };
+        setEditPerms({
+          canEditCadastral: p.canEditCadastral,
+          canEditTraining: p.canEditTraining,
+          canCustomizeTraining: p.canCustomizeTraining,
+          loaded: true,
+        });
       })
-      .catch(() => setEditPerms({ canEditCadastral: false, canEditTraining: false, loaded: true }));
+      .catch(() => setEditPerms({ canEditCadastral: false, canEditTraining: false, canCustomizeTraining: false, loaded: true }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student.data?.id]);
 
@@ -333,11 +343,15 @@ function PerfilAluno() {
                         <TableCell>{p.end_date ? new Date(p.end_date).toLocaleDateString("pt-BR") : "—"}</TableCell>
                         <TableCell><Badge variant="secondary" className="capitalize">{p.status}</Badge></TableCell>
                         <TableCell className="text-right">
-                          <Button asChild size="sm" variant="outline">
-                            <Link to="/alunos/$studentId/prescricao/$planId" params={{ studentId, planId: p.id }}>
-                              <Settings2 className="h-3.5 w-3.5 mr-1" /> Personalizar
-                            </Link>
-                          </Button>
+                          {editPerms.canCustomizeTraining ? (
+                            <Button asChild size="sm" variant="outline">
+                              <Link to="/alunos/$studentId/prescricao/$planId" params={{ studentId, planId: p.id }}>
+                                <Settings2 className="h-3.5 w-3.5 mr-1" /> Personalizar
+                              </Link>
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

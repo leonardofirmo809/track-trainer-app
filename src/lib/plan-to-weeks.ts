@@ -2,12 +2,20 @@ import type { DayOfWeek, TrainingSession, WeekPlan } from "./training-session-ty
 import { DAYS_OF_WEEK, emptyDays, recalcSummary } from "./training-session-types";
 import { sessionLibrary } from "./session-library";
 import { newSessionId } from "./training-store";
+import { catalogPayloadToWeeks } from "./plan-catalog-to-weeks";
 
 /**
  * Best-effort adapter to derive WeekPlan[] from an arbitrary training_plans.payload.
  * Falls back to an empty 4-week skeleton if the payload shape is unknown.
+ *
+ * Prioridade: 1) payload.customization.weeks (edição manual via PrescricaoEditor) —
+ * sempre vence, para nunca pisar em cima de uma personalização já salva; 2) payload.weeks/
+ * semanas (formato genérico legado); 3) payload de catálogo (level/weekDays/currentPhase
+ * [+workoutOverrides]) — o formato real salvo pelo fluxo principal de planilha-{N}km, que
+ * precisa de `planType` (plan_type do plano) para saber qual catálogo/distância usar;
+ * 4) fallback de semanas vazias.
  */
-export function planPayloadToWeeks(payload: unknown, fallbackWeeks = 4): WeekPlan[] {
+export function planPayloadToWeeks(payload: unknown, fallbackWeeks = 4, planType?: string | null): WeekPlan[] {
   if (!payload || typeof payload !== "object") return blankWeeks(fallbackWeeks);
 
   const p = payload as Record<string, unknown>;
@@ -26,6 +34,13 @@ export function planPayloadToWeeks(payload: unknown, fallbackWeeks = 4): WeekPla
 
   if (Array.isArray(candidateWeeks) && candidateWeeks.length > 0) {
     return candidateWeeks.map((w, idx) => weekFromArbitrary(w, idx));
+  }
+
+  // Formato de catálogo (level/weekDays/currentPhase[/workoutOverrides]) — usado pelo
+  // fluxo principal das planilhas 5/10/21/42km.
+  if (planType) {
+    const fromCatalog = catalogPayloadToWeeks(p, planType);
+    if (fromCatalog) return fromCatalog;
   }
 
   return blankWeeks(fallbackWeeks);

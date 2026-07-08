@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, Save, Undo2, Plus, X, Pencil, Replace, GripVertical, Trash2, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowLeft, Save, Undo2, Plus, X, Pencil, Replace, GripVertical, Trash2, Sparkles } from "lucide-react";
 import { QuickSwapPopover } from "@/components/prescricao/QuickSwapPopover";
 import {
   DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors,
@@ -45,7 +45,7 @@ export function PrescricaoEditor({ studentId, planId, variant = "page", onSaved 
   const fetchPlan = useServerFn(getPlanCustomization);
   const savePlan = useServerFn(savePlanCustomization);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["plan-customization", planId],
     queryFn: () => fetchPlan({ data: { planId } }),
   });
@@ -58,7 +58,7 @@ export function PrescricaoEditor({ studentId, planId, variant = "page", onSaved 
     if (!data?.plan) return;
     const state = useTrainingStore.getState();
     if (state.prescription.id === planId) return;
-    const weeks = planPayloadToWeeks(data.plan.payload, 4);
+    const weeks = planPayloadToWeeks(data.plan.payload, 4, data.plan.plan_type);
     state.loadPrescription(planId, studentId, weeks);
   }, [data?.plan, planId, studentId]);
 
@@ -97,7 +97,31 @@ export function PrescricaoEditor({ studentId, planId, variant = "page", onSaved 
     else store.moveSession(from, to);
   };
 
-  if (isLoading || !data) return <p className="text-muted-foreground">Carregando…</p>;
+  if (isLoading) return <p className="text-muted-foreground">Carregando…</p>;
+
+  if (isError || !data) {
+    const status = error instanceof Response ? error.status : undefined;
+    const message =
+      status === 403
+        ? "Você não tem permissão para personalizar este treino."
+        : status === 404
+          ? "Plano não encontrado."
+          : "Não foi possível carregar a personalização deste treino.";
+
+    return (
+      <div className="space-y-4">
+        {variant === "page" && (
+          <Button asChild variant="ghost" size="sm" className="-ml-2">
+            <Link to="/alunos/$studentId" params={{ studentId }}><ArrowLeft /> Voltar para o aluno</Link>
+          </Button>
+        )}
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <AlertCircle className="size-4 mt-0.5 shrink-0" />
+          <span>{message}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn("space-y-5", variant === "page" && "max-w-[1400px]")}>

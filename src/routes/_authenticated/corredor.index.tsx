@@ -21,6 +21,11 @@ export const Route = createFileRoute("/_authenticated/corredor/")({ component: R
 
 const DIST_LABEL: Record<string, string> = { "10km": "10KM", "21km": "21KM (Meia)", "42km": "42KM (Maratona)" };
 
+function formatBrDate(iso: string): string {
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(iso + "T00:00:00") : new Date(iso);
+  return d.toLocaleDateString("pt-BR");
+}
+
 function RunnerHome() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -49,7 +54,13 @@ function RunnerHome() {
   const level = ((activePlan?.payload as { level?: number } | null)?.level) ?? profile?.goal_level ?? 1;
 
   const today = activePlan
-    ? buildRunnerToday(activePlan.payload, activePlan.start_date, activePlan.created_at)
+    ? buildRunnerToday(activePlan.payload, activePlan.start_date, activePlan.created_at, activePlan.plan_type)
+    : null;
+
+  const validityLine = activePlan?.start_date
+    ? activePlan.end_date
+      ? `Treino pronto para dia ${formatBrDate(activePlan.start_date)} com término em ${formatBrDate(activePlan.end_date)}`
+      : `Treino pronto para dia ${formatBrDate(activePlan.start_date)}`
     : null;
 
   const daysToRace = profile?.race_date
@@ -80,6 +91,12 @@ function RunnerHome() {
           </div>
         </div>
       </header>
+
+      {validityLine && (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground px-1">
+          <Calendar className="size-4 shrink-0" /> {validityLine}
+        </p>
+      )}
 
       {/* HERO: Treino de hoje */}
       {!today?.hasPlan ? (

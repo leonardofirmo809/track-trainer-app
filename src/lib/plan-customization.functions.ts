@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { assertCanManageStudentTraining } from "@/lib/company-permissions.server";
+import { assertCanManageStudentTraining, assertCanCustomizeStudentTraining } from "@/lib/company-permissions.server";
 
 const ZoneEnum = z.enum(["Z1", "Z2", "Z3", "Z4", "Z5"]);
 const DayEnum = z.enum(["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"]);
@@ -51,7 +51,7 @@ const WeekSchema = z.object({
 async function fetchPlanForCoach(planId: string, userId: string) {
   const { data: plan, error } = await supabaseAdmin
     .from("training_plans")
-    .select("id, coach_id, student_id, plan_type, payload")
+    .select("id, coach_id, student_id, plan_type, payload, start_date, end_date")
     .eq("id", planId)
     .maybeSingle();
   if (error) throw new Response(error.message, { status: 500 });
@@ -60,11 +60,27 @@ async function fetchPlanForCoach(planId: string, userId: string) {
   return plan;
 }
 
+// Usado apenas pelo fluxo de "Personalizar" (getPlanCustomization, savePlanCustomization,
+// savePlanWorkoutOverrides): qualquer membro da mesma empresa do aluno pode personalizar,
+// sem exigir can_manage_training. updatePlanStartDate/updatePlanEndDate continuam usando
+// fetchPlanForCoach (regra administrativa) — não é enfraquecida por esta função.
+async function fetchPlanForCustomization(planId: string, userId: string) {
+  const { data: plan, error } = await supabaseAdmin
+    .from("training_plans")
+    .select("id, coach_id, student_id, plan_type, payload")
+    .eq("id", planId)
+    .maybeSingle();
+  if (error) throw new Response(error.message, { status: 500 });
+  if (!plan) throw new Response("Plano não encontrado", { status: 404 });
+  await assertCanCustomizeStudentTraining(plan.student_id, userId);
+  return plan;
+}
+
 export const getPlanCustomization = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ planId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const plan = await fetchPlanForCoach(data.planId, context.userId);
+    const plan = await fetchPlanForCustomization(data.planId, context.userId);
     const { data: student } = await supabaseAdmin
       .from("students")
       .select("id, full_name, level, target_distance")
@@ -138,7 +154,7 @@ export const savePlanWorkoutOverrides = createServerFn({ method: "POST" })
     z.object({ planId: z.string().uuid(), overrides: OverridesSchema }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const plan = await fetchPlanForCoach(data.planId, context.userId);
+    const plan = await fetchPlanForCustomization(data.planId, context.userId);
     const basePayload = (plan.payload && typeof plan.payload === "object" ? plan.payload : {}) as Record<string, unknown>;
     const newPayload = {
       ...basePayload,
@@ -159,7 +175,7 @@ export const savePlanCustomization = createServerFn({ method: "POST" })
     z.object({ planId: z.string().uuid(), weeks: z.array(WeekSchema).max(60) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const plan = await fetchPlanForCoach(data.planId, context.userId);
+    const plan = await fetchPlanForCustomization(data.planId, context.userId);
     const basePayload = (plan.payload && typeof plan.payload === "object" ? plan.payload : {}) as Record<string, unknown>;
     const newPayload = {
       ...basePayload,
@@ -183,10 +199,35 @@ export const updatePlanStartDate = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    await fetchPlanForCoach(data.planId, context.userId);
+    const plan = await fetchPlanForCoach(data.planId, context.userId);
+    if (data.startDate && plan.end_date && data.startDate > plan.end_date) {
+      throw new Response("A data de início não pode ser posterior à data de término.", { status: 400 });
+    }
     const { error } = await supabaseAdmin
       .from("training_plans")
       .update({ start_date: data.startDate, updated_at: new Date().toISOString() })
+      .eq("id", data.planId);
+    if (error) throw new Response(error.message, { status: 500 });
+    return { ok: true as const };
+  });
+
+export const updatePlanEndDate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      planId: z.string().uuid(),
+      // ISO yyyy-mm-dd ou null para limpar
+      endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const plan = await fetchPlanForCoach(data.planId, context.userId);
+    if (data.endDate && plan.start_date && data.endDate < plan.start_date) {
+      throw new Response("A data de término não pode ser anterior à data de início.", { status: 400 });
+    }
+    const { error } = await supabaseAdmin
+      .from("training_plans")
+      .update({ end_date: data.endDate, updated_at: new Date().toISOString() })
       .eq("id", data.planId);
     if (error) throw new Response(error.message, { status: 500 });
     return { ok: true as const };

@@ -48,6 +48,7 @@ export function buildRunnerToday(
   payload: unknown,
   startDate: string | null,
   createdAt: string,
+  planType?: string | null,
 ): RunnerTodaySnapshot {
   const today = startOfDay(new Date());
   const todayKey = JS_DAY_TO_KEY[today.getDay()];
@@ -58,7 +59,7 @@ export function buildRunnerToday(
     return typeof v === "number" && v >= 1 && v <= 4 ? v : 1;
   })();
 
-  const weeks = planPayloadToWeeks(payload, 4);
+  const weeks = planPayloadToWeeks(payload, 4, planType);
   const hasPlan = weeks.some((w) => Object.values(w.days).some(Boolean));
 
   // Anchor: Monday of the week that contains start_date (or created_at)

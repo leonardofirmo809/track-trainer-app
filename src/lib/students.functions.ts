@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { canCustomizeStudentTraining } from "@/lib/company-permissions.server";
 
 // ── listAccessibleCompanies ───────────────────────────────────────────────────
 // Returns companies where the current user can create students.
@@ -64,8 +65,12 @@ export const getStudentPermissions = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
 
+    // Mesma fonte de permissão usada pelo backend do fluxo "Personalizar"
+    // (getPlanCustomization/savePlanCustomization) — mantém frontend e backend em sincronia.
+    const canCustomizeTraining = await canCustomizeStudentTraining(data.studentId, userId);
+
     const { data: isAdmin } = await supabaseAdmin.rpc("has_role", { _user_id: userId, _role: "admin" });
-    if (isAdmin) return { canEditCadastral: true, canEditTraining: true };
+    if (isAdmin) return { canEditCadastral: true, canEditTraining: true, canCustomizeTraining };
 
     const { data: student } = await supabaseAdmin
       .from("students")
@@ -73,12 +78,12 @@ export const getStudentPermissions = createServerFn({ method: "POST" })
       .eq("id", data.studentId)
       .single();
 
-    if (!student) return { canEditCadastral: false, canEditTraining: false };
+    if (!student) return { canEditCadastral: false, canEditTraining: false, canCustomizeTraining };
 
     // No company: only the assigned coach can edit
     if (!student.company_id) {
       const isCoach = student.coach_id === userId;
-      return { canEditCadastral: isCoach, canEditTraining: isCoach };
+      return { canEditCadastral: isCoach, canEditTraining: isCoach, canCustomizeTraining };
     }
 
     // Has company: check membership AND active company status
@@ -96,12 +101,13 @@ export const getStudentPermissions = createServerFn({ method: "POST" })
         .single(),
     ]);
 
-    if (!member || company?.status !== "active") return { canEditCadastral: false, canEditTraining: false };
+    if (!member || company?.status !== "active") return { canEditCadastral: false, canEditTraining: false, canCustomizeTraining };
 
     const isAdminRole = member.role === "owner" || member.role === "admin";
     return {
       canEditCadastral: isAdminRole || member.can_manage_students,
       canEditTraining: isAdminRole || member.can_manage_training,
+      canCustomizeTraining,
     };
   });
 

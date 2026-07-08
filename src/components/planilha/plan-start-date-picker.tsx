@@ -67,6 +67,7 @@ export function PlanStartDatePicker({
 
   async function handleSelect(d: Date | undefined) {
     if (!d) return;
+    const previous = date;
     setDate(d);
     if (!planId) return;
     setSaving(true);
@@ -74,6 +75,7 @@ export function PlanStartDatePicker({
       await updateFn({ data: { planId, startDate: toIsoDate(d) } });
       if (invalidateQueryKey) qc.invalidateQueries({ queryKey: invalidateQueryKey });
     } catch (e) {
+      setDate(previous);
       const msg = e instanceof Response ? await e.text() : (e as Error).message;
       toast.error(`Falha ao salvar data: ${msg}`);
     } finally {

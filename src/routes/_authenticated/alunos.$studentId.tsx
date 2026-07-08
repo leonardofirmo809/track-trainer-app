@@ -24,6 +24,13 @@ import { formatMmss } from "@/lib/teste-3km";
 
 export const Route = createFileRoute("/_authenticated/alunos/$studentId")({ component: PerfilAluno });
 
+function isPlanExpired(endDate: string | null): boolean {
+  if (!endDate) return false;
+  const d = new Date();
+  const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return endDate < todayIso;
+}
+
 function fmtPace(paceSec: number | null): string {
   if (!paceSec || paceSec <= 0) return "—";
   const m = Math.floor(paceSec / 60);
@@ -341,7 +348,12 @@ function PerfilAluno() {
                         <TableCell><Badge>{p.plan_type.toUpperCase()}</Badge></TableCell>
                         <TableCell>{p.start_date ? new Date(p.start_date).toLocaleDateString("pt-BR") : "—"}</TableCell>
                         <TableCell>{p.end_date ? new Date(p.end_date).toLocaleDateString("pt-BR") : "—"}</TableCell>
-                        <TableCell><Badge variant="secondary" className="capitalize">{p.status}</Badge></TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Badge variant="secondary" className="capitalize">{p.status}</Badge>
+                            {isPlanExpired(p.end_date) && <Badge variant="destructive">Vencido</Badge>}
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right">
                           {editPerms.canCustomizeTraining ? (
                             <Button asChild size="sm" variant="outline">

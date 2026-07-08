@@ -55,16 +55,18 @@ export function PlanEndDatePicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialEndDate]);
 
-  async function persist(iso: string | null) {
-    if (!planId) return;
+  async function persist(iso: string | null): Promise<boolean> {
+    if (!planId) return false;
     setSaving(true);
     try {
       await updateFn({ data: { planId, endDate: iso } });
       onChange?.(iso);
       if (invalidateQueryKey) qc.invalidateQueries({ queryKey: invalidateQueryKey });
+      return true;
     } catch (e) {
       const msg = e instanceof Response ? await e.text() : (e as Error).message;
       toast.error(`Falha ao salvar data: ${msg}`);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -72,13 +74,15 @@ export function PlanEndDatePicker({
 
   async function handleSelect(d: Date | undefined) {
     if (!d) return;
+    const previous = date;
     setDate(d);
-    await persist(toIsoDate(d));
+    if (!(await persist(toIsoDate(d)))) setDate(previous);
   }
 
   async function handleClear() {
+    const previous = date;
     setDate(undefined);
-    await persist(null);
+    if (!(await persist(null))) setDate(previous);
   }
 
   return (

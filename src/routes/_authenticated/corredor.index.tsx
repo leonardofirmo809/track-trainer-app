@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Calendar, RefreshCw, Trophy, ChevronRight, Layers, Target, Coffee, ArrowRight,
+  Calendar, RefreshCw, Trophy, ChevronRight, Layers, Target, Coffee, ArrowRight, AlertCircle,
 } from "lucide-react";
 import { getRunnerOverview } from "@/lib/runner.functions";
 import { useAuth } from "@/lib/auth-context";
@@ -24,6 +24,11 @@ const DIST_LABEL: Record<string, string> = { "10km": "10KM", "21km": "21KM (Meia
 function formatBrDate(iso: string): string {
   const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(iso + "T00:00:00") : new Date(iso);
   return d.toLocaleDateString("pt-BR");
+}
+
+function todayIsoDate(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function RunnerHome() {
@@ -63,6 +68,11 @@ function RunnerHome() {
       : `Treino pronto para dia ${formatBrDate(activePlan.start_date)}`
     : null;
 
+  // Plano vencido: end_date existe e já passou. Não escondemos o plano nem o histórico,
+  // só deixamos claro que ele não está mais vigente (decisão de produto — não mexer em
+  // status no banco nesta etapa).
+  const isPlanExpired = !!(activePlan?.end_date && activePlan.end_date < todayIsoDate());
+
   const daysToRace = profile?.race_date
     ? Math.max(0, Math.ceil((new Date(profile.race_date).getTime() - Date.now()) / 86_400_000))
     : null;
@@ -96,6 +106,15 @@ function RunnerHome() {
         <p className="flex items-center gap-2 text-sm text-muted-foreground px-1">
           <Calendar className="size-4 shrink-0" /> {validityLine}
         </p>
+      )}
+
+      {isPlanExpired && activePlan?.end_date && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          <AlertCircle className="size-4 mt-0.5 shrink-0" />
+          <span>
+            Este treino venceu em {formatBrDate(activePlan.end_date)}. Fale com seu treinador para receber uma nova planilha.
+          </span>
+        </div>
       )}
 
       {/* HERO: Treino de hoje */}

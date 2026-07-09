@@ -356,9 +356,14 @@ function PerfilAluno() {
                         </TableCell>
                         <TableCell className="text-right">
                           {editPerms.canCustomizeTraining ? (
-                            <Button asChild size="sm" variant="outline">
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              title="Personalização livre da prescrição — sobrescreve a visualização do aluno com semanas e sessões editadas manualmente."
+                            >
                               <Link to="/alunos/$studentId/prescricao/$planId" params={{ studentId, planId: p.id }}>
-                                <Settings2 className="h-3.5 w-3.5 mr-1" /> Personalizar
+                                <Settings2 className="h-3.5 w-3.5 mr-1" /> Editor avançado
                               </Link>
                             </Button>
                           ) : (

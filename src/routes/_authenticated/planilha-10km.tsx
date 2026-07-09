@@ -371,12 +371,17 @@ function Planilha10kmPage() {
             <CardTitle className="pt-0.5">4. {level === 1 ? "Treinos (4 semanas)" : "Fase e treinos"}</CardTitle>
             <div className="flex gap-2 flex-wrap">
               {dataQuery.data?.plan?.id ? (
-                <Button variant="outline" size="sm" onClick={() => setEditorOpen(true)}>
-                  <Settings2 /> Personalizar planilha
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditorOpen(true)}
+                  title="Ajustes pontuais nos treinos gerados pela planilha — mantém o vínculo com o modelo."
+                >
+                  <Settings2 /> Ajustar modelo
                 </Button>
               ) : (
                 <Button variant="outline" size="sm" disabled title="Salve a planilha primeiro">
-                  <Settings2 /> Personalizar planilha
+                  <Settings2 /> Ajustar modelo
                 </Button>
               )}
               <PlanStartDatePicker

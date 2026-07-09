@@ -30,7 +30,7 @@ export function softDayCountMessage10km(level: 1 | 2, weekDays: DayCode[]): stri
   const n = weekDays.length;
   if (n === 0 || n === suggested) return null;
   if (n > suggested) {
-    return `Sugestão para Nível ${level}: ${suggested} dias. Os ${n - suggested} dia(s) extras ficarão como descanso (ou adicione treinos novos no Personalizar planilha).`;
+    return `Sugestão para Nível ${level}: ${suggested} dias. Os ${n - suggested} dia(s) extras ficarão como descanso (ou adicione treinos novos no Ajustar modelo).`;
   }
-  return `Sugestão para Nível ${level}: ${suggested} dias. Você selecionou menos — os treinos que sobrarem ficarão na bandeja "Treinos sem dia" do Personalizar planilha.`;
+  return `Sugestão para Nível ${level}: ${suggested} dias. Você selecionou menos — os treinos que sobrarem ficarão na bandeja "Treinos sem dia" do Ajustar modelo.`;
 }

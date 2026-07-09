@@ -19,5 +19,5 @@ export function softDayCountMessage42km(_level: 1 | 2, weekDays: DayCode[]): str
   if (n > suggested) {
     return `Sugestão: ${suggested} dias. Os ${n - suggested} dia(s) extras ficarão como descanso.`;
   }
-  return `Sugestão: ${suggested} dias. Os treinos que sobrarem ficarão na bandeja "Treinos sem dia" do Personalizar planilha.`;
+  return `Sugestão: ${suggested} dias. Os treinos que sobrarem ficarão na bandeja "Treinos sem dia" do Ajustar modelo.`;
 }

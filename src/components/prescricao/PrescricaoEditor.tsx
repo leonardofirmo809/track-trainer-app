@@ -132,9 +132,12 @@ export function PrescricaoEditor({ studentId, planId, variant = "page", onSaved 
               <Link to="/alunos/$studentId" params={{ studentId }}><ArrowLeft /> Voltar para o aluno</Link>
             </Button>
           )}
-          <h1 className="text-2xl font-display font-bold">Personalizar prescrição</h1>
+          <h1 className="text-2xl font-display font-bold">Editor avançado de prescrição</h1>
           <p className="text-sm text-muted-foreground">
             {data.student?.full_name} · {data.plan.plan_type?.toUpperCase()}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Edite livremente as semanas e sessões deste aluno. Isso sobrescreve a visualização gerada pelo modelo da planilha.
           </p>
         </div>
         <div className="flex items-center gap-2">

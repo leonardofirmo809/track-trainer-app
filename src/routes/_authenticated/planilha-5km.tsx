@@ -124,7 +124,7 @@ function Planilha5kmPage() {
 
   const suggestedCount = level === 1 ? 3 : 4;
   const softMessage = weekDays.length > 0 && weekDays.length !== suggestedCount
-    ? `Sugestão para Nível ${level}: ${suggestedCount} dias. Você pode escolher quantos quiser — ajuste a alocação dos treinos no Personalizar planilha.`
+    ? `Sugestão para Nível ${level}: ${suggestedCount} dias. Você pode escolher quantos quiser — ajuste a alocação dos treinos no Ajustar modelo.`
     : null;
 
   // Resumo de todas as fases (blocos de 4 semanas)
@@ -377,12 +377,17 @@ function Planilha5kmPage() {
             <CardTitle className="pt-0.5">4. Fase e treinos</CardTitle>
             <div className="flex gap-2 flex-wrap">
               {dataQuery.data?.plan?.id ? (
-                <Button variant="outline" size="sm" onClick={() => setEditorOpen(true)}>
-                  <Settings2 /> Personalizar planilha
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditorOpen(true)}
+                  title="Ajustes pontuais nos treinos gerados pela planilha — mantém o vínculo com o modelo."
+                >
+                  <Settings2 /> Ajustar modelo
                 </Button>
               ) : (
                 <Button variant="outline" size="sm" disabled title="Salve a planilha primeiro">
-                  <Settings2 /> Personalizar planilha
+                  <Settings2 /> Ajustar modelo
                 </Button>
               )}
               <PlanStartDatePicker

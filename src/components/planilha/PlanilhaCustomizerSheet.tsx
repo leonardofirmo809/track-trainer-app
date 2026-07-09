@@ -230,9 +230,10 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-[1100px] overflow-y-auto p-6 space-y-4">
         <SheetHeader>
-          <SheetTitle>Personalizar planilha</SheetTitle>
+          <SheetTitle>Ajustar modelo</SheetTitle>
           <SheetDescription>
-            Edite, adicione ou remova treinos. As mudanças são aplicadas à planilha do aluno após salvar.
+            Faça ajustes pontuais nos treinos gerados pela planilha — edite, adicione ou remova treinos mantendo
+            o vínculo com o modelo. As mudanças são aplicadas à planilha do aluno após salvar.
           </SheetDescription>
         </SheetHeader>
 

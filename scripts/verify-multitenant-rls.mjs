@@ -11,7 +11,13 @@
  *   SUPABASE_SERVICE_ROLE_KEY   (setup/teardown only — never used for assertions)
  *   SUPABASE_PUBLISHABLE_KEY    (anon key — used for the actual RLS-scoped queries)
  *
- * Run: node scripts/verify-multitenant-rls.mjs
+ * This script uses the SERVICE ROLE key to create and delete real rows
+ * (companies/users/students/tests/training_plans) wherever SUPABASE_URL
+ * points to. NEVER run it against a production project. As a safety net it
+ * refuses to run unless ALLOW_RLS_WRITE_TESTS=true is set AND SUPABASE_URL
+ * does not look like a known production hostname — see the guard below.
+ *
+ * Run: ALLOW_RLS_WRITE_TESTS=true node scripts/verify-multitenant-rls.mjs
  */
 import { createClient } from "@supabase/supabase-js";
 
@@ -22,6 +28,34 @@ const ANON_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !ANON_KEY) {
   console.error(
     "Missing env vars. Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_PUBLISHABLE_KEY",
+  );
+  process.exit(1);
+}
+
+// ── Safety guard: this script writes/deletes real rows with the service role
+// key, bypassing RLS entirely for setup/teardown. Require an explicit opt-in
+// so it can never run "by accident" just because envs happen to be exported
+// in the shell (e.g. a leftover `SUPABASE_URL` from a prod deploy session).
+if (process.env.ALLOW_RLS_WRITE_TESTS !== "true") {
+  console.error(
+    "Refusing to run: this script performs real writes/deletes with the " +
+      "service role key (companies, users, students, tests, training_plans).\n" +
+      "Set ALLOW_RLS_WRITE_TESTS=true explicitly to confirm SUPABASE_URL " +
+      `points to a local/staging project you intend to test, not production.\n` +
+      `Current SUPABASE_URL: ${SUPABASE_URL}`,
+  );
+  process.exit(1);
+}
+
+// Known 8020Pace production project ref (see supabase/config.toml /
+// src/integrations/supabase/public-config.ts). Refuse even with the opt-in
+// flag set — this is a hard stop, not just a warning, to protect prod data.
+const PRODUCTION_PROJECT_REF = "eyivvedcwecrgpuijoyy";
+if (SUPABASE_URL.includes(PRODUCTION_PROJECT_REF)) {
+  console.error(
+    `Refusing to run: SUPABASE_URL points to the known PRODUCTION project ` +
+      `(${PRODUCTION_PROJECT_REF}). This script must only run against a ` +
+      "local or staging Supabase project.",
   );
   process.exit(1);
 }
@@ -72,12 +106,17 @@ async function main() {
   const runner1Id = await createUser(`qa-runner-1-${stamp}@example.invalid`);
   const runner2Id = await createUser(`qa-runner-2-${stamp}@example.invalid`);
   const globalAdminId = await createUser(`qa-admin-${stamp}@example.invalid`);
+  // Company A staff member with can_manage_students=true but no elevated role —
+  // used to prove students INSERT is scoped to the membership's OWN company,
+  // not "any active company the user has this flag in" (the tautology bug).
+  const staffAId = await createUser(`qa-staff-a-${stamp}@example.invalid`);
 
   // Plain company members (no can_manage_students / can_manage_training) —
   // the exact case that used to leak the whole company roster.
   await admin.from("company_members").insert([
     { company_id: companyA.id, user_id: coachAId, role: "coach", can_manage_students: false, can_manage_training: false },
     { company_id: companyB.id, user_id: coachBId, role: "coach", can_manage_students: false, can_manage_training: false },
+    { company_id: companyA.id, user_id: staffAId, role: "coach", can_manage_students: true, can_manage_training: false },
   ]);
 
   await admin.from("user_roles").insert({ user_id: globalAdminId, role: "admin" });
@@ -189,6 +228,146 @@ async function main() {
       "Coach A não vê training_plans da Empresa B",
       ids.includes(planA.id) && !ids.includes(planB.id),
       `visible=${JSON.stringify(ids)}`,
+    );
+  }
+
+  // 6. Coach A tenta inserir teste falso em aluno da Empresa B (cross-tenant INSERT).
+  {
+    const client = await signIn(`qa-coach-a-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("tests")
+      .insert({ student_id: studentB.id, coach_id: coachAId, test_type: "3km", test_date: "2026-01-01" });
+    record(
+      "Coach A NÃO consegue inserir teste falso em aluno da Empresa B",
+      !!error,
+      error ? `bloqueado (${error.code ?? error.message})` : "INSERIU SEM ERRO — RLS QUEBRADA",
+    );
+  }
+
+  // 7. Coach A tenta inserir training_plan falso em aluno da Empresa B (cross-tenant INSERT).
+  {
+    const client = await signIn(`qa-coach-a-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("training_plans")
+      .insert({ student_id: studentB.id, coach_id: coachAId, plan_type: "10km", status: "ativa", payload: {} });
+    record(
+      "Coach A NÃO consegue inserir training_plan falso em aluno da Empresa B",
+      !!error,
+      error ? `bloqueado (${error.code ?? error.message})` : "INSERIU SEM ERRO — RLS QUEBRADA",
+    );
+  }
+
+  // 8. Sanity: Coach A consegue inserir teste no próprio aluno (fluxo legítimo preservado).
+  {
+    const client = await signIn(`qa-coach-a-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("tests")
+      .insert({ student_id: studentA.id, coach_id: coachAId, test_type: "3km", test_date: "2026-01-01" });
+    record(
+      "Coach A consegue inserir teste no próprio aluno (fluxo legítimo preservado)",
+      !error,
+      error ? `error=${error.message}` : "ok",
+    );
+  }
+
+  // 9. Coach A tenta mover o próprio aluno para a Empresa B (cross-tenant UPDATE).
+  {
+    const client = await signIn(`qa-coach-a-${stamp}@example.invalid`);
+    const { error } = await client.from("students").update({ company_id: companyB.id }).eq("id", studentA.id);
+    record(
+      "Coach A NÃO consegue mover o próprio aluno para a Empresa B",
+      !!error,
+      error ? `bloqueado (${error.code ?? error.message})` : "ATUALIZOU SEM ERRO — RLS QUEBRADA",
+    );
+  }
+
+  // 10. Coach A tenta reatribuir user_id do próprio aluno (sequestro de vínculo com corredor).
+  {
+    const client = await signIn(`qa-coach-a-${stamp}@example.invalid`);
+    const { error } = await client.from("students").update({ user_id: runner2Id }).eq("id", studentA.id);
+    record(
+      "Coach A NÃO consegue reatribuir user_id do próprio aluno",
+      !!error,
+      error ? `bloqueado (${error.code ?? error.message})` : "ATUALIZOU SEM ERRO — RLS QUEBRADA",
+    );
+  }
+
+  // 11. Sanity: Coach A consegue atualizar campo comum (full_name) do próprio aluno.
+  {
+    const client = await signIn(`qa-coach-a-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("students")
+      .update({ full_name: `Aluno QA A ${stamp} (editado)` })
+      .eq("id", studentA.id);
+    record(
+      "Coach A consegue editar campo comum do próprio aluno (fluxo legítimo preservado)",
+      !error,
+      error ? `error=${error.message}` : "ok",
+    );
+  }
+
+  // 12. Coach A (plain member, sem can_manage_students) tenta inserir aluno
+  //     com company_id da Empresa B — cross-tenant INSERT em students.
+  {
+    const client = await signIn(`qa-coach-a-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("students")
+      .insert({ full_name: `Fake Student ${stamp}`, coach_id: coachAId, company_id: companyB.id });
+    record(
+      "Coach A NÃO consegue inserir aluno com company_id da Empresa B",
+      !!error,
+      error ? `bloqueado (${error.code ?? error.message})` : "INSERIU SEM ERRO — RLS QUEBRADA",
+    );
+  }
+
+  // 13. Staff A (can_manage_students=true só na Empresa A) tenta inserir aluno
+  //     com company_id da Empresa B. Isto é exatamente o cenário da tautologia:
+  //     antes da correção, o EXISTS só confirmava "é can_manage_students de
+  //     ALGUMA empresa ativa" (a própria Empresa A), sem checar que era a
+  //     MESMA empresa do company_id sendo gravado (Empresa B) — então isto
+  //     passava indevidamente. Agora deve ser bloqueado.
+  {
+    const client = await signIn(`qa-staff-a-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("students")
+      .insert({ full_name: `Fake Student via staff ${stamp}`, coach_id: staffAId, company_id: companyB.id });
+    record(
+      "Staff A (can_manage_students só na Empresa A) NÃO consegue inserir aluno com company_id da Empresa B",
+      !!error,
+      error ? `bloqueado (${error.code ?? error.message})` : "INSERIU SEM ERRO — RLS QUEBRADA (tautologia)",
+    );
+  }
+
+  // 14. Sanity: Staff A insere aluno com company_id da PRÓPRIA Empresa A — permitido.
+  {
+    const client = await signIn(`qa-staff-a-${stamp}@example.invalid`);
+    const { data, error } = await client
+      .from("students")
+      .insert({ full_name: `Aluno legítimo via staff ${stamp}`, coach_id: staffAId, company_id: companyA.id })
+      .select("id")
+      .single();
+    record(
+      "Staff A consegue inserir aluno na própria Empresa A (fluxo legítimo preservado)",
+      !error && !!data,
+      error ? `error=${error.message}` : "ok",
+    );
+  }
+
+  // 15. Coach A tenta inserir aluno já vinculando user_id a uma conta arbitrária.
+  //     Usa globalAdminId (não runner1Id/runner2Id) de propósito: esses dois já
+  //     têm uma linha em students via students_user_id_unique, então um insert
+  //     duplicado seria bloqueado pela constraint mesmo com RLS quebrada,
+  //     mascarando o resultado do teste. globalAdminId nunca tem student
+  //     associado, então isto isola exclusivamente o comportamento da RLS.
+  {
+    const client = await signIn(`qa-coach-a-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("students")
+      .insert({ full_name: `Fake Student user_id ${stamp}`, coach_id: coachAId, user_id: globalAdminId });
+    record(
+      "Coach A NÃO consegue inserir aluno com user_id arbitrário",
+      !!error,
+      error ? `bloqueado (${error.code ?? error.message})` : "INSERIU SEM ERRO — RLS QUEBRADA",
     );
   }
 }

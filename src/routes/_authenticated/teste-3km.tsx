@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, ChevronRight, Save, Calculator, FileDown } from "lucide-react";
+import { Home, ChevronRight, Save, Calculator, FileDown, UserPlus } from "lucide-react";
 import {
   calcularTeste3km, calcularProva5km, calcularProva10km, calcularCooper12min,
   formatMmss, parseMmss, parseHmmss, EVAL_LIMITS,
@@ -21,6 +21,7 @@ import {
 import { saveTeste3km } from "@/lib/tests-3km.functions";
 import { useCoachBranding } from "@/lib/use-coach-branding";
 import { generateTeste3kmPdf, downloadPdf } from "@/lib/teste-3km-pdf";
+import { StudentCreateModal } from "@/components/student-create-modal";
 
 export const Route = createFileRoute("/_authenticated/teste-3km")({ component: Teste3kmPage });
 
@@ -50,6 +51,7 @@ function Teste3kmPage() {
   const [result, setResult] = useState<Teste3kmResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const branding = useCoachBranding();
 
   const students = useQuery({
@@ -88,6 +90,14 @@ function Teste3kmPage() {
       if (digits.length >= 3) masked = `${digits.slice(0, digits.length - 2)}:${digits.slice(-2)}`;
       setTempo(masked);
     }
+  }
+
+  function handleStudentCreated(student: { id: string; full_name: string }) {
+    qc.setQueryData<{ id: string; full_name: string }[]>(["students-list"], (old) =>
+      old ? [...old, student].sort((a, b) => a.full_name.localeCompare(b.full_name)) : old
+    );
+    qc.invalidateQueries({ queryKey: ["students-list"] });
+    setStudentId(student.id);
   }
 
   function handleLimpar() {
@@ -158,7 +168,14 @@ function Teste3kmPage() {
         },
       });
       toast.success(`Avaliação salva no perfil de ${studentName}`);
+      // Invalida o histórico de testes do aluno e os dados de todas as planilhas
+      // (cada distância usa sua própria query key) para que o teste recém-salvo
+      // seja reconhecido imediatamente ao gerar planilha, sem precisar recarregar.
       qc.invalidateQueries({ queryKey: ["tests", studentId] });
+      qc.invalidateQueries({ queryKey: ["planilha-5km", studentId] });
+      qc.invalidateQueries({ queryKey: ["planilha-10km", studentId] });
+      qc.invalidateQueries({ queryKey: ["planilha-21km", studentId] });
+      qc.invalidateQueries({ queryKey: ["planilha-42km", studentId] });
       setResult(null);
       setTempo("");
       setMeters("");
@@ -214,13 +231,21 @@ function Teste3kmPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="md:col-span-1">
               <Label htmlFor="aluno">Aluno (opcional)</Label>
-              <Select value={studentId || "__none__"} onValueChange={(v) => setStudentId(v === "__none__" ? "" : v)}>
-                <SelectTrigger id="aluno"><SelectValue placeholder={students.isLoading ? "Carregando…" : "Nenhum (avulso)"} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Nenhum (avulso) —</SelectItem>
-                  {students.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={studentId || "__none__"} onValueChange={(v) => setStudentId(v === "__none__" ? "" : v)}>
+                  <SelectTrigger id="aluno" className="flex-1"><SelectValue placeholder={students.isLoading ? "Carregando…" : "Nenhum (avulso)"} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Nenhum (avulso) —</SelectItem>
+                    {students.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="icon" onClick={() => setCreateOpen(true)} title="Cadastrar aluno">
+                  <UserPlus />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Não encontrou o aluno? Cadastre rapidamente e continue o teste.
+              </p>
             </div>
             <div>
               {kind === "cooper" ? (
@@ -318,6 +343,8 @@ function Teste3kmPage() {
           </CardContent>
         </Card>
       )}
+
+      <StudentCreateModal open={createOpen} onOpenChange={setCreateOpen} onCreated={handleStudentCreated} />
     </div>
   );
 }

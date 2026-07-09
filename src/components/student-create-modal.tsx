@@ -24,7 +24,12 @@ interface Company { id: string; name: string }
 
 const EMPTY_FORM = { full_name: "", email: "", phone: "" };
 
-export function StudentCreateModal({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+export function StudentCreateModal({ open, onOpenChange, onCreated }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  /** Called with the newly created student right after a successful save. */
+  onCreated?: (student: { id: string; full_name: string }) => void;
+}) {
   const isMobile = useIsMobile();
   const qc = useQueryClient();
 
@@ -80,7 +85,7 @@ export function StudentCreateModal({ open, onOpenChange }: { open: boolean; onOp
     }
     setSaving(true);
     try {
-      await createFn({
+      const created = await createFn({
         data: {
           fullName: parsed.data.full_name,
           email: parsed.data.email || undefined,
@@ -90,6 +95,7 @@ export function StudentCreateModal({ open, onOpenChange }: { open: boolean; onOp
       });
       toast.success("Aluno cadastrado!");
       qc.invalidateQueries({ queryKey: ["students"] });
+      onCreated?.({ id: created.id, full_name: parsed.data.full_name });
       reset();
       onOpenChange(false);
     } catch (e: unknown) {

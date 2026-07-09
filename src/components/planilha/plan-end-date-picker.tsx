@@ -27,7 +27,11 @@ function toIsoDate(d: Date): string {
 }
 
 export type PlanEndDatePickerProps = {
-  /** ID do plano salvo. Quando ausente, o campo fica desabilitado. */
+  /**
+   * ID do plano salvo. Quando ausente, o picker funciona em modo "pendente":
+   * o valor escolhido não é persistido aqui (não há plano ainda para salvar),
+   * apenas repassado via onChange para o pai enviar na criação do plano.
+   */
   planId: string | null | undefined;
   /** end_date salvo no banco (yyyy-mm-dd). Ausente = treino sem término definido. */
   initialEndDate: string | null | undefined;
@@ -74,14 +78,25 @@ export function PlanEndDatePicker({
 
   async function handleSelect(d: Date | undefined) {
     if (!d) return;
+    const iso = toIsoDate(d);
     const previous = date;
     setDate(d);
-    if (!(await persist(toIsoDate(d)))) setDate(previous);
+    if (!planId) {
+      // Plano ainda não existe — mantém o valor localmente; o pai envia este
+      // valor pendente na criação do plano (ex: ao clicar "Aplicar configuração").
+      onChange?.(iso);
+      return;
+    }
+    if (!(await persist(iso))) setDate(previous);
   }
 
   async function handleClear() {
     const previous = date;
     setDate(undefined);
+    if (!planId) {
+      onChange?.(null);
+      return;
+    }
     if (!(await persist(null))) setDate(previous);
   }
 
@@ -93,13 +108,13 @@ export function PlanEndDatePicker({
             variant="outline"
             size="sm"
             aria-label="Data de término do treino"
-            title={!planId ? "Salve a planilha primeiro" : "Data de término do treino"}
+            title={!planId ? "Data será salva ao aplicar a configuração" : "Data de término do treino"}
             className={cn(
               "justify-start text-left font-normal",
               date && "rounded-r-none border-r-0",
               !date && "text-muted-foreground",
             )}
-            disabled={!planId}
+            disabled={saving}
           >
             <CalendarIcon className="mr-2 size-4" />
             Término: {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : "não definido"}

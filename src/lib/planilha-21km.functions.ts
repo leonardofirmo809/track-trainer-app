@@ -11,6 +11,8 @@ const configSchema = z.object({
   level: z.union([z.literal(1), z.literal(2)]),
   weekDays: z.array(DAY).min(1).max(7),
   currentPhase: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+  // ISO yyyy-mm-dd. Omitido = não altera end_date (update) / sem término definido (insert).
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 export const getPlanilha21kmData = createServerFn({ method: "GET" })
@@ -49,8 +51,12 @@ export const savePlanilha21kmConfig = createServerFn({ method: "POST" })
 
     const { data: existing } = await supabaseAdmin
       .from("training_plans")
-      .select("id, payload").eq("student_id", data.studentId).eq("plan_type", "21km").eq("status", "ativa")
+      .select("id, payload, start_date").eq("student_id", data.studentId).eq("plan_type", "21km").eq("status", "ativa")
       .order("updated_at", { ascending: false }).limit(1);
+
+    if (data.endDate && existing?.[0]?.start_date && data.endDate < existing[0].start_date) {
+      throw new Response("A data de término não pode ser anterior à data de início.", { status: 400 });
+    }
 
     const existingPayload =
       existing?.[0]?.payload && typeof existing[0].payload === "object" && !Array.isArray(existing[0].payload)
@@ -67,7 +73,11 @@ export const savePlanilha21kmConfig = createServerFn({ method: "POST" })
     if (existing?.[0]) {
       const { error } = await supabaseAdmin
         .from("training_plans")
-        .update({ payload, updated_at: new Date().toISOString() })
+        .update({
+          payload,
+          updated_at: new Date().toISOString(),
+          ...(data.endDate !== undefined ? { end_date: data.endDate } : {}),
+        })
         .eq("id", existing[0].id);
       if (error) throw new Response(error.message, { status: 500 });
       return { id: existing[0].id };
@@ -80,6 +90,7 @@ export const savePlanilha21kmConfig = createServerFn({ method: "POST" })
           plan_type: "21km",
           status: "ativa",
           payload,
+          end_date: data.endDate ?? null,
         })
         .select("id").single();
       if (error) throw new Response(error.message, { status: 500 });

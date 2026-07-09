@@ -64,6 +64,7 @@ function Planilha5kmPage() {
   const [exporting, setExporting] = useState(false);
   const [garminOpen, setGarminOpen] = useState(false);
   const [pdfStartDate, setPdfStartDate] = useState<string | null>(null);
+  const [pendingEndDate, setPendingEndDate] = useState<string | null>(null);
   const branding = useCoachBranding();
 
   const students = useQuery({
@@ -185,6 +186,7 @@ function Planilha5kmPage() {
     try {
       await saveFn({ data: {
         studentId, level, daysPerWeek: weekDays.length, weekDays, currentPhase: opts.phase ?? phase,
+        endDate: pendingEndDate ?? undefined,
       }});
       qc.invalidateQueries({ queryKey: ["planilha-5km", studentId] });
     } catch (e) {
@@ -354,6 +356,21 @@ function Planilha5kmPage() {
               )}
             </div>
 
+            <div>
+              <Label>Data de término</Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Opcional. Use para definir até quando este treino ficará válido.
+              </p>
+              <div className="mt-2">
+                <PlanEndDatePicker
+                  planId={dataQuery.data?.plan?.id ?? null}
+                  initialEndDate={(dataQuery.data?.plan as { end_date?: string | null } | null)?.end_date ?? null}
+                  invalidateQueryKey={["planilha-5km", studentId] as const}
+                  onChange={setPendingEndDate}
+                />
+              </div>
+            </div>
+
             {validation && (
               <p className="text-xs text-amber-600 flex items-center gap-1">
                 <AlertTriangle className="size-3" /> {validation}
@@ -396,11 +413,6 @@ function Planilha5kmPage() {
                 fallbackDate={dataQuery.data?.plan?.created_at ?? null}
                 invalidateQueryKey={["planilha-5km", studentId] as const}
                 onChange={setPdfStartDate}
-              />
-              <PlanEndDatePicker
-                planId={dataQuery.data?.plan?.id ?? null}
-                initialEndDate={(dataQuery.data?.plan as { end_date?: string | null } | null)?.end_date ?? null}
-                invalidateQueryKey={["planilha-5km", studentId] as const}
               />
               <Button onClick={handleExportPdf} disabled={exporting} size="sm">
                 <Download /> {exporting ? "Gerando…" : "Exportar PDF"}

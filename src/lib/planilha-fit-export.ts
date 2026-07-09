@@ -117,5 +117,8 @@ function workoutToFitSteps(wkt: WorkoutForFit): FitWorkoutStep[] {
 export function workoutToFitBlob(wkt: WorkoutForFit, workoutName: string): Blob {
   const steps = workoutToFitSteps(wkt);
   const data  = generateFitWorkout({ name: workoutName.slice(0, 15), steps });
-  return new Blob([data], { type: "application/octet-stream" });
+  // generateFitWorkout returns Uint8Array<ArrayBufferLike>, but BlobPart requires
+  // Uint8Array<ArrayBuffer>. Copying into a fresh Uint8Array narrows the buffer type.
+  const bytes = new Uint8Array(data);
+  return new Blob([bytes], { type: "application/octet-stream" });
 }

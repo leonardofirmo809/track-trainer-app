@@ -23,6 +23,7 @@ dist-ssr
 
 # Supabase
 supabase/.temp/
+supabase/.branches/
 
 # Wrangler / Cloudflare
 .wrangler/

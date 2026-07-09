@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { canCustomizeStudentTraining } from "@/lib/company-permissions.server";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 // ── listAccessibleCompanies ───────────────────────────────────────────────────
 // Returns companies where the current user can create students.
@@ -177,7 +178,7 @@ export const updateStudent = createServerFn({ method: "POST" })
       }
     }
 
-    const patch: Record<string, unknown> = {};
+    const patch: TablesUpdate<"students"> = {};
 
     if (data.updateCadastral) {
       if (!canEditCadastral) throw new Response("Forbidden: sem permissão para editar dados cadastrais.", { status: 403 });

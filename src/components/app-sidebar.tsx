@@ -100,32 +100,32 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin/treinadores")} tooltip="Treinadores" className={activeCls}>
+                  <SidebarMenuButton asChild isActive={isActive({ url: "/admin/treinadores" })} tooltip="Treinadores" className={activeCls}>
                     <Link to="/admin/treinadores" onClick={closeOnMobile}><Users /><span>Treinadores</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin/alunos")} tooltip="Alunos" className={activeCls}>
+                  <SidebarMenuButton asChild isActive={isActive({ url: "/admin/alunos" })} tooltip="Alunos" className={activeCls}>
                     <Link to="/admin/alunos" onClick={closeOnMobile}><ClipboardList /><span>Alunos</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin/auditoria")} tooltip="Auditoria" className={activeCls}>
+                  <SidebarMenuButton asChild isActive={isActive({ url: "/admin/auditoria" })} tooltip="Auditoria" className={activeCls}>
                     <Link to="/admin/auditoria" onClick={closeOnMobile}><ScrollText /><span>Auditoria</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin/usuarios")} tooltip="Usuários" className={activeCls}>
+                  <SidebarMenuButton asChild isActive={isActive({ url: "/admin/usuarios" })} tooltip="Usuários" className={activeCls}>
                     <Link to="/admin/usuarios" onClick={closeOnMobile}><UserCog /><span>Usuários</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin/empresas")} tooltip="Empresas" className={activeCls}>
+                  <SidebarMenuButton asChild isActive={isActive({ url: "/admin/empresas" })} tooltip="Empresas" className={activeCls}>
                     <Link to="/admin/empresas" onClick={closeOnMobile}><Building2 /><span>Empresas</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/admin/configuracoes")} tooltip="Configurações" className={activeCls}>
+                  <SidebarMenuButton asChild isActive={isActive({ url: "/admin/configuracoes" })} tooltip="Configurações" className={activeCls}>
                     <Link to="/admin/configuracoes" onClick={closeOnMobile}><Settings /><span>Configurações</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -370,6 +370,222 @@ async function main() {
       error ? `bloqueado (${error.code ?? error.message})` : "INSERIU SEM ERRO — RLS QUEBRADA",
     );
   }
+
+  // ── 16-26: runner UPDATE/DELETE só em training_plans/tests de autoatendimento
+  //    (coach_id IS NULL), nunca em registro criado pelo treinador. Fixado em
+  //    20260709130000_restrict_runner_write_to_self_service_training_data.sql.
+  const { data: coachPlanForRunner1 } = await admin
+    .from("training_plans")
+    .insert({ student_id: runnerStudent1.id, coach_id: coachAId, plan_type: "10km", status: "ativa", payload: {} })
+    .select("id")
+    .single();
+  const { data: coachTestForRunner1 } = await admin
+    .from("tests")
+    .insert({ student_id: runnerStudent1.id, coach_id: coachAId, test_type: "3km", test_date: "2026-01-01" })
+    .select("id")
+    .single();
+
+  // 16. Runner 1 tenta UPDATE em training_plan criado pelo treinador (coach_id
+  //     preenchido). A policy usa USING, então a linha simplesmente não é
+  //     "vista" pelo UPDATE — não gera erro, só afeta 0 linhas. Confirmamos
+  //     isso via .select() (array vazio) e reconferindo com o client admin
+  //     que o valor original não mudou.
+  {
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { data, error } = await client
+      .from("training_plans")
+      .update({ status: "concluida" })
+      .eq("id", coachPlanForRunner1.id)
+      .select("id");
+    const { data: after } = await admin
+      .from("training_plans").select("status").eq("id", coachPlanForRunner1.id).single();
+    record(
+      "Runner 1 NÃO consegue atualizar training_plan criado pelo treinador (coach_id preenchido)",
+      !error && (data?.length ?? 0) === 0 && after?.status === "ativa",
+      error ? `error inesperado=${error.message}` : `rows_affected=${data?.length ?? 0}, status_final=${after?.status}`,
+    );
+  }
+
+  // 17. Runner 1 tenta DELETE em training_plan criado pelo treinador.
+  {
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { data, error } = await client
+      .from("training_plans")
+      .delete()
+      .eq("id", coachPlanForRunner1.id)
+      .select("id");
+    const { data: stillThere } = await admin
+      .from("training_plans").select("id").eq("id", coachPlanForRunner1.id).maybeSingle();
+    record(
+      "Runner 1 NÃO consegue deletar training_plan criado pelo treinador (coach_id preenchido)",
+      !error && (data?.length ?? 0) === 0 && !!stillThere,
+      error ? `error inesperado=${error.message}` : `rows_affected=${data?.length ?? 0}, ainda_existe=${!!stillThere}`,
+    );
+  }
+
+  // 18. Runner 1 tenta UPDATE em test criado pelo treinador (coach_id preenchido).
+  {
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { data, error } = await client
+      .from("tests")
+      .update({ pace_seconds_per_km: 200 })
+      .eq("id", coachTestForRunner1.id)
+      .select("id");
+    const { data: after } = await admin
+      .from("tests").select("pace_seconds_per_km").eq("id", coachTestForRunner1.id).single();
+    record(
+      "Runner 1 NÃO consegue atualizar test criado pelo treinador (coach_id preenchido)",
+      !error && (data?.length ?? 0) === 0 && after?.pace_seconds_per_km !== 200,
+      error ? `error inesperado=${error.message}` : `rows_affected=${data?.length ?? 0}, pace_final=${after?.pace_seconds_per_km}`,
+    );
+  }
+
+  // 19. Runner 1 tenta DELETE em test criado pelo treinador.
+  {
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { data, error } = await client
+      .from("tests")
+      .delete()
+      .eq("id", coachTestForRunner1.id)
+      .select("id");
+    const { data: stillThere } = await admin
+      .from("tests").select("id").eq("id", coachTestForRunner1.id).maybeSingle();
+    record(
+      "Runner 1 NÃO consegue deletar test criado pelo treinador (coach_id preenchido)",
+      !error && (data?.length ?? 0) === 0 && !!stillThere,
+      error ? `error inesperado=${error.message}` : `rows_affected=${data?.length ?? 0}, ainda_existe=${!!stillThere}`,
+    );
+  }
+
+  // 20. Sanity: Runner 1 consegue UPDATE no próprio plano de autoatendimento
+  //     (coach_id IS NULL) — fluxo legítimo preservado.
+  const { data: selfPlanForRunner1 } = await admin
+    .from("training_plans")
+    .insert({ student_id: runnerStudent1.id, coach_id: null, plan_type: "5km", status: "ativa", payload: {} })
+    .select("id")
+    .single();
+  {
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("training_plans")
+      .update({ status: "concluida" })
+      .eq("id", selfPlanForRunner1.id);
+    record(
+      "Runner 1 consegue atualizar o próprio plano de autoatendimento (coach_id IS NULL) — fluxo legítimo preservado",
+      !error,
+      error ? `error=${error.message}` : "ok",
+    );
+  }
+
+  // 21. Sanity: Runner 1 consegue DELETE no próprio plano de autoatendimento.
+  {
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("training_plans")
+      .delete()
+      .eq("id", selfPlanForRunner1.id);
+    record(
+      "Runner 1 consegue deletar o próprio plano de autoatendimento (coach_id IS NULL) — fluxo legítimo preservado",
+      !error,
+      error ? `error=${error.message}` : "ok",
+    );
+  }
+
+  // 22. Sanity: Runner 1 consegue UPDATE no próprio test de autoatendimento.
+  const { data: selfTestForRunner1 } = await admin
+    .from("tests")
+    .insert({ student_id: runnerStudent1.id, coach_id: null, test_type: "3km", test_date: "2026-01-03" })
+    .select("id")
+    .single();
+  {
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("tests")
+      .update({ pace_seconds_per_km: 210 })
+      .eq("id", selfTestForRunner1.id);
+    record(
+      "Runner 1 consegue atualizar o próprio test de autoatendimento (coach_id IS NULL) — fluxo legítimo preservado",
+      !error,
+      error ? `error=${error.message}` : "ok",
+    );
+  }
+
+  // 23. Sanity: Runner 1 consegue DELETE no próprio test de autoatendimento.
+  {
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("tests")
+      .delete()
+      .eq("id", selfTestForRunner1.id);
+    record(
+      "Runner 1 consegue deletar o próprio test de autoatendimento (coach_id IS NULL) — fluxo legítimo preservado",
+      !error,
+      error ? `error=${error.message}` : "ok",
+    );
+  }
+
+  // 24. Runner 1 tenta, no próprio UPDATE, preencher coach_id do plano de
+  //     autoatendimento (disfarçar/desvincular do treinador). A linha É
+  //     visível via USING (coach_id ainda NULL antes do update), então isto
+  //     gera um erro real de WITH CHECK, não um "0 linhas afetadas".
+  {
+    const { data: guardPlan } = await admin
+      .from("training_plans")
+      .insert({ student_id: runnerStudent1.id, coach_id: null, plan_type: "21km", status: "ativa", payload: {} })
+      .select("id")
+      .single();
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("training_plans")
+      .update({ coach_id: coachAId })
+      .eq("id", guardPlan.id);
+    record(
+      "Runner 1 NÃO consegue preencher coach_id do próprio plano via UPDATE (WITH CHECK)",
+      !!error,
+      error ? `bloqueado (${error.code ?? error.message})` : "ATUALIZOU SEM ERRO — RLS QUEBRADA",
+    );
+  }
+
+  // 25. Mesma checagem para tests: runner não pode preencher coach_id do
+  //     próprio test de autoatendimento via UPDATE.
+  {
+    const { data: guardTest } = await admin
+      .from("tests")
+      .insert({ student_id: runnerStudent1.id, coach_id: null, test_type: "5km", test_date: "2026-01-04" })
+      .select("id")
+      .single();
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("tests")
+      .update({ coach_id: coachAId })
+      .eq("id", guardTest.id);
+    record(
+      "Runner 1 NÃO consegue preencher coach_id do próprio test via UPDATE (WITH CHECK)",
+      !!error,
+      error ? `bloqueado (${error.code ?? error.message})` : "ATUALIZOU SEM ERRO — RLS QUEBRADA",
+    );
+  }
+
+  // 26. Runner 1 tenta mover o próprio plano de autoatendimento para o
+  //     student_id do Runner 2 (sequestro via reatribuição de student_id) —
+  //     bloqueado pelo WITH CHECK, que reavalia o EXISTS sobre a linha NOVA.
+  {
+    const { data: moveGuardPlan } = await admin
+      .from("training_plans")
+      .insert({ student_id: runnerStudent1.id, coach_id: null, plan_type: "42km", status: "ativa", payload: {} })
+      .select("id")
+      .single();
+    const client = await signIn(`qa-runner-1-${stamp}@example.invalid`);
+    const { error } = await client
+      .from("training_plans")
+      .update({ student_id: runnerStudent2.id })
+      .eq("id", moveGuardPlan.id);
+    record(
+      "Runner 1 NÃO consegue mover o próprio plano de autoatendimento para o aluno do Runner 2 (student_id)",
+      !!error,
+      error ? `bloqueado (${error.code ?? error.message})` : "ATUALIZOU SEM ERRO — RLS QUEBRADA",
+    );
+  }
 }
 
 async function teardown() {

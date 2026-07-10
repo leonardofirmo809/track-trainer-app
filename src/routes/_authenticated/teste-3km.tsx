@@ -9,10 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, ChevronRight, Save, Calculator, FileDown, UserPlus } from "lucide-react";
+import { Home, ChevronRight, Save, Calculator, FileDown, UserPlus, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   calcularTeste3km, calcularProva5km, calcularProva10km, calcularCooper12min,
   formatMmss, parseMmss, parseHmmss, EVAL_LIMITS,
@@ -38,6 +40,14 @@ const TAB_HINT: Record<EvalKind, string> = {
   "cooper": "Distância percorrida em 12 min (em metros)",
 };
 
+type StudentListItem = { id: string; full_name: string; created_at: string };
+type SortMode = "az" | "newest" | "oldest";
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: "az", label: "A-Z" },
+  { value: "newest", label: "Mais novo" },
+  { value: "oldest", label: "Mais antigo" },
+];
+
 function Teste3kmPage() {
   const qc = useQueryClient();
   const saveFn = useServerFn(saveTeste3km);
@@ -52,6 +62,9 @@ function Teste3kmPage() {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [studentSearch, setStudentSearch] = useState("");
+  const [sortMode, setSortMode] = useState<SortMode>("az");
   const branding = useCoachBranding();
 
   const students = useQuery({
@@ -63,11 +76,11 @@ function Teste3kmPage() {
       const scope = await getStudentScopeFilter(userId);
       const { data, error } = await supabase
         .from("students")
-        .select("id, full_name")
+        .select("id, full_name, created_at")
         .or(scope)
         .order("full_name");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as StudentListItem[];
     },
   });
 
@@ -75,6 +88,19 @@ function Teste3kmPage() {
     () => students.data?.find((s) => s.id === studentId)?.full_name ?? "",
     [students.data, studentId]
   );
+
+  const filteredStudents = useMemo(() => {
+    const list = students.data ?? [];
+    const term = studentSearch.trim().toLowerCase();
+    const filtered = term ? list.filter((s) => s.full_name.toLowerCase().includes(term)) : list;
+    return [...filtered].sort((a, b) => {
+      if (sortMode === "az") return a.full_name.localeCompare(b.full_name, "pt-BR");
+      const aDate = a.created_at ?? "";
+      const bDate = b.created_at ?? "";
+      if (sortMode === "newest") return aDate < bDate ? 1 : aDate > bDate ? -1 : 0;
+      return aDate < bDate ? -1 : aDate > bDate ? 1 : 0;
+    });
+  }, [students.data, studentSearch, sortMode]);
 
   function handleTempoChange(v: string) {
     if (kind === "10km") {
@@ -92,12 +118,15 @@ function Teste3kmPage() {
     }
   }
 
-  function handleStudentCreated(student: { id: string; full_name: string }) {
-    qc.setQueryData<{ id: string; full_name: string }[]>(["students-list"], (old) =>
-      old ? [...old, student].sort((a, b) => a.full_name.localeCompare(b.full_name)) : old
+  function handleStudentCreated(student: { id: string; full_name: string; created_at?: string }) {
+    const withCreatedAt: StudentListItem = { ...student, created_at: student.created_at ?? new Date().toISOString() };
+    qc.setQueryData<StudentListItem[]>(["students-list"], (old) =>
+      old ? [...old, withCreatedAt].sort((a, b) => a.full_name.localeCompare(b.full_name)) : old
     );
     qc.invalidateQueries({ queryKey: ["students-list"] });
     setStudentId(student.id);
+    setStudentSearch("");
+    setPickerOpen(false);
   }
 
   function handleLimpar() {
@@ -230,22 +259,94 @@ function Teste3kmPage() {
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="md:col-span-1">
-              <Label htmlFor="aluno">Aluno (opcional)</Label>
-              <Select value={studentId || "__none__"} onValueChange={(v) => setStudentId(v === "__none__" ? "" : v)}>
-                <SelectTrigger id="aluno" className="w-full"><SelectValue placeholder={students.isLoading ? "Carregando…" : "Nenhum (avulso)"} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Nenhum (avulso) —</SelectItem>
-                  {students.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <div className="mt-2 space-y-1.5">
-                <p className="text-xs text-muted-foreground">
-                  Não encontrou o aluno? Cadastre rapidamente e continue o teste.
-                </p>
-                <Button type="button" variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-                  <UserPlus /> Cadastrar novo aluno
-                </Button>
-              </div>
+              <Label htmlFor="aluno">Aluno</Label>
+              <Popover open={pickerOpen} onOpenChange={(v) => { setPickerOpen(v); if (!v) setStudentSearch(""); }}>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="aluno"
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={pickerOpen}
+                    aria-label="Selecione ou cadastre um aluno"
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {students.isLoading ? "Carregando…" : studentId ? studentName : "Teste avulso"}
+                    </span>
+                    <ChevronsUpDown className="size-4 opacity-60 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[min(92vw,360px)] p-0">
+                  <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+                    <span className="text-xs font-medium text-muted-foreground">Ordenar por</span>
+                    <div className="flex gap-1">
+                      {SORT_OPTIONS.map((opt) => (
+                        <Button
+                          key={opt.value}
+                          type="button"
+                          size="sm"
+                          variant={sortMode === opt.value ? "secondary" : "ghost"}
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setSortMode(opt.value)}
+                        >
+                          {opt.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Pesquisar aluno..."
+                      value={studentSearch}
+                      onValueChange={setStudentSearch}
+                    />
+                    <CommandList>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__avulso__"
+                          onSelect={() => { setStudentId(""); setPickerOpen(false); }}
+                          className="cursor-pointer"
+                        >
+                          <Check className={cn("mr-2 size-4", !studentId ? "opacity-100" : "opacity-0")} />
+                          Teste avulso
+                        </CommandItem>
+                      </CommandGroup>
+                      {filteredStudents.length === 0 ? (
+                        <p className="py-4 text-center text-sm text-muted-foreground">Nenhum aluno encontrado.</p>
+                      ) : (
+                        <CommandGroup heading="Alunos">
+                          {filteredStudents.map((s) => (
+                            <CommandItem
+                              key={s.id}
+                              value={s.id}
+                              onSelect={() => { setStudentId(s.id); setPickerOpen(false); }}
+                              className="cursor-pointer"
+                            >
+                              <Check className={cn("mr-2 size-4", studentId === s.id ? "opacity-100" : "opacity-0")} />
+                              <span className="truncate">{s.full_name}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )}
+                      <CommandSeparator />
+                      <CommandGroup>
+                        <CommandItem
+                          value="__create__"
+                          onSelect={() => { setPickerOpen(false); setCreateOpen(true); }}
+                          className="cursor-pointer font-medium"
+                        >
+                          <UserPlus className="mr-2 size-4" />
+                          Cadastrar novo aluno
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground mt-1">
+                Não encontrou o aluno? Cadastre rapidamente e continue o teste.
+              </p>
             </div>
             <div>
               {kind === "cooper" ? (

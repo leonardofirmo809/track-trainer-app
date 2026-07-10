@@ -231,21 +231,21 @@ function Teste3kmPage() {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="md:col-span-1">
               <Label htmlFor="aluno">Aluno (opcional)</Label>
-              <div className="flex gap-2">
-                <Select value={studentId || "__none__"} onValueChange={(v) => setStudentId(v === "__none__" ? "" : v)}>
-                  <SelectTrigger id="aluno" className="flex-1"><SelectValue placeholder={students.isLoading ? "Carregando…" : "Nenhum (avulso)"} /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— Nenhum (avulso) —</SelectItem>
-                    {students.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button type="button" variant="outline" size="icon" onClick={() => setCreateOpen(true)} title="Cadastrar aluno">
-                  <UserPlus />
+              <Select value={studentId || "__none__"} onValueChange={(v) => setStudentId(v === "__none__" ? "" : v)}>
+                <SelectTrigger id="aluno" className="w-full"><SelectValue placeholder={students.isLoading ? "Carregando…" : "Nenhum (avulso)"} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Nenhum (avulso) —</SelectItem>
+                  {students.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <div className="mt-2 space-y-1.5">
+                <p className="text-xs text-muted-foreground">
+                  Não encontrou o aluno? Cadastre rapidamente e continue o teste.
+                </p>
+                <Button type="button" variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
+                  <UserPlus /> Cadastrar novo aluno
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Não encontrou o aluno? Cadastre rapidamente e continue o teste.
-              </p>
             </div>
             <div>
               {kind === "cooper" ? (

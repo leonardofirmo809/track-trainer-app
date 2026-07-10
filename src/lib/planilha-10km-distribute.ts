@@ -1,6 +1,6 @@
 // Helpers de sugestão/validação dos dias da semana — Planilha 10km.
 // A regra fixa virou apenas SUGESTÃO: o treinador pode escolher qualquer
-// quantidade de dias (>=1). A função de validação só bloqueia quando 0 dias.
+// quantidade de dias entre 2 e 7.
 import type { DayCode } from "./planilha-5km-data";
 
 export function slotCountFor10km(level: 1 | 2): number {
@@ -18,7 +18,8 @@ export function allowedDayCounts10km(level: 1 | 2): number[] {
 }
 
 export function validateWeekDays10km(_level: 1 | 2, weekDays: DayCode[]): string | null {
-  if (weekDays.length === 0) return "Selecione pelo menos 1 dia de treino.";
+  if (weekDays.length < 2) return "Selecione entre 2 e 7 dias de treino.";
+  if (weekDays.length > 7) return "Selecione no máximo 7 dias de treino.";
   const set = new Set(weekDays);
   if (set.size !== weekDays.length) return "Há dias duplicados na seleção.";
   return null;

@@ -19,7 +19,7 @@ import {
   type WorkoutOverrides, type WorkoutPatch,
   applyOverrides, getPatch, setOverride,
   getWeekPatches, getRemoved, getAdded, getManualDayMap, setWorkoutDay,
-  removeWorkout, restoreRemovedWorkout,
+  removeWorkout, restoreRemovedWorkout, resetWeekOverrides,
   addWorkout, updateAddedWorkout, deleteAddedWorkout,
 } from "@/lib/workout-overrides";
 import { savePlanWorkoutOverrides } from "@/lib/plan-customization.functions";
@@ -137,7 +137,8 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
       const dist = distributeWeek(all.map((x) => x.workout), { manualDayByCode, noDrop: true });
       const originByCode = new Map<string, Origin>(all.map((x) => [x.workout.code, x.origin]));
       const removedOriginals = rawList.filter((wo) => removedSet.has(wo.code));
-      return { dist, originByCode, removedOriginals };
+      const hasOverrides = !!weekObj && (Object.keys(patches).length > 0 || removedSet.size > 0 || added.length > 0);
+      return { dist, originByCode, removedOriginals, hasOverrides };
     });
   }, [phase, overrides, getRawPhaseWeeks, distributeWeek]);
 
@@ -210,6 +211,11 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
     setDirty(true);
   }
 
+  function handleResetWeek(p: TPhase, weekIdx: number) {
+    setOverridesState((cur) => resetWeekOverrides(cur, p, weekIdx));
+    setDirty(true);
+  }
+
   async function handleSave() {
     setSaving(true);
     try {
@@ -230,10 +236,10 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-[1100px] overflow-y-auto p-6 space-y-4">
         <SheetHeader>
-          <SheetTitle>Ajustar modelo</SheetTitle>
+          <SheetTitle>Ajustar modelo da planilha</SheetTitle>
           <SheetDescription>
-            Faça ajustes pontuais nos treinos gerados pela planilha — edite, adicione ou remova treinos mantendo
-            o vínculo com o modelo. As mudanças são aplicadas à planilha do aluno após salvar.
+            Edite dias e treinos desta planilha sem perder a estrutura metodológica original. As mudanças são
+            aplicadas à planilha do aluno após salvar.
           </SheetDescription>
         </SheetHeader>
 
@@ -367,12 +373,23 @@ export function PlanilhaCustomizerSheet<TPhase extends number>(props: PlanilhaCu
                   </div>
 
                   <div className="flex items-center justify-between gap-2 flex-wrap pt-1">
-                    <Button
-                      type="button" size="sm" variant="outline"
-                      onClick={() => setEditing({ kind: "new", phase: p, weekIdx: idx })}
-                    >
-                      <Plus /> Adicionar treino
-                    </Button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button
+                        type="button" size="sm" variant="outline"
+                        onClick={() => setEditing({ kind: "new", phase: p, weekIdx: idx })}
+                      >
+                        <Plus /> Adicionar treino
+                      </Button>
+                      {wk.hasOverrides && (
+                        <Button
+                          type="button" size="sm" variant="ghost"
+                          onClick={() => handleResetWeek(p, idx)}
+                          title="Descarta edições, remoções e treinos adicionados desta semana, voltando ao padrão da metodologia."
+                        >
+                          <RotateCcw /> Restaurar padrão
+                        </Button>
+                      )}
+                    </div>
                     {wk.removedOriginals.length > 0 && (
                       <div className="flex items-center gap-1 flex-wrap text-xs text-muted-foreground">
                         <span>Removidos:</span>

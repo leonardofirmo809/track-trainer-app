@@ -9,7 +9,7 @@ const DAY = z.enum(["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"]);
 const configSchema = z.object({
   studentId: z.string().uuid(),
   level: z.union([z.literal(1), z.literal(2)]),
-  weekDays: z.array(DAY).min(1).max(7),
+  weekDays: z.array(DAY).min(2).max(7),
   currentPhase: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   // ISO yyyy-mm-dd. Omitido = não altera end_date (update) / sem término definido (insert).
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),

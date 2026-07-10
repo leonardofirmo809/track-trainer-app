@@ -119,7 +119,8 @@ function Planilha5kmPage() {
   }, [dataQuery.data]);
 
   const validation = useMemo<string | null>(() => {
-    if (weekDays.length === 0) return "Selecione pelo menos 1 dia de treino.";
+    if (weekDays.length < 2) return "Selecione entre 2 e 7 dias de treino.";
+    if (weekDays.length > 7) return "Selecione no máximo 7 dias de treino.";
     return null;
   }, [weekDays]);
 
@@ -331,7 +332,7 @@ function Planilha5kmPage() {
             <div>
               <Label>Dias da semana</Label>
               <p className="text-xs text-muted-foreground mt-1">
-                Sugestão para Nível {level}: {suggestedCount} dias. Você pode escolher quantos quiser.
+                Sugestão para Nível {level}: {suggestedCount} dias. Você pode escolher entre 2 e 7 dias.
               </p>
               <div className="flex gap-3 mt-2 flex-wrap">
                 {DAY_ORDER.map((d) => {

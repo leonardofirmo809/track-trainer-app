@@ -254,6 +254,23 @@ export function getManualDayMap(
   return out;
 }
 
+/** Restaura a semana ao padrão da metodologia: descarta patches, remoções e treinos adicionados. */
+export function resetWeekOverrides(
+  overrides: WorkoutOverrides,
+  phase: number | string,
+  weekIdx: number,
+): WorkoutOverrides {
+  const pKey = String(phase);
+  const wKey = String(weekIdx);
+  if (!overrides[pKey]?.[wKey]) return overrides;
+  const next: WorkoutOverrides = { ...overrides };
+  const phaseObj = { ...next[pKey] };
+  delete phaseObj[wKey];
+  if (Object.keys(phaseObj).length === 0) delete next[pKey];
+  else next[pKey] = phaseObj;
+  return next;
+}
+
 /** Atalho para mudar apenas o dia de um treino original. */
 export function setWorkoutDay(
   overrides: WorkoutOverrides,

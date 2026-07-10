@@ -121,6 +121,8 @@ const WorkoutPatchSchema = z.object({
   zones: z.array(ZoneEnum).max(5).optional(),
   sections: z.array(SectionSchemaWO).max(8).optional(),
   note: z.string().max(500).nullable().optional(),
+  // Dia da semana atribuído manualmente (mover treino). `null` = explicitamente sem dia.
+  day: DayEnum.nullable().optional(),
 });
 
 const WorkoutSchema = z.object({

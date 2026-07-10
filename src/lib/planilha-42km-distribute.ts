@@ -6,7 +6,8 @@ export function suggestedDayCount42km(_level: 1 | 2): number { return 4; }
 export function allowedDayCounts42km(_level: 1 | 2): number[] { return [4]; }
 
 export function validateWeekDays42km(_level: 1 | 2, weekDays: DayCode[]): string | null {
-  if (weekDays.length === 0) return "Selecione pelo menos 1 dia de treino.";
+  if (weekDays.length < 2) return "Selecione entre 2 e 7 dias de treino.";
+  if (weekDays.length > 7) return "Selecione no máximo 7 dias de treino.";
   const set = new Set(weekDays);
   if (set.size !== weekDays.length) return "Há dias duplicados na seleção.";
   return null;

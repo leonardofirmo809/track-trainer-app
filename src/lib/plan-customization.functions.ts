@@ -48,6 +48,15 @@ const WeekSchema = z.object({
   }),
 });
 
+// Usado só por updatePlanStartDate/updatePlanEndDate. allowRunner=true acima
+// confirma que o chamador tem *algum* acesso válido ao aluno (staff OU o
+// próprio corredor dono do perfil) — não diz qual dos dois. Para edição de
+// datas isso não basta: um corredor só pode mexer nas datas de um plano de
+// autoatendimento (coach_id IS NULL); um plano com coach_id preenchido foi
+// prescrito pelo treinador e só staff (dono do aluno, admin global ou membro
+// da empresa autorizado) pode alterar suas datas. Isso espelha, no código de
+// aplicação (que usa supabaseAdmin e por isso não passa pela RLS), a mesma
+// regra já endurecida na RLS por 20260709130000_restrict_runner_write_to_self_service_training_data.sql.
 async function fetchPlanForCoach(planId: string, userId: string) {
   const { data: plan, error } = await supabaseAdmin
     .from("training_plans")
@@ -57,6 +66,20 @@ async function fetchPlanForCoach(planId: string, userId: string) {
   if (error) throw new Response(error.message, { status: 500 });
   if (!plan) throw new Response("Plano não encontrado", { status: 404 });
   await assertCanManageStudentTraining(plan.student_id, userId, true);
+
+  if (plan.coach_id !== null) {
+    // Plano prescrito por um treinador: exige a checagem estrita (sem
+    // allowRunner), ou seja, só passa quem é staff — nunca o corredor sozinho.
+    try {
+      await assertCanManageStudentTraining(plan.student_id, userId, false);
+    } catch (err) {
+      if (err instanceof Response && err.status === 403) {
+        throw new Response("Você não tem permissão para alterar as datas deste plano.", { status: 403 });
+      }
+      throw err;
+    }
+  }
+
   return plan;
 }
 

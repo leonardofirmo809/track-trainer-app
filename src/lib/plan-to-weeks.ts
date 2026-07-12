@@ -46,6 +46,32 @@ export function planPayloadToWeeks(payload: unknown, fallbackWeeks = 4, planType
   return blankWeeks(fallbackWeeks);
 }
 
+export type PlanSource = "advanced" | "adjusted" | "base";
+
+/**
+ * Fonte ativa da grade semanal deste plano, na MESMA ordem de prioridade usada
+ * por planPayloadToWeeks acima — mantenha as duas em sincronia se a regra mudar.
+ * "advanced" = payload.customization.weeks vence (Editor avançado);
+ * "adjusted" = sem customization.weeks, mas há workoutOverrides não-vazio;
+ * "base" = metodologia pura do catálogo, sem nenhum ajuste salvo.
+ */
+export function getActivePlanSource(payload: unknown): PlanSource {
+  if (!payload || typeof payload !== "object") return "base";
+  const p = payload as Record<string, unknown>;
+
+  const customization = p.customization as { weeks?: unknown[] } | undefined;
+  if (customization?.weeks && Array.isArray(customization.weeks) && customization.weeks.length > 0) {
+    return "advanced";
+  }
+
+  const overrides = p.workoutOverrides as Record<string, unknown> | undefined;
+  if (overrides && typeof overrides === "object" && Object.keys(overrides).length > 0) {
+    return "adjusted";
+  }
+
+  return "base";
+}
+
 function normalizeWeek(w: WeekPlan): WeekPlan {
   const days = { ...emptyDays(), ...w.days };
   return { weekNumber: w.weekNumber, days, summary: recalcSummary(days) };

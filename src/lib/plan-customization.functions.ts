@@ -214,6 +214,33 @@ export const savePlanCustomization = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+// Remove só payload.customization (o snapshot do Editor avançado), preservando
+// todo o resto do payload (level/daysPerWeek/weekDays/currentPhase/workoutOverrides
+// etc.) intacto. Mesma regra de permissão de savePlanCustomization/
+// savePlanWorkoutOverrides (assertCanCustomizeStudentTraining via
+// fetchPlanForCustomization) — nunca permite o corredor, só staff de treino.
+export const clearPlanAdvancedCustomization = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ planId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const plan = await fetchPlanForCustomization(data.planId, context.userId);
+    const basePayload = (plan.payload && typeof plan.payload === "object" ? plan.payload : {}) as Record<string, unknown>;
+    if (!("customization" in basePayload)) return { ok: true as const };
+
+    // customization: undefined é serializado como ausente pelo JSON.stringify
+    // (usado pelo supabase-js ao enviar o UPDATE), removendo a chave do JSONB
+    // sem precisar de `delete` — mesmo padrão de spread usado em savePlanCustomization/
+    // savePlanWorkoutOverrides acima, só que omitindo a chave em vez de setá-la.
+    const newPayload = { ...basePayload, customization: undefined };
+
+    const { error } = await supabaseAdmin
+      .from("training_plans")
+      .update({ payload: newPayload, updated_at: new Date().toISOString() })
+      .eq("id", data.planId);
+    if (error) throw new Response(error.message, { status: 500 });
+    return { ok: true as const };
+  });
+
 export const updatePlanStartDate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>

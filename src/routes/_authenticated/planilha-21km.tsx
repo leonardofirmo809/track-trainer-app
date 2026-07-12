@@ -34,6 +34,8 @@ import { validateWeekDays21km } from "@/lib/planilha-21km-distribute";
 import { getPlanilha21kmData, savePlanilha21kmConfig } from "@/lib/planilha-21km.functions";
 import { formatMmss } from "@/lib/teste-3km";
 import { PlanAllPhasesSummary, type PhaseBlock } from "@/components/planilha/PlanAllPhasesSummary";
+import { getActivePlanSource } from "@/lib/plan-to-weeks";
+import { PlanSourceBadge, PlanAdvancedCustomizationNotice } from "@/components/planilha/PlanSourceNotice";
 
 export const Route = createFileRoute("/_authenticated/planilha-21km")({ component: Planilha21kmPage });
 
@@ -156,6 +158,11 @@ function Planilha21kmPage() {
       return distributeWeek(list, weekDays, level, WORKOUT_TYPES_21KM, { manualDayByCode, noDrop: true });
     });
   }, [applied, level, phase, weekDays, validation, overrides]);
+
+  const activeSource = useMemo(
+    () => getActivePlanSource(dataQuery.data?.plan?.payload),
+    [dataQuery.data?.plan?.payload],
+  );
 
   const garminWeeks = useMemo((): GarminWeek[] => {
     if (!weeks) return [];
@@ -377,14 +384,19 @@ function Planilha21kmPage() {
       {applied && weeks && zones && (
         <Card>
           <CardHeader className="flex-row items-start justify-between space-y-0 flex-wrap gap-3">
-            <CardTitle className="pt-0.5">4. Planilha e treinos</CardTitle>
+            <CardTitle className="pt-0.5 flex items-center gap-2 flex-wrap">
+              4. Planilha e treinos <PlanSourceBadge source={activeSource} />
+            </CardTitle>
             <div className="flex gap-2 flex-wrap">
               {dataQuery.data?.plan?.id ? (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setEditorOpen(true)}
-                  title="Ajustes pontuais nos treinos gerados pela planilha — mantém o vínculo com o modelo."
+                  disabled={activeSource === "advanced"}
+                  title={activeSource === "advanced"
+                    ? "Este plano tem uma personalização avançada ativa. Remova-a para usar o Ajustar modelo."
+                    : "Ajustes pontuais nos treinos gerados pela planilha — mantém o vínculo com o modelo."}
                 >
                   <Settings2 /> Ajustar modelo
                 </Button>
@@ -409,6 +421,12 @@ function Planilha21kmPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {activeSource === "advanced" && dataQuery.data?.plan?.id && (
+              <PlanAdvancedCustomizationNotice
+                planId={dataQuery.data.plan.id}
+                onCleared={() => dataQuery.refetch()}
+              />
+            )}
             <Tabs value={String(phase)} onValueChange={(v) => changePhase(Number(v) as Phase21)}>
               <TabsList>
                 {PHASES.map((p) => (

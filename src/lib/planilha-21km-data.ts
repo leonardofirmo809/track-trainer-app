@@ -295,5 +295,4 @@ export const LEVEL_2_21KM: PhasesByLevel21km = { 1: N2_P1, 2: N2_P2, 3: N2_P3, 4
 export const WORKOUTS_21KM: Record<1 | 2, PhasesByLevel21km> = { 1: LEVEL_1_21KM, 2: LEVEL_2_21KM };
 
 export function slotCountFor21km(_level: 1 | 2): number { return 4; }
-export function allowedDayCounts21km(_level: 1 | 2): number[] { return [4]; }
 export function defaultDaysFor21km(_level: 1 | 2): DayCode[] { return ["TER","QUI","SEX","SAB"]; }

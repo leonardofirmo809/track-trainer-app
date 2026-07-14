@@ -2,8 +2,6 @@
 import type { DayCode } from "./planilha-5km-data";
 
 export function slotCountFor42km(_level: 1 | 2): number { return 4; }
-export function suggestedDayCount42km(_level: 1 | 2): number { return 4; }
-export function allowedDayCounts42km(_level: 1 | 2): number[] { return [4]; }
 
 export function validateWeekDays42km(_level: 1 | 2, weekDays: DayCode[]): string | null {
   if (weekDays.length < 2) return "Selecione entre 2 e 7 dias de treino.";

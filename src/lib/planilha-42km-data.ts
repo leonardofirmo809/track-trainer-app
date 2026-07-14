@@ -263,5 +263,4 @@ export const LEVEL_2_42KM: PhasesByLevel42km = { 1: N2_P1, 2: N2_P2, 3: N2_P3, 4
 export const WORKOUTS_42KM: Record<1 | 2, PhasesByLevel42km> = { 1: LEVEL_1_42KM, 2: LEVEL_2_42KM };
 
 export function slotCountFor42km(_level: 1 | 2): number { return 4; }
-export function allowedDayCounts42km(_level: 1 | 2): number[] { return [4]; }
 export function defaultDaysFor42km(_level: 1 | 2): DayCode[] { return ["TER","QUI","SEX","SAB"]; }

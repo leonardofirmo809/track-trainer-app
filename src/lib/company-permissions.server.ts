@@ -51,23 +51,17 @@ export async function assertCanManageStudentTraining(
   throw new Response("Forbidden", { status: 403 });
 }
 
-// company_role hoje só tem estes 3 valores (ver migration 20260626210000 e
-// src/integrations/supabase/types.ts) — todos são papéis de treino (dono/gestor/coach
-// da própria academia). Listado explicitamente (em vez de "qualquer membro existe")
-// para que, se um papel não-treinador (ex.: vendedor/atendimento/suporte) for
-// adicionado no futuro, ele NÃO ganhe acesso a personalizar treinos por acidente.
-const TRAINING_STAFF_ROLES = ["owner", "admin", "coach"] as const;
-
 /**
  * Returns true if userId may customize (rearrange/edit sessions of) an existing
- * training plan belonging to studentId. Deliberately looser than
- * assertCanManageStudentTraining: any active member of the student's company
- * with a training-staff role (TRAINING_STAFF_ROLES) qualifies, regardless of the
- * per-coach can_manage_training flag — that flag still gates generating/administering
- * plans elsewhere. Never allows the runner who owns the student profile, and never
- * allows a non-training-staff role even if one is added to company_role later.
- * This is the single source of truth for the "Personalizar" feature — both the
- * server functions and the frontend's canCustomizeTraining flag must call this.
+ * training plan belonging to studentId.
+ * Allowed: global admin; owner/admin of the student's active company;
+ * the student's original coach (coach_id); any active company member with
+ * can_manage_training=true. A coach without that flag who isn't the original
+ * coach is rejected — this is what stops a restricted coach from reaching
+ * another coach's student via a direct URL. Never allows the runner who owns
+ * the student profile. This is the single source of truth for the
+ * "Personalizar" feature — both the server functions and the frontend's
+ * canCustomizeTraining flag must call this.
  */
 export async function canCustomizeStudentTraining(studentId: string, userId: string): Promise<boolean> {
   const { data: student } = await supabaseAdmin
@@ -87,7 +81,7 @@ export async function canCustomizeStudentTraining(studentId: string, userId: str
   const [{ data: member }, { data: company }] = await Promise.all([
     supabaseAdmin
       .from("company_members")
-      .select("role")
+      .select("role, can_manage_training")
       .eq("company_id", student.company_id)
       .eq("user_id", userId)
       .maybeSingle(),
@@ -99,7 +93,7 @@ export async function canCustomizeStudentTraining(studentId: string, userId: str
   ]);
 
   if (!member || company?.status !== "active") return false;
-  return (TRAINING_STAFF_ROLES as readonly string[]).includes(member.role);
+  return member.role === "owner" || member.role === "admin" || member.can_manage_training === true;
 }
 
 /**

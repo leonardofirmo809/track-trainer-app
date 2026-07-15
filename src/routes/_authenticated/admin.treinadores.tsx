@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Check, Copy, KeyRound, Pencil, Plus, RefreshCw, ShieldOff, Trash2, UserPlus, Users, X } from "lucide-react";
@@ -83,6 +84,8 @@ function AdminUsersPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [inviteCompanyId, setInviteCompanyId] = useState<string>("");
+  const [inviteCanManageTraining, setInviteCanManageTraining] = useState(false);
+  const [inviteCanManageStudents, setInviteCanManageStudents] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const createCoach = useServerFn(createCoachAccount);
@@ -154,11 +157,13 @@ function AdminUsersPage() {
           email: email.trim(),
           fullName: name.trim(),
           companyId: inviteCompanyId || undefined,
+          canManageTraining: inviteCompanyId ? inviteCanManageTraining : false,
+          canManageStudents: inviteCompanyId ? inviteCanManageStudents : false,
         },
       });
       await navigator.clipboard.writeText(inviteLink(result.token)).catch(() => {});
       toast.success("Convite criado! E-mail enviado e link copiado como backup.");
-      setName(""); setEmail(""); setInviteCompanyId(""); setOpenInvite(false);
+      setName(""); setEmail(""); setInviteCompanyId(""); setInviteCanManageTraining(false); setInviteCanManageStudents(false); setOpenInvite(false);
       load();
     } catch (e) {
       const msg = e instanceof Response ? await e.text() : e instanceof Error ? e.message : "Erro";
@@ -388,6 +393,28 @@ function AdminUsersPage() {
                             <p className="text-xs text-muted-foreground">
                               Se selecionada, o coach é adicionado automaticamente à empresa ao aceitar o convite.
                             </p>
+                          </div>
+                        )}
+                        {inviteCompanyId && (
+                          <div className="space-y-3 rounded-md border p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="space-y-0.5">
+                                <Label htmlFor="itraining">Permitir gerenciar treinos e testes da empresa</Label>
+                                <p className="text-xs text-muted-foreground">
+                                  Com essa permissão, o treinador poderá ver e editar testes e planilhas de todos os alunos da empresa. Deixe desligado para restringir aos próprios alunos.
+                                </p>
+                              </div>
+                              <Switch id="itraining" checked={inviteCanManageTraining} onCheckedChange={setInviteCanManageTraining} />
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="space-y-0.5">
+                                <Label htmlFor="istudents">Permitir gerenciar cadastro de alunos</Label>
+                                <p className="text-xs text-muted-foreground">
+                                  Com essa permissão, o treinador poderá cadastrar e editar dados dos alunos da empresa.
+                                </p>
+                              </div>
+                              <Switch id="istudents" checked={inviteCanManageStudents} onCheckedChange={setInviteCanManageStudents} />
+                            </div>
                           </div>
                         )}
                       </div>

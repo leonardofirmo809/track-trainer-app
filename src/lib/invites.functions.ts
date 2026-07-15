@@ -12,7 +12,7 @@ export const acceptInvite = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { data: invite, error: invErr } = await supabaseAdmin
       .from("coach_invites")
-      .select("id, email, full_name, status, expires_at, company_id")
+      .select("id, email, full_name, status, expires_at, company_id, can_manage_students, can_manage_training")
       .eq("token", data.token)
       .maybeSingle();
 
@@ -36,6 +36,8 @@ export const acceptInvite = createServerFn({ method: "POST" })
       .eq("id", invite.id);
 
     // If the invite was linked to a company, add the coach as a member automatically.
+    // Permissions come from the invite (set explicitly by the admin who created it).
+    // Fallback false covers invites created before these columns existed.
     if (invite.company_id) {
       await supabaseAdmin
         .from("company_members")
@@ -44,8 +46,8 @@ export const acceptInvite = createServerFn({ method: "POST" })
             company_id: invite.company_id,
             user_id: created.user.id,
             role: "coach",
-            can_manage_students: false,
-            can_manage_training: true,
+            can_manage_students: invite.can_manage_students ?? false,
+            can_manage_training: invite.can_manage_training ?? false,
           },
           { onConflict: "company_id,user_id" },
         );

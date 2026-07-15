@@ -7,6 +7,11 @@ const createSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(255),
   fullName: z.string().trim().min(2).max(100),
   companyId: z.string().uuid().optional(),
+  // Permissões que o coach receberá em company_members ao aceitar o convite
+  // (ver acceptInvite em invites.functions.ts). Só têm efeito quando
+  // companyId é informado. Default restrito — quem convida decide liberar.
+  canManageStudents: z.boolean().optional().default(false),
+  canManageTraining: z.boolean().optional().default(false),
 });
 
 export const createCoachInvite = createServerFn({ method: "POST" })
@@ -23,7 +28,15 @@ export const createCoachInvite = createServerFn({ method: "POST" })
 
     const { data: invite, error } = await supabaseAdmin
       .from("coach_invites")
-      .insert({ email: data.email, full_name: data.fullName, token, invited_by: userId, company_id: data.companyId ?? null })
+      .insert({
+        email: data.email,
+        full_name: data.fullName,
+        token,
+        invited_by: userId,
+        company_id: data.companyId ?? null,
+        can_manage_students: data.canManageStudents,
+        can_manage_training: data.canManageTraining,
+      })
       .select("id, token")
       .single();
 

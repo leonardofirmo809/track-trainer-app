@@ -84,9 +84,10 @@ async function fetchPlanForCoach(planId: string, userId: string) {
 }
 
 // Usado apenas pelo fluxo de "Personalizar" (getPlanCustomization, savePlanCustomization,
-// savePlanWorkoutOverrides): qualquer membro da mesma empresa do aluno pode personalizar,
-// sem exigir can_manage_training. updatePlanStartDate/updatePlanEndDate continuam usando
-// fetchPlanForCoach (regra administrativa) — não é enfraquecida por esta função.
+// savePlanWorkoutOverrides): owner/admin da empresa, o coach original do aluno, ou um
+// membro da mesma empresa com can_manage_training=true podem personalizar — ver regra
+// completa em canCustomizeStudentTraining. updatePlanStartDate/updatePlanEndDate continuam
+// usando fetchPlanForCoach (regra administrativa) — não é enfraquecida por esta função.
 async function fetchPlanForCustomization(planId: string, userId: string) {
   const { data: plan, error } = await supabaseAdmin
     .from("training_plans")

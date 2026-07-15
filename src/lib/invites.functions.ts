@@ -1,6 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { resolveInvitePermissions } from "@/lib/invite-permissions";
+
+export { resolveInvitePermissions };
 
 const schema = z.object({
   token: z.string().min(10).max(200),
@@ -37,8 +40,8 @@ export const acceptInvite = createServerFn({ method: "POST" })
 
     // If the invite was linked to a company, add the coach as a member automatically.
     // Permissions come from the invite (set explicitly by the admin who created it).
-    // Fallback false covers invites created before these columns existed.
     if (invite.company_id) {
+      const permissions = resolveInvitePermissions(invite);
       await supabaseAdmin
         .from("company_members")
         .upsert(
@@ -46,8 +49,8 @@ export const acceptInvite = createServerFn({ method: "POST" })
             company_id: invite.company_id,
             user_id: created.user.id,
             role: "coach",
-            can_manage_students: invite.can_manage_students ?? false,
-            can_manage_training: invite.can_manage_training ?? false,
+            can_manage_students: permissions.can_manage_students,
+            can_manage_training: permissions.can_manage_training,
           },
           { onConflict: "company_id,user_id" },
         );

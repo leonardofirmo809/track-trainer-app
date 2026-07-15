@@ -1,4 +1,7 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { canCustomizeStudentTrainingFromContext, type CustomizeTrainingContext } from "@/lib/customize-training-decision";
+
+export { canCustomizeStudentTrainingFromContext, type CustomizeTrainingContext };
 
 /**
  * Checks if userId can view or manage training data for a given student.
@@ -92,8 +95,14 @@ export async function canCustomizeStudentTraining(studentId: string, userId: str
       .maybeSingle(),
   ]);
 
-  if (!member || company?.status !== "active") return false;
-  return member.role === "owner" || member.role === "admin" || member.can_manage_training === true;
+  return canCustomizeStudentTrainingFromContext({
+    isOriginalCoach: false,
+    isGlobalAdmin: false,
+    hasCompany: true,
+    companyActive: company?.status === "active",
+    memberRole: member?.role ?? null,
+    canManageTraining: member?.can_manage_training === true,
+  });
 }
 
 /**
